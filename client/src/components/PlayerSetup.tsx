@@ -1,0 +1,147 @@
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card } from "@/components/ui/card";
+import { PlayerColorPicker } from "./PlayerColorPicker";
+import { ChevronUp, ChevronDown, X } from "lucide-react";
+import type { Player } from "@shared/schema";
+import { LOGO_URL, MAX_PLAYERS } from "@/lib/constants";
+
+interface PlayerSetupProps {
+  players: Player[];
+  onAddPlayer: (name: string) => void;
+  onRemovePlayer: (id: string) => void;
+  onUpdatePlayerName: (id: string, name: string) => void;
+  onUpdatePlayerColor: (id: string, color: string) => void;
+  onMovePlayer: (id: string, direction: "up" | "down") => void;
+  onStartGame: () => void;
+}
+
+export function PlayerSetup({
+  players,
+  onAddPlayer,
+  onRemovePlayer,
+  onUpdatePlayerName,
+  onUpdatePlayerColor,
+  onMovePlayer,
+  onStartGame,
+}: PlayerSetupProps) {
+  const [showColorPicker, setShowColorPicker] = useState<string | null>(null);
+
+  const handleAddPlayer = () => {
+    onAddPlayer(`Player ${players.length + 1}`);
+  };
+
+  const namedPlayers = players.filter((p) => p.name.trim().length > 0);
+  const canStart = players.length > 0 && namedPlayers.length === players.length;
+
+  return (
+    <div className="flex flex-col min-h-screen p-6 pb-8">
+      <div className="flex flex-col items-center mb-6">
+        <img 
+          src={LOGO_URL} 
+          alt="PftC logo" 
+          className="w-24 h-auto mb-4"
+        />
+        <h2 className="text-center text-sm font-semibold uppercase tracking-wide text-muted-foreground px-4">
+          Enter Player Names from Tallest to Shortest Height
+        </h2>
+        <p className="text-sm text-muted-foreground mt-2">
+          Players: {players.length} (named {namedPlayers.length})
+        </p>
+      </div>
+
+      <div className="space-y-3 flex-1 mb-6">
+        {players.map((player, index) => (
+          <Card key={player.id} className="p-3" data-testid={`player-card-${player.id}`}>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setShowColorPicker(showColorPicker === player.id ? null : player.id)}
+                className="w-9 h-9 rounded-full border-2 flex-shrink-0 hover-elevate active-elevate-2"
+                style={{ 
+                  backgroundColor: player.color,
+                  borderColor: showColorPicker === player.id ? "hsl(var(--foreground))" : "hsl(var(--border))"
+                }}
+                data-testid={`button-color-${player.id}`}
+                aria-label="Change color"
+              />
+
+              <Input
+                value={player.name}
+                onChange={(e) => onUpdatePlayerName(player.id, e.target.value)}
+                placeholder="Player name"
+                className="flex-1"
+                data-testid={`input-name-${player.id}`}
+              />
+
+              <div className="flex gap-1 flex-shrink-0">
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  onClick={() => onMovePlayer(player.id, "up")}
+                  disabled={index === 0}
+                  data-testid={`button-move-up-${player.id}`}
+                  aria-label="Move up"
+                >
+                  <ChevronUp className="w-4 h-4" />
+                </Button>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  onClick={() => onMovePlayer(player.id, "down")}
+                  disabled={index === players.length - 1}
+                  data-testid={`button-move-down-${player.id}`}
+                  aria-label="Move down"
+                >
+                  <ChevronDown className="w-4 h-4" />
+                </Button>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  onClick={() => onRemovePlayer(player.id)}
+                  data-testid={`button-remove-${player.id}`}
+                  aria-label="Remove player"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+
+            {showColorPicker === player.id && (
+              <div className="mt-3 pt-3 border-t">
+                <PlayerColorPicker
+                  selectedColor={player.color}
+                  onColorSelect={(color) => {
+                    onUpdatePlayerColor(player.id, color);
+                    setShowColorPicker(null);
+                  }}
+                />
+              </div>
+            )}
+          </Card>
+        ))}
+      </div>
+
+      <div className="space-y-3">
+        <Button
+          onClick={handleAddPlayer}
+          disabled={players.length >= MAX_PLAYERS}
+          className="w-full h-12"
+          variant="outline"
+          data-testid="button-add-player"
+        >
+          Add Player
+        </Button>
+        <Button
+          onClick={onStartGame}
+          disabled={!canStart}
+          className="w-full h-12 text-lg font-semibold"
+          data-testid="button-start-game"
+        >
+          Start
+        </Button>
+      </div>
+    </div>
+  );
+}
