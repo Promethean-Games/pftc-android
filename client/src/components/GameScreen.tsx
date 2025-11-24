@@ -6,6 +6,7 @@ import type { Player, HoleScore } from "@shared/schema";
 import { PAR_OPTIONS, LEADER_ICON_URL } from "@/lib/constants";
 import { getScoreCallout } from "@/lib/game-utils";
 import { cn } from "@/lib/utils";
+import { DrawDialog } from "./DrawDialog";
 
 interface GameScreenProps {
   players: Player[];
@@ -20,6 +21,7 @@ interface GameScreenProps {
   onNextCard: () => void;
   onUndo: () => void;
   canUndo: boolean;
+  onSetParForAll: (par: number) => void;
 }
 
 export function GameScreen({
@@ -35,7 +37,9 @@ export function GameScreen({
   onNextCard,
   onUndo,
   canUndo,
+  onSetParForAll,
 }: GameScreenProps) {
+  const [showDrawDialog, setShowDrawDialog] = useState(false);
   const currentScore = scores[currentPlayer.id]?.find((s) => s.hole === currentHole) || {
     hole: currentHole,
     par: 0,
@@ -76,7 +80,18 @@ export function GameScreen({
     }
   };
 
-  const canAdvance = par > 0 && strokes > 0;
+  const handleDrawPar = (selectedPar: number) => {
+    onSetParForAll(selectedPar);
+    setPar(selectedPar);
+  };
+
+  // Check if all players have non-zero scores for current hole
+  const allPlayersHaveScores = players.every((player) => {
+    const playerScore = scores[player.id]?.find((s) => s.hole === currentHole);
+    return playerScore && playerScore.strokes > 0;
+  });
+
+  const canAdvance = par > 0 && strokes > 0 && allPlayersHaveScores;
 
   const batterIndex = players.findIndex((p) => p.id === currentPlayer.id);
   const batterInfo = `Batter ${batterIndex + 1} of ${players.length}`;
@@ -142,7 +157,15 @@ export function GameScreen({
 
       {/* Par Selection */}
       <div className={cn("flex items-center gap-3 mb-3", leftHandedMode && "flex-row-reverse")}>
-        <label htmlFor="par-select" className="text-base font-medium">Select Par:</label>
+        <Button
+          variant="outline"
+          onClick={() => setShowDrawDialog(true)}
+          className="h-11 px-4"
+          data-testid="button-draw"
+        >
+          DRAW
+        </Button>
+        <label htmlFor="par-select" className="text-base font-medium">Par:</label>
         <Select value={par > 0 ? par.toString() : ""} onValueChange={(v) => setPar(parseInt(v))}>
           <SelectTrigger className="w-32 h-11" id="par-select" data-testid="select-par">
             <SelectValue placeholder="--" />
@@ -232,6 +255,13 @@ export function GameScreen({
           Next Card
         </Button>
       </div>
+
+      {showDrawDialog && (
+        <DrawDialog
+          onSelectPar={handleDrawPar}
+          onClose={() => setShowDrawDialog(false)}
+        />
+      )}
     </div>
   );
 }

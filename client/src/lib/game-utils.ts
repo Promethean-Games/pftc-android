@@ -7,7 +7,7 @@ export function calculatePlayerTotal(scores: HoleScore[]): {
 } {
   return scores.reduce(
     (acc, score) => ({
-      totalStrokes: acc.totalStrokes + score.strokes,
+      totalStrokes: acc.totalStrokes + score.strokes + score.penalties,
       totalScratches: acc.totalScratches + score.scratches,
       totalPenalties: acc.totalPenalties + score.penalties,
     }),

@@ -27,6 +27,7 @@ export default function GameScreenExample() {
       onNextCard={() => console.log("Next card")}
       onUndo={() => console.log("Undo")}
       canUndo={true}
+      onSetParForAll={(par) => console.log("Set par for all:", par)}
     />
   );
 }

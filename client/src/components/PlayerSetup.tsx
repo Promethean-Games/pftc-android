@@ -47,7 +47,7 @@ export function PlayerSetup({
           Enter Player Names from Tallest to Shortest Height
         </h2>
         <p className="text-sm text-muted-foreground mt-2">
-          Players: {players.length} (named {namedPlayers.length})
+          Players: {players.length}
         </p>
       </div>
 

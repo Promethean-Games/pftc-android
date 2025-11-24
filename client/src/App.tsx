@@ -128,6 +128,7 @@ function GameApp() {
           onNextCard={game.nextCard}
           onUndo={game.undo}
           canUndo={true}
+          onSetParForAll={(par) => game.setParForAllPlayers(game.currentHole, par)}
         />
       )}
 

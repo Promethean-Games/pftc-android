@@ -29,6 +29,7 @@ interface GameContextValue extends GameState {
   getSavedGames: () => Record<string, GameSession>;
   updateSettings: (settings: Partial<Settings>) => void;
   undo: () => void;
+  setParForAllPlayers: (hole: number, par: number) => void;
 }
 
 const GameContext = createContext<GameContextValue | null>(null);
@@ -260,6 +261,31 @@ export function GameProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const setParForAllPlayers = (hole: number, par: number) => {
+    saveHistory(gameState);
+    setGameState((prev) => {
+      const newScores = { ...prev.scores };
+      
+      prev.players.forEach((player) => {
+        const playerScores = newScores[player.id] || [];
+        const holeIndex = playerScores.findIndex((s) => s.hole === hole);
+        
+        if (holeIndex >= 0) {
+          newScores[player.id] = playerScores.map((s, i) =>
+            i === holeIndex ? { ...s, par } : s
+          );
+        } else {
+          newScores[player.id] = [
+            ...playerScores,
+            { hole, par, strokes: 0, scratches: 0, penalties: 0 },
+          ];
+        }
+      });
+      
+      return { ...prev, scores: newScores };
+    });
+  };
+
   return (
     <GameContext.Provider
       value={{
@@ -281,6 +307,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         getSavedGames,
         updateSettings,
         undo,
+        setParForAllPlayers,
       }}
     >
       {children}
