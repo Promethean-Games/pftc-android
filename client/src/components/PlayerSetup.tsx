@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -27,9 +27,27 @@ export function PlayerSetup({
   onStartGame,
 }: PlayerSetupProps) {
   const [showColorPicker, setShowColorPicker] = useState<string | null>(null);
+  const [newPlayerName, setNewPlayerName] = useState("");
+  const addButtonRef = useRef<HTMLButtonElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    addButtonRef.current?.focus();
+  }, []);
 
   const handleAddPlayer = () => {
-    onAddPlayer(`Player ${players.length + 1}`);
+    const name = newPlayerName.trim() || `Player ${players.length + 1}`;
+    onAddPlayer(name);
+    setNewPlayerName("");
+    setTimeout(() => {
+      inputRef.current?.focus();
+    }, 0);
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      handleAddPlayer();
+    }
   };
 
   const namedPlayers = players.filter((p) => p.name.trim().length > 0);
@@ -124,15 +142,27 @@ export function PlayerSetup({
       </div>
 
       <div className="space-y-3">
-        <Button
-          onClick={handleAddPlayer}
-          disabled={players.length >= MAX_PLAYERS}
-          className="w-full h-12"
-          variant="outline"
-          data-testid="button-add-player"
-        >
-          Add Player
-        </Button>
+        <div className="flex gap-3">
+          <Input
+            ref={inputRef}
+            value={newPlayerName}
+            onChange={(e) => setNewPlayerName(e.target.value)}
+            onKeyPress={handleKeyPress}
+            placeholder="Player name"
+            className="flex-1"
+            data-testid="input-new-player"
+          />
+          <Button
+            ref={addButtonRef}
+            onClick={handleAddPlayer}
+            disabled={players.length >= MAX_PLAYERS}
+            className="h-11 px-6"
+            variant="outline"
+            data-testid="button-add-player"
+          >
+            Add Player
+          </Button>
+        </div>
         <Button
           onClick={onStartGame}
           disabled={!canStart}
