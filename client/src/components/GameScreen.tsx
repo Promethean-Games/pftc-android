@@ -40,6 +40,8 @@ export function GameScreen({
   onSetParForAll,
 }: GameScreenProps) {
   const [showDrawDialog, setShowDrawDialog] = useState(false);
+  const [lastHole, setLastHole] = useState(currentHole);
+  
   const currentScore = scores[currentPlayer.id]?.find((s) => s.hole === currentHole) || {
     hole: currentHole,
     par: 0,
@@ -52,6 +54,25 @@ export function GameScreen({
   const [strokes, setStrokes] = useState(currentScore.strokes || 0);
   const [scratches, setScratches] = useState(currentScore.scratches || 0);
   const [penalties, setPenalties] = useState(currentScore.penalties || 0);
+
+  // Show DRAW dialog when hole changes
+  useEffect(() => {
+    if (currentHole !== lastHole) {
+      setLastHole(currentHole);
+      // Check if par is already set for this hole
+      const existingPar = scores[currentPlayer.id]?.find((s) => s.hole === currentHole)?.par;
+      if (!existingPar || existingPar === 0) {
+        setShowDrawDialog(true);
+      }
+    }
+  }, [currentHole, lastHole, scores, currentPlayer.id]);
+
+  // Show DRAW dialog on initial load if no par set
+  useEffect(() => {
+    if (currentScore.par === 0) {
+      setShowDrawDialog(true);
+    }
+  }, []);
 
   useEffect(() => {
     setPar(currentScore.par || 0);
