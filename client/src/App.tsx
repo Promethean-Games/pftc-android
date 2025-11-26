@@ -137,6 +137,7 @@ function GameApp() {
           players={game.players}
           scores={game.scores}
           onNewGame={handleNewGame}
+          isGameOver={game.isComplete}
         />
       )}
 

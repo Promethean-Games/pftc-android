@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { X, Save, FolderOpen } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import type { GameSession } from "@shared/schema";
 
 interface SaveLoadDialogProps {
@@ -15,6 +16,7 @@ interface SaveLoadDialogProps {
 
 export function SaveLoadDialog({ mode, savedGames, onSave, onLoad, onClose }: SaveLoadDialogProps) {
   const [customSlot, setCustomSlot] = useState("");
+  const { toast } = useToast();
 
   const slots = ["Slot 1", "Slot 2", "Slot 3"];
 
@@ -48,7 +50,9 @@ export function SaveLoadDialog({ mode, savedGames, onSave, onLoad, onClose }: Sa
                   onClick={() => {
                     if (customSlot.trim() && onSave) {
                       onSave(customSlot.trim());
+                      toast({ title: "Game Saved", description: `Saved to "${customSlot.trim()}"` });
                       setCustomSlot("");
+                      onClose();
                     }
                   }}
                   disabled={!customSlot.trim()}
@@ -79,7 +83,13 @@ export function SaveLoadDialog({ mode, savedGames, onSave, onLoad, onClose }: Sa
                   <Button
                     variant="outline"
                     className="w-full h-14"
-                    onClick={() => mode === "save" && onSave?.(slot)}
+                    onClick={() => {
+                      if (mode === "save") {
+                        onSave?.(slot);
+                        toast({ title: "Game Saved", description: `Saved to ${slot}` });
+                        onClose();
+                      }
+                    }}
                     disabled={mode === "load"}
                     data-testid={`button-${mode}-${slot}`}
                   >
@@ -95,8 +105,12 @@ export function SaveLoadDialog({ mode, savedGames, onSave, onLoad, onClose }: Sa
                       onClick={() => {
                         if (mode === "save") {
                           onSave?.(slot);
+                          toast({ title: "Game Overwritten", description: `Overwrote ${slot}` });
+                          onClose();
                         } else {
                           onLoad?.(slot);
+                          toast({ title: "Game Loaded", description: `Loaded from ${slot}` });
+                          onClose();
                         }
                       }}
                       data-testid={`button-${mode}-${slot}`}
@@ -120,14 +134,6 @@ export function SaveLoadDialog({ mode, savedGames, onSave, onLoad, onClose }: Sa
           })}
         </div>
 
-        <Button
-          variant="outline"
-          className="w-full h-12 mt-6"
-          onClick={onClose}
-          data-testid="button-back"
-        >
-          Back
-        </Button>
       </div>
     </div>
   );

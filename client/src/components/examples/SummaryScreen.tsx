@@ -32,6 +32,7 @@ export default function SummaryScreenExample() {
       scores={scores}
       onNewGame={() => console.log("New game")}
       onSubmitToSheets={() => console.log("Submit to sheets")}
+      isGameOver={true}
     />
   );
 }

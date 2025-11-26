@@ -197,7 +197,7 @@ export function GameScreen({
             ))}
           </SelectContent>
         </Select>
-        {par > 0 && (
+        {par > 0 && strokes >= par + 5 && (
           <Button
             variant="outline"
             onClick={handleMercy}
