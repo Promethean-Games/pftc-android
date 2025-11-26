@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ChevronLeft, ChevronRight, Undo2 } from "lucide-react";
@@ -41,6 +41,37 @@ export function GameScreen({
 }: GameScreenProps) {
   const [showDrawDialog, setShowDrawDialog] = useState(false);
   const [lastHole, setLastHole] = useState(currentHole);
+  
+  // Swipe gesture handling
+  const touchStartX = useRef<number | null>(null);
+  const touchEndX = useRef<number | null>(null);
+  const minSwipeDistance = 50;
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchEndX.current = null;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    touchEndX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStartX.current || !touchEndX.current) return;
+    
+    const distance = touchStartX.current - touchEndX.current;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+    
+    if (isLeftSwipe) {
+      onNextPlayer();
+    } else if (isRightSwipe) {
+      onPreviousPlayer();
+    }
+    
+    touchStartX.current = null;
+    touchEndX.current = null;
+  };
   
   const currentScore = scores[currentPlayer.id]?.find((s) => s.hole === currentHole) || {
     hole: currentHole,
@@ -123,7 +154,12 @@ export function GameScreen({
   const shooterInfo = `${shootersRemaining} shooter${shootersRemaining !== 1 ? "s" : ""} remaining`;
 
   return (
-    <div className={cn("flex flex-col min-h-screen p-4 pb-6", leftHandedMode && "left-handed")}>
+    <div 
+      className={cn("flex flex-col min-h-screen p-4 pb-6", leftHandedMode && "left-handed")}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
       {/* Player Navigation */}
       <div className="flex items-center gap-3 mb-4">
         <Button
