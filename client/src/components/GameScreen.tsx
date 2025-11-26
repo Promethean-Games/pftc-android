@@ -114,8 +114,13 @@ export function GameScreen({
 
   const canAdvance = par > 0 && strokes > 0 && allPlayersHaveScores;
 
-  const batterIndex = players.findIndex((p) => p.id === currentPlayer.id);
-  const batterInfo = `Batter ${batterIndex + 1} of ${players.length}`;
+  // Count players remaining with zero score for current hole
+  const shootersRemaining = players.filter((player) => {
+    const playerScore = scores[player.id]?.find((s) => s.hole === currentHole);
+    return !playerScore || playerScore.strokes === 0;
+  }).length;
+  
+  const shooterInfo = `${shootersRemaining} shooter${shootersRemaining !== 1 ? "s" : ""} remaining`;
 
   return (
     <div className={cn("flex flex-col min-h-screen p-4 pb-6", leftHandedMode && "left-handed")}>
@@ -170,10 +175,10 @@ export function GameScreen({
 
       <div className="h-0.5 mb-4" style={{ backgroundColor: currentPlayer.color }} />
 
-      {/* Hole & Batter Info */}
+      {/* Hole & Shooters Remaining */}
       <div className="flex justify-between items-center mb-3">
         <div className="text-lg font-bold" data-testid="text-hole">Hole {currentHole}</div>
-        <div className="text-sm text-muted-foreground" data-testid="text-batter">{batterInfo}</div>
+        <div className="text-sm text-muted-foreground" data-testid="text-shooters-remaining">{shooterInfo}</div>
       </div>
 
       {/* Par Selection */}
