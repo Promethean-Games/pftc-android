@@ -322,6 +322,7 @@ export function GameScreen({
         <DrawDialog
           onSelectPar={handleDrawPar}
           onClose={() => setShowDrawDialog(false)}
+          isFirstDraw={currentHole === 1}
         />
       )}
     </div>

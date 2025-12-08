@@ -5,9 +5,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 interface DrawDialogProps {
   onSelectPar: (par: number) => void;
   onClose: () => void;
+  isFirstDraw?: boolean;
 }
 
-export function DrawDialog({ onSelectPar, onClose }: DrawDialogProps) {
+export function DrawDialog({ onSelectPar, onClose, isFirstDraw = false }: DrawDialogProps) {
   const [selectedPar, setSelectedPar] = useState<number | null>(null);
 
   const handleConfirm = () => {
@@ -21,6 +22,12 @@ export function DrawDialog({ onSelectPar, onClose }: DrawDialogProps) {
     <div className="fixed inset-0 bg-background/95 z-50 flex items-center justify-center p-6">
       <div className="w-full max-w-md text-center space-y-8">
         <h1 className="text-8xl font-extrabold" data-testid="text-draw">DRAW!</h1>
+        
+        {isFirstDraw && (
+          <p className="text-muted-foreground text-lg" data-testid="text-first-draw-tip">
+            To begin, the tallest player draws a card at random.
+          </p>
+        )}
         
         <div className="space-y-4">
           <label htmlFor="par-select-draw" className="text-xl font-semibold block">
