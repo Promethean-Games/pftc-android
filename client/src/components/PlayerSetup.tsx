@@ -32,7 +32,7 @@ export function PlayerSetup({
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    addButtonRef.current?.focus();
+    inputRef.current?.focus();
   }, []);
 
   const handleAddPlayer = () => {
