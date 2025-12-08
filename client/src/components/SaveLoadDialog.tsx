@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { X, Save, FolderOpen } from "lucide-react";
+import { X, Save, FolderOpen, Pencil, Check } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { GameSession } from "@shared/schema";
 
@@ -11,14 +11,39 @@ interface SaveLoadDialogProps {
   savedGames: Record<string, GameSession>;
   onSave?: (slot: string) => void;
   onLoad?: (slot: string) => void;
+  onRename?: (oldSlot: string, newSlot: string) => void;
   onClose: () => void;
 }
 
-export function SaveLoadDialog({ mode, savedGames, onSave, onLoad, onClose }: SaveLoadDialogProps) {
+export function SaveLoadDialog({ mode, savedGames, onSave, onLoad, onRename, onClose }: SaveLoadDialogProps) {
   const [customSlot, setCustomSlot] = useState("");
+  const [editingSlot, setEditingSlot] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState("");
   const { toast } = useToast();
 
-  const slots = ["Slot 1", "Slot 2", "Slot 3"];
+  const defaultSlots = ["Slot 1", "Slot 2", "Slot 3"];
+  
+  // Combine default slots with any custom saves
+  const allSlotNames = new Set([...defaultSlots, ...Object.keys(savedGames)]);
+  const slots = Array.from(allSlotNames).sort((a, b) => {
+    // Keep default slots first in order
+    const aDefault = defaultSlots.indexOf(a);
+    const bDefault = defaultSlots.indexOf(b);
+    if (aDefault !== -1 && bDefault !== -1) return aDefault - bDefault;
+    if (aDefault !== -1) return -1;
+    if (bDefault !== -1) return 1;
+    return a.localeCompare(b);
+  });
+
+  const handleRename = (oldSlot: string) => {
+    const newName = editingName.trim();
+    if (newName && newName !== oldSlot && onRename) {
+      onRename(oldSlot, newName);
+      toast({ title: "Slot Renamed", description: `Renamed to "${newName}"` });
+    }
+    setEditingSlot(null);
+    setEditingName("");
+  };
 
   return (
     <div className="fixed inset-0 bg-background z-50 overflow-y-auto">
@@ -38,7 +63,7 @@ export function SaveLoadDialog({ mode, savedGames, onSave, onLoad, onClose }: Sa
         <div className="space-y-3">
           {mode === "save" && (
             <Card className="p-4">
-              <Label className="text-sm font-medium mb-2 block">Custom Save Name</Label>
+              <Label className="text-sm font-medium mb-2 block">New Save</Label>
               <div className="flex gap-2">
                 <Input
                   value={customSlot}
@@ -67,15 +92,61 @@ export function SaveLoadDialog({ mode, savedGames, onSave, onLoad, onClose }: Sa
           {slots.map((slot) => {
             const savedGame = savedGames[slot];
             const isEmpty = !savedGame;
+            const isEditing = editingSlot === slot;
 
             return (
               <Card key={slot} className="p-4" data-testid={`slot-${slot}`}>
-                <div className="flex items-center justify-between mb-2">
-                  <h3 className="font-semibold">{slot}</h3>
-                  {!isEmpty && (
-                    <span className="text-xs text-muted-foreground">
-                      {new Date(savedGame.updatedAt).toLocaleDateString()}
-                    </span>
+                <div className="flex items-center justify-between mb-2 gap-2">
+                  {isEditing ? (
+                    <div className="flex items-center gap-2 flex-1">
+                      <Input
+                        value={editingName}
+                        onChange={(e) => setEditingName(e.target.value)}
+                        className="h-8"
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleRename(slot);
+                          if (e.key === "Escape") {
+                            setEditingSlot(null);
+                            setEditingName("");
+                          }
+                        }}
+                        data-testid={`input-rename-${slot}`}
+                      />
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => handleRename(slot)}
+                        data-testid={`button-confirm-rename-${slot}`}
+                      >
+                        <Check className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold">{slot}</h3>
+                        {!isEmpty && (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-6 w-6"
+                            onClick={() => {
+                              setEditingSlot(slot);
+                              setEditingName(slot);
+                            }}
+                            data-testid={`button-rename-${slot}`}
+                          >
+                            <Pencil className="w-3 h-3" />
+                          </Button>
+                        )}
+                      </div>
+                      {!isEmpty && (
+                        <span className="text-xs text-muted-foreground">
+                          {new Date(savedGame.updatedAt).toLocaleDateString()}
+                        </span>
+                      )}
+                    </>
                   )}
                 </div>
                 

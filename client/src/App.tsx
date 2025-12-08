@@ -76,6 +76,10 @@ function GameApp() {
     setShowSaveLoad(null);
   };
 
+  const handleRenameSlot = (oldSlot: string, newSlot: string) => {
+    game.renameSlot(oldSlot, newSlot);
+  };
+
   const currentPlayer = game.players[game.currentPlayerIndex];
   const playerIsLeader = currentPlayer ? isLeader(currentPlayer.id, game.players, game.scores) : false;
 
@@ -89,6 +93,7 @@ function GameApp() {
             mode="load"
             savedGames={game.getSavedGames()}
             onLoad={handleLoadSlot}
+            onRename={handleRenameSlot}
             onClose={() => setShowSaveLoad(null)}
           />
         )}
@@ -158,6 +163,7 @@ function GameApp() {
           savedGames={game.getSavedGames()}
           onSave={handleSaveSlot}
           onLoad={handleLoadSlot}
+          onRename={handleRenameSlot}
           onClose={() => setShowSaveLoad(null)}
         />
       )}

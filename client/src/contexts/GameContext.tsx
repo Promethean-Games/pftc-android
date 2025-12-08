@@ -27,6 +27,7 @@ interface GameContextValue extends GameState {
   saveGame: (slot: string) => void;
   loadGame: (slot: string) => void;
   getSavedGames: () => Record<string, GameSession>;
+  renameSlot: (oldSlot: string, newSlot: string) => void;
   updateSettings: (settings: Partial<Settings>) => void;
   undo: () => void;
   setParForAllPlayers: (hole: number, par: number) => void;
@@ -246,6 +247,15 @@ export function GameProvider({ children }: { children: ReactNode }) {
     return JSON.parse(localStorage.getItem("savedGames") || "{}");
   };
 
+  const renameSlot = (oldSlot: string, newSlot: string) => {
+    const games = JSON.parse(localStorage.getItem("savedGames") || "{}");
+    if (games[oldSlot] && oldSlot !== newSlot) {
+      games[newSlot] = { ...games[oldSlot], updatedAt: new Date().toISOString() };
+      delete games[oldSlot];
+      localStorage.setItem("savedGames", JSON.stringify(games));
+    }
+  };
+
   const updateSettings = (settings: Partial<Settings>) => {
     setGameState((prev) => ({
       ...prev,
@@ -305,6 +315,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         saveGame,
         loadGame,
         getSavedGames,
+        renameSlot,
         updateSettings,
         undo,
         setParForAllPlayers,
