@@ -273,9 +273,16 @@ export function GameScreen({
       {/* Score Display & Controls */}
       <div className={cn("flex gap-4 items-center mb-4", leftHandedMode && "flex-row-reverse")}>
         <div className="flex-1 text-center">
-          <div className="text-8xl font-extrabold leading-none" data-testid="text-score">{strokes}</div>
+          <div className="text-8xl font-extrabold leading-none" data-testid="text-score">
+            {strokes + (scratches * 2) + penalties}
+          </div>
+          {(scratches > 0 || penalties > 0) && (
+            <div className="text-xs text-muted-foreground" data-testid="text-score-breakdown">
+              {strokes} + {scratches > 0 && `${scratches * 2}S`}{scratches > 0 && penalties > 0 && " + "}{penalties > 0 && `${penalties}P`}
+            </div>
+          )}
           <div className="text-sm font-bold min-h-[20px] mt-1" data-testid="text-callout">
-            {par > 0 && strokes > 0 && getScoreCallout(strokes, par)}
+            {par > 0 && strokes > 0 && getScoreCallout(strokes + (scratches * 2) + penalties, par)}
           </div>
         </div>
         <div className="flex flex-col gap-3 w-28">
