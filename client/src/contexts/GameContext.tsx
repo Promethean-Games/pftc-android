@@ -12,7 +12,7 @@ interface GameState {
 }
 
 interface GameContextValue extends GameState {
-  addPlayer: (name: string) => void;
+  addPlayer: (name: string, position?: number) => void;
   removePlayer: (id: string) => void;
   updatePlayerName: (id: string, name: string) => void;
   updatePlayerColor: (id: string, color: string) => void;
@@ -88,18 +88,35 @@ export function GameProvider({ children }: { children: ReactNode }) {
     setGameState(newState);
   };
 
-  const addPlayer = (name: string) => {
+  const addPlayer = (name: string, position?: number) => {
     const newPlayer: Player = {
       id: crypto.randomUUID(),
       name,
       color: PLAYER_COLORS[gameState.players.length % PLAYER_COLORS.length],
-      order: gameState.players.length,
+      order: position ?? gameState.players.length,
     };
-    setGameState((prev) => ({
-      ...prev,
-      players: [...prev.players, newPlayer],
-      scores: { ...prev.scores, [newPlayer.id]: [] },
-    }));
+    
+    setGameState((prev) => {
+      let newPlayers: Player[];
+      
+      if (position !== undefined && position >= 0 && position < prev.players.length) {
+        // Insert at specific position
+        newPlayers = [
+          ...prev.players.slice(0, position),
+          newPlayer,
+          ...prev.players.slice(position),
+        ].map((p, i) => ({ ...p, order: i }));
+      } else {
+        // Add at end
+        newPlayers = [...prev.players, newPlayer];
+      }
+      
+      return {
+        ...prev,
+        players: newPlayers,
+        scores: { ...prev.scores, [newPlayer.id]: [] },
+      };
+    });
   };
 
   const removePlayer = (id: string) => {

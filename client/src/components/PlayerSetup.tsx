@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PlayerColorPicker } from "./PlayerColorPicker";
 import { ChevronUp, ChevronDown, X } from "lucide-react";
 import type { Player } from "@shared/schema";
@@ -9,7 +10,7 @@ import { LOGO_URL, MAX_PLAYERS } from "@/lib/constants";
 
 interface PlayerSetupProps {
   players: Player[];
-  onAddPlayer: (name: string) => void;
+  onAddPlayer: (name: string, position?: number) => void;
   onRemovePlayer: (id: string) => void;
   onUpdatePlayerName: (id: string, name: string) => void;
   onUpdatePlayerColor: (id: string, color: string) => void;
@@ -28,6 +29,7 @@ export function PlayerSetup({
 }: PlayerSetupProps) {
   const [showColorPicker, setShowColorPicker] = useState<string | null>(null);
   const [newPlayerName, setNewPlayerName] = useState("");
+  const [insertPosition, setInsertPosition] = useState<string>("end");
   const addButtonRef = useRef<HTMLButtonElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -37,8 +39,10 @@ export function PlayerSetup({
 
   const handleAddPlayer = () => {
     const name = newPlayerName.trim() || `Player ${players.length + 1}`;
-    onAddPlayer(name);
+    const position = insertPosition === "end" ? undefined : parseInt(insertPosition);
+    onAddPlayer(name, position);
     setNewPlayerName("");
+    setInsertPosition("end");
     setTimeout(() => {
       inputRef.current?.focus();
     }, 0);
@@ -142,7 +146,7 @@ export function PlayerSetup({
       </div>
 
       <div className="space-y-3">
-        <div className="flex gap-3">
+        <div className="flex gap-2">
           <Input
             ref={inputRef}
             value={newPlayerName}
@@ -152,15 +156,27 @@ export function PlayerSetup({
             className="flex-1"
             data-testid="input-new-player"
           />
+          <Select value={insertPosition} onValueChange={setInsertPosition}>
+            <SelectTrigger className="w-28" data-testid="select-position">
+              <SelectValue placeholder="Position" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="end">At End</SelectItem>
+              {players.map((player, index) => (
+                <SelectItem key={player.id} value={index.toString()}>
+                  Before {index + 1}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Button
             ref={addButtonRef}
             onClick={handleAddPlayer}
             disabled={players.length >= MAX_PLAYERS}
-            className="h-11 px-6"
             variant="outline"
             data-testid="button-add-player"
           >
-            Add Player
+            Add
           </Button>
         </div>
         <Button
