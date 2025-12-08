@@ -2,9 +2,19 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { X, Save, FolderOpen, Pencil, Check } from "lucide-react";
+import { X, Save, FolderOpen, Pencil, Check, Trash2, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { GameSession } from "@shared/schema";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface SaveLoadDialogProps {
   mode: "save" | "load";
@@ -12,23 +22,32 @@ interface SaveLoadDialogProps {
   onSave?: (slot: string) => void;
   onLoad?: (slot: string) => void;
   onRename?: (oldSlot: string, newSlot: string) => void;
+  onDelete?: (slot: string) => void;
   onClose: () => void;
 }
 
-export function SaveLoadDialog({ mode, savedGames, onSave, onLoad, onRename, onClose }: SaveLoadDialogProps) {
-  const [customSlot, setCustomSlot] = useState("");
+const AUTOSAVE_KEY = "__autosave__";
+const MANUAL_SLOTS = ["Slot 1", "Slot 2", "Slot 3"];
+
+export function SaveLoadDialog({ mode, savedGames, onSave, onLoad, onRename, onDelete, onClose }: SaveLoadDialogProps) {
   const [editingSlot, setEditingSlot] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
+  const [confirmAction, setConfirmAction] = useState<{ type: "overwrite" | "delete"; slot: string } | null>(null);
   const { toast } = useToast();
 
-  const defaultSlots = ["Slot 1", "Slot 2", "Slot 3"];
+  const autosave = savedGames[AUTOSAVE_KEY];
   
-  // Combine default slots with any custom saves
-  const allSlotNames = new Set([...defaultSlots, ...Object.keys(savedGames)]);
+  // Get all manual slots (default 3 + any custom named ones that aren't autosave)
+  const allSlotNames = new Set([...MANUAL_SLOTS]);
+  Object.keys(savedGames).forEach((key) => {
+    if (key !== AUTOSAVE_KEY) {
+      allSlotNames.add(key);
+    }
+  });
+  
   const slots = Array.from(allSlotNames).sort((a, b) => {
-    // Keep default slots first in order
-    const aDefault = defaultSlots.indexOf(a);
-    const bDefault = defaultSlots.indexOf(b);
+    const aDefault = MANUAL_SLOTS.indexOf(a);
+    const bDefault = MANUAL_SLOTS.indexOf(b);
     if (aDefault !== -1 && bDefault !== -1) return aDefault - bDefault;
     if (aDefault !== -1) return -1;
     if (bDefault !== -1) return 1;
@@ -37,12 +56,26 @@ export function SaveLoadDialog({ mode, savedGames, onSave, onLoad, onRename, onC
 
   const handleRename = (oldSlot: string) => {
     const newName = editingName.trim();
-    if (newName && newName !== oldSlot && onRename) {
+    if (newName && newName !== oldSlot && newName !== AUTOSAVE_KEY && onRename) {
       onRename(oldSlot, newName);
       toast({ title: "Slot Renamed", description: `Renamed to "${newName}"` });
     }
     setEditingSlot(null);
     setEditingName("");
+  };
+
+  const handleConfirmAction = () => {
+    if (!confirmAction) return;
+    
+    if (confirmAction.type === "overwrite") {
+      onSave?.(confirmAction.slot);
+      toast({ title: "Game Overwritten", description: `Overwrote ${confirmAction.slot}` });
+      onClose();
+    } else if (confirmAction.type === "delete") {
+      onDelete?.(confirmAction.slot);
+      toast({ title: "Save Deleted", description: `Deleted ${confirmAction.slot}` });
+    }
+    setConfirmAction(null);
   };
 
   return (
@@ -61,33 +94,42 @@ export function SaveLoadDialog({ mode, savedGames, onSave, onLoad, onRename, onC
         </div>
 
         <div className="space-y-3">
-          {mode === "save" && (
-            <Card className="p-4">
-              <Label className="text-sm font-medium mb-2 block">New Save</Label>
-              <div className="flex gap-2">
-                <Input
-                  value={customSlot}
-                  onChange={(e) => setCustomSlot(e.target.value)}
-                  placeholder="Enter save name"
-                  data-testid="input-save-name"
-                />
-                <Button
-                  onClick={() => {
-                    if (customSlot.trim() && onSave) {
-                      onSave(customSlot.trim());
-                      toast({ title: "Game Saved", description: `Saved to "${customSlot.trim()}"` });
-                      setCustomSlot("");
-                      onClose();
-                    }
-                  }}
-                  disabled={!customSlot.trim()}
-                  data-testid="button-save-custom"
-                >
-                  <Save className="w-4 h-4" />
-                </Button>
+          {/* Autosave Section - Load Only */}
+          {autosave && (
+            <Card className="p-4 border-dashed" data-testid="slot-autosave">
+              <div className="flex items-center gap-2 mb-2">
+                <Clock className="w-4 h-4 text-muted-foreground" />
+                <h3 className="font-semibold">Autosave</h3>
+                <span className="text-xs text-muted-foreground ml-auto">
+                  {new Date(autosave.updatedAt).toLocaleString()}
+                </span>
               </div>
+              <p className="text-sm text-muted-foreground mb-2">
+                {autosave.players.length} players • Hole {autosave.currentHole}
+              </p>
+              <Button
+                variant="outline"
+                className="w-full h-12"
+                onClick={() => {
+                  onLoad?.(AUTOSAVE_KEY);
+                  toast({ title: "Game Loaded", description: "Loaded from autosave" });
+                  onClose();
+                }}
+                disabled={mode === "save"}
+                data-testid="button-load-autosave"
+              >
+                <FolderOpen className="w-4 h-4 mr-2" />
+                {mode === "save" ? "Autosave (Load Only)" : "Load Autosave"}
+              </Button>
             </Card>
           )}
+
+          {/* Manual Save Slots */}
+          <div className="pt-2">
+            <h3 className="text-sm font-medium text-muted-foreground mb-3">
+              {mode === "save" ? "Save Slots" : "Saved Games"}
+            </h3>
+          </div>
 
           {slots.map((slot) => {
             const savedGame = savedGames[slot];
@@ -141,11 +183,24 @@ export function SaveLoadDialog({ mode, savedGames, onSave, onLoad, onRename, onC
                           </Button>
                         )}
                       </div>
-                      {!isEmpty && (
-                        <span className="text-xs text-muted-foreground">
-                          {new Date(savedGame.updatedAt).toLocaleDateString()}
-                        </span>
-                      )}
+                      <div className="flex items-center gap-2">
+                        {!isEmpty && (
+                          <>
+                            <span className="text-xs text-muted-foreground">
+                              {new Date(savedGame.updatedAt).toLocaleDateString()}
+                            </span>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-6 w-6 text-destructive hover:text-destructive"
+                              onClick={() => setConfirmAction({ type: "delete", slot })}
+                              data-testid={`button-delete-${slot}`}
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </Button>
+                          </>
+                        )}
+                      </div>
                     </>
                   )}
                 </div>
@@ -175,9 +230,7 @@ export function SaveLoadDialog({ mode, savedGames, onSave, onLoad, onRename, onC
                       className="w-full h-12"
                       onClick={() => {
                         if (mode === "save") {
-                          onSave?.(slot);
-                          toast({ title: "Game Overwritten", description: `Overwrote ${slot}` });
-                          onClose();
+                          setConfirmAction({ type: "overwrite", slot });
                         } else {
                           onLoad?.(slot);
                           toast({ title: "Game Loaded", description: `Loaded from ${slot}` });
@@ -204,12 +257,33 @@ export function SaveLoadDialog({ mode, savedGames, onSave, onLoad, onRename, onC
             );
           })}
         </div>
-
       </div>
+
+      {/* Confirmation Modal */}
+      <AlertDialog open={!!confirmAction} onOpenChange={() => setConfirmAction(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {confirmAction?.type === "overwrite" ? "Overwrite Save?" : "Delete Save?"}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {confirmAction?.type === "overwrite"
+                ? `This will overwrite the saved game in "${confirmAction.slot}". This action cannot be undone.`
+                : `This will permanently delete the saved game "${confirmAction?.slot}". This action cannot be undone.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-confirm">Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmAction}
+              className={confirmAction?.type === "delete" ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : ""}
+              data-testid="button-confirm-action"
+            >
+              {confirmAction?.type === "overwrite" ? "Overwrite" : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
-}
-
-function Label({ children, className }: { children: React.ReactNode; className?: string }) {
-  return <div className={className}>{children}</div>;
 }

@@ -28,6 +28,7 @@ interface GameContextValue extends GameState {
   loadGame: (slot: string) => void;
   getSavedGames: () => Record<string, GameSession>;
   renameSlot: (oldSlot: string, newSlot: string) => void;
+  deleteSlot: (slot: string) => void;
   updateSettings: (settings: Partial<Settings>) => void;
   undo: () => void;
   setParForAllPlayers: (hole: number, par: number) => void;
@@ -68,8 +69,17 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const [history, setHistory] = useState<GameState[]>([]);
 
   useEffect(() => {
-    if (gameState.settings.autoSave) {
+    if (gameState.settings.autoSave && gameState.players.length > 0) {
       localStorage.setItem("currentGame", JSON.stringify(gameState));
+      // Also save to the autosave slot in savedGames for the load dialog
+      const games = JSON.parse(localStorage.getItem("savedGames") || "{}");
+      games["__autosave__"] = {
+        id: "autosave",
+        ...gameState,
+        createdAt: games["__autosave__"]?.createdAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      localStorage.setItem("savedGames", JSON.stringify(games));
     }
   }, [gameState]);
 
@@ -256,6 +266,14 @@ export function GameProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const deleteSlot = (slot: string) => {
+    const games = JSON.parse(localStorage.getItem("savedGames") || "{}");
+    if (games[slot]) {
+      delete games[slot];
+      localStorage.setItem("savedGames", JSON.stringify(games));
+    }
+  };
+
   const updateSettings = (settings: Partial<Settings>) => {
     setGameState((prev) => ({
       ...prev,
@@ -316,6 +334,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         loadGame,
         getSavedGames,
         renameSlot,
+        deleteSlot,
         updateSettings,
         undo,
         setParForAllPlayers,
