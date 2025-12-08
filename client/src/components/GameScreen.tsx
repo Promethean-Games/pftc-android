@@ -2,11 +2,12 @@ import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ChevronLeft, ChevronRight, Undo2 } from "lucide-react";
-import type { Player, HoleScore } from "@shared/schema";
+import type { Player, HoleScore, SetupTime } from "@shared/schema";
 import { PAR_OPTIONS, LEADER_ICON_URL } from "@/lib/constants";
 import { getScoreCallout } from "@/lib/game-utils";
 import { cn } from "@/lib/utils";
 import { DrawDialog } from "./DrawDialog";
+import { TableSetupDialog } from "./TableSetupDialog";
 
 interface GameScreenProps {
   players: Player[];
@@ -22,6 +23,7 @@ interface GameScreenProps {
   onUndo: () => void;
   canUndo: boolean;
   onSetParForAll: (par: number) => void;
+  onRecordSetupTime: (setupTime: SetupTime) => void;
 }
 
 export function GameScreen({
@@ -38,8 +40,12 @@ export function GameScreen({
   onUndo,
   canUndo,
   onSetParForAll,
+  onRecordSetupTime,
 }: GameScreenProps) {
   const [showDrawDialog, setShowDrawDialog] = useState(false);
+  const [showTableSetupDialog, setShowTableSetupDialog] = useState(false);
+  const [pendingPar, setPendingPar] = useState<number | null>(null);
+  const [drawConfirmTime, setDrawConfirmTime] = useState<number | null>(null);
   const [lastHole, setLastHole] = useState(currentHole);
   
   // Swipe gesture handling
@@ -133,8 +139,39 @@ export function GameScreen({
   };
 
   const handleDrawPar = (selectedPar: number) => {
-    onSetParForAll(selectedPar);
-    setPar(selectedPar);
+    // Store the selected par and start timing
+    setPendingPar(selectedPar);
+    setDrawConfirmTime(Date.now());
+    setShowDrawDialog(false);
+    // Show table setup dialog (except for first hole where table isn't set up yet)
+    if (currentHole === 1) {
+      // First hole - apply par immediately without table setup confirmation
+      onSetParForAll(selectedPar);
+      setPar(selectedPar);
+    } else {
+      // Subsequent holes - show table setup confirmation
+      setShowTableSetupDialog(true);
+    }
+  };
+
+  const handleTableReady = () => {
+    if (pendingPar !== null && drawConfirmTime !== null) {
+      const setupTimeMs = Date.now() - drawConfirmTime;
+      // Record the setup time
+      onRecordSetupTime({
+        hole: currentHole,
+        par: pendingPar,
+        setupTimeMs,
+        timestamp: new Date().toISOString(),
+      });
+      // Apply the par
+      onSetParForAll(pendingPar);
+      setPar(pendingPar);
+    }
+    // Reset state
+    setPendingPar(null);
+    setDrawConfirmTime(null);
+    setShowTableSetupDialog(false);
   };
 
   // Check if all players have non-zero scores for current hole
@@ -330,6 +367,14 @@ export function GameScreen({
           onSelectPar={handleDrawPar}
           onClose={() => setShowDrawDialog(false)}
           isFirstDraw={currentHole === 1}
+        />
+      )}
+
+      {showTableSetupDialog && pendingPar !== null && (
+        <TableSetupDialog
+          hole={currentHole}
+          par={pendingPar}
+          onConfirm={handleTableReady}
         />
       )}
     </div>

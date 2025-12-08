@@ -28,6 +28,7 @@ export default function GameScreenExample() {
       onUndo={() => console.log("Undo")}
       canUndo={true}
       onSetParForAll={(par) => console.log("Set par for all:", par)}
+      onRecordSetupTime={(setupTime) => console.log("Setup time:", setupTime)}
     />
   );
 }

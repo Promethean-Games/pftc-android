@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
-import type { Player, HoleScore, GameSession, Settings } from "@shared/schema";
+import type { Player, HoleScore, GameSession, Settings, SetupTime } from "@shared/schema";
 import { PLAYER_COLORS } from "@/lib/constants";
 
 interface GameState {
@@ -32,6 +32,8 @@ interface GameContextValue extends GameState {
   updateSettings: (settings: Partial<Settings>) => void;
   undo: () => void;
   setParForAllPlayers: (hole: number, par: number) => void;
+  recordSetupTime: (setupTime: SetupTime) => void;
+  getSetupTimes: () => SetupTime[];
 }
 
 const GameContext = createContext<GameContextValue | null>(null);
@@ -331,6 +333,16 @@ export function GameProvider({ children }: { children: ReactNode }) {
     });
   };
 
+  const recordSetupTime = (setupTime: SetupTime) => {
+    const times = JSON.parse(localStorage.getItem("setupTimes") || "[]");
+    times.push(setupTime);
+    localStorage.setItem("setupTimes", JSON.stringify(times));
+  };
+
+  const getSetupTimes = (): SetupTime[] => {
+    return JSON.parse(localStorage.getItem("setupTimes") || "[]");
+  };
+
   return (
     <GameContext.Provider
       value={{
@@ -355,6 +367,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
         updateSettings,
         undo,
         setParForAllPlayers,
+        recordSetupTime,
+        getSetupTimes,
       }}
     >
       {children}

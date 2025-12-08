@@ -52,3 +52,13 @@ export const settingsSchema = z.object({
 });
 
 export type Settings = z.infer<typeof settingsSchema>;
+
+// Setup time tracking schema (for analytics)
+export const setupTimeSchema = z.object({
+  hole: z.number(),
+  par: z.number(),
+  setupTimeMs: z.number(), // Time in milliseconds from draw confirm to table ready
+  timestamp: z.string(),
+});
+
+export type SetupTime = z.infer<typeof setupTimeSchema>;

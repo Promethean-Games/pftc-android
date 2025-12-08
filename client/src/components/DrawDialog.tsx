@@ -47,7 +47,12 @@ export function DrawDialog({ onSelectPar, onClose, isFirstDraw = false }: DrawDi
             data-testid="img-draw-first"
           />
         ) : (
-          <h1 className="text-8xl font-extrabold" data-testid="text-draw">DRAW!</h1>
+          <div className="space-y-2">
+            <h1 className="text-8xl font-extrabold" data-testid="text-draw">DRAW!</h1>
+            <p className="text-muted-foreground text-lg" data-testid="text-lowest-score-tip">
+              The player with the lowest score draws a card at random.
+            </p>
+          </div>
         )}
         
         <div className="space-y-4">
