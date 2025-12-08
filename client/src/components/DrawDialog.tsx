@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import drawImage from "@assets/draw-image.png";
 
 interface DrawDialogProps {
   onSelectPar: (par: number) => void;
@@ -21,7 +22,16 @@ export function DrawDialog({ onSelectPar, onClose, isFirstDraw = false }: DrawDi
   return (
     <div className="fixed inset-0 bg-background/95 z-50 flex items-center justify-center p-6">
       <div className="w-full max-w-md text-center space-y-8">
-        <h1 className="text-8xl font-extrabold" data-testid="text-draw">DRAW!</h1>
+        {isFirstDraw ? (
+          <img 
+            src={drawImage} 
+            alt="DRAW!" 
+            className="w-full max-w-sm mx-auto rounded-lg"
+            data-testid="img-draw-first"
+          />
+        ) : (
+          <h1 className="text-8xl font-extrabold" data-testid="text-draw">DRAW!</h1>
+        )}
         
         {isFirstDraw && (
           <p className="text-muted-foreground text-lg" data-testid="text-first-draw-tip">
