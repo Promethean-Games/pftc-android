@@ -22,6 +22,23 @@ export function DrawDialog({ onSelectPar, onClose, isFirstDraw = false }: DrawDi
   return (
     <div className="fixed inset-0 bg-background/95 z-50 flex items-center justify-center p-6">
       <div className="w-full max-w-md text-center space-y-8">
+        {isFirstDraw && (
+          <div className="space-y-2">
+            <p className="text-muted-foreground text-lg" data-testid="text-first-draw-tip">
+              To begin, the tallest player draws a card at random.
+            </p>
+            <a 
+              href="https://www.thegamecrafter.com/games/par-for-the-course-classic"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary underline text-sm"
+              data-testid="link-buy-cards"
+            >
+              I don't have cards yet.
+            </a>
+          </div>
+        )}
+        
         {isFirstDraw ? (
           <img 
             src={drawImage} 
@@ -31,12 +48,6 @@ export function DrawDialog({ onSelectPar, onClose, isFirstDraw = false }: DrawDi
           />
         ) : (
           <h1 className="text-8xl font-extrabold" data-testid="text-draw">DRAW!</h1>
-        )}
-        
-        {isFirstDraw && (
-          <p className="text-muted-foreground text-lg" data-testid="text-first-draw-tip">
-            To begin, the tallest player draws a card at random.
-          </p>
         )}
         
         <div className="space-y-4">
