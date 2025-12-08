@@ -1,34 +1,82 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { X } from "lucide-react";
-import type { Settings } from "@shared/schema";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { UserPlus } from "lucide-react";
+import type { Settings, Player } from "@shared/schema";
 
 interface SettingsPanelProps {
   settings: Settings;
+  players: Player[];
   onUpdateSettings: (settings: Partial<Settings>) => void;
-  onClose: () => void;
+  onAddPlayer: (name: string, position?: number) => void;
   onEndGame: () => void;
 }
 
-export function SettingsPanel({ settings, onUpdateSettings, onClose, onEndGame }: SettingsPanelProps) {
+export function SettingsPanel({ settings, players, onUpdateSettings, onAddPlayer, onEndGame }: SettingsPanelProps) {
+  const [newPlayerName, setNewPlayerName] = useState("");
+  const [insertPosition, setInsertPosition] = useState<string>("end");
+
+  const handleAddPlayer = () => {
+    const name = newPlayerName.trim() || `Player ${players.length + 1}`;
+    const position = insertPosition === "end" ? undefined : parseInt(insertPosition);
+    onAddPlayer(name, position);
+    setNewPlayerName("");
+    setInsertPosition("end");
+  };
+
   return (
-    <div className="fixed inset-0 bg-background z-50 overflow-y-auto">
-      <div className="p-6 pb-8">
-        <div className="flex items-center justify-between mb-6">
+    <div className="flex flex-col min-h-screen pb-16">
+      <div className="flex-1 overflow-y-auto p-6">
+        <div className="mb-6">
           <h2 className="text-2xl font-bold">Settings</h2>
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={onClose}
-            data-testid="button-close-settings"
-          >
-            <X className="w-6 h-6" />
-          </Button>
         </div>
 
         <div className="space-y-4">
+          {/* Add Player Section */}
+          <Card className="p-4">
+            <h3 className="font-semibold mb-3 flex items-center gap-2">
+              <UserPlus className="w-4 h-4" />
+              Add Player
+            </h3>
+            <div className="flex gap-2">
+              <Input
+                value={newPlayerName}
+                onChange={(e) => setNewPlayerName(e.target.value)}
+                placeholder="Player name"
+                className="flex-1"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleAddPlayer();
+                }}
+                data-testid="input-settings-new-player"
+              />
+              <Select value={insertPosition} onValueChange={setInsertPosition}>
+                <SelectTrigger className="w-28" data-testid="select-settings-position">
+                  <SelectValue placeholder="Position" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="end">At End</SelectItem>
+                  {players.map((player, index) => (
+                    <SelectItem key={player.id} value={index.toString()}>
+                      Before {index + 1}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                onClick={handleAddPlayer}
+                data-testid="button-settings-add-player"
+              >
+                Add
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              Current players: {players.length}
+            </p>
+          </Card>
           <Card className="p-4">
             <h3 className="font-semibold mb-4">Display</h3>
             
@@ -81,17 +129,17 @@ export function SettingsPanel({ settings, onUpdateSettings, onClose, onEndGame }
             <p className="text-sm text-muted-foreground mb-2">Par for the Course</p>
             <p className="text-xs text-muted-foreground">Version 2.0.0</p>
           </Card>
-        </div>
 
-        <div className="mt-8">
-          <Button
-            variant="destructive"
-            className="w-full h-12"
-            onClick={onEndGame}
-            data-testid="button-end-game"
-          >
-            End Game
-          </Button>
+          <div className="pt-4">
+            <Button
+              variant="destructive"
+              className="w-full h-12"
+              onClick={onEndGame}
+              data-testid="button-end-game"
+            >
+              End Game
+            </Button>
+          </div>
         </div>
       </div>
     </div>

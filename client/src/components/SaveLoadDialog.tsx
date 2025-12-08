@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { X, Save, FolderOpen, Pencil, Check, Trash2, Clock } from "lucide-react";
+import { Save, FolderOpen, Pencil, Check, Trash2, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { GameSession } from "@shared/schema";
 import {
@@ -65,18 +65,10 @@ export function SaveLoadDialog({ mode, savedGames, onSave, onLoad, onRename, onD
   };
 
   return (
-    <div className="fixed inset-0 bg-background z-50 flex flex-col">
-      <div className="flex-1 overflow-y-auto p-6 pb-24">
-        <div className="flex items-center justify-between mb-6">
+    <div className="flex flex-col min-h-screen pb-16">
+      <div className="flex-1 overflow-y-auto p-6">
+        <div className="mb-6">
           <h2 className="text-2xl font-bold">{mode === "save" ? "Save Game" : "Load Game"}</h2>
-          <Button
-            size="icon"
-            variant="ghost"
-            onClick={onClose}
-            data-testid="button-close-dialog"
-          >
-            <X className="w-6 h-6" />
-          </Button>
         </div>
 
         <div className="space-y-3">
@@ -243,18 +235,6 @@ export function SaveLoadDialog({ mode, savedGames, onSave, onLoad, onRename, onD
             );
           })}
         </div>
-      </div>
-
-      {/* Footer Nav */}
-      <div className="fixed bottom-0 left-0 right-0 bg-background border-t p-4">
-        <Button
-          variant="outline"
-          className="w-full h-12"
-          onClick={onClose}
-          data-testid="button-footer-close"
-        >
-          Close
-        </Button>
       </div>
 
       {/* Confirmation Modal */}

@@ -23,8 +23,7 @@ function GameApp() {
   
   const [screen, setScreen] = useState<Screen>("splash");
   const [activeTab, setActiveTab] = useState<ActiveTab>("game");
-  const [showSettings, setShowSettings] = useState(false);
-  const [showSaveLoad, setShowSaveLoad] = useState<"save" | "load" | null>(null);
+  const [showSaveLoad, setShowSaveLoad] = useState<"load" | null>(null);
 
   // Sync theme with game settings
   useEffect(() => {
@@ -47,33 +46,22 @@ function GameApp() {
 
   const handleEndGame = () => {
     game.endGame();
-    setScreen("summary");
-    setShowSettings(false);
+    setActiveTab("summary");
   };
 
   const handleTabChange = (tab: ActiveTab) => {
     setActiveTab(tab);
-    
-    if (tab === "settings") {
-      setShowSettings(true);
-    } else if (tab === "save") {
-      setShowSaveLoad("save");
-    } else if (tab === "summary") {
-      setScreen("summary");
-    } else if (tab === "game") {
-      setScreen("game");
-    }
   };
 
   const handleLoadSlot = (slot: string) => {
     game.loadGame(slot);
     setShowSaveLoad(null);
     setScreen("game");
+    setActiveTab("game");
   };
 
   const handleSaveSlot = (slot: string) => {
     game.saveGame(slot);
-    setShowSaveLoad(null);
   };
 
   const handleRenameSlot = (oldSlot: string, newSlot: string) => {
@@ -121,10 +109,10 @@ function GameApp() {
     );
   }
 
-  // Game/Summary with Bottom Nav
+  // Game/Summary/Save/Settings with Bottom Nav
   return (
     <div className="pb-16">
-      {screen === "game" && currentPlayer && (
+      {activeTab === "game" && currentPlayer && (
         <GameScreen
           players={game.players}
           currentPlayer={currentPlayer}
@@ -142,7 +130,7 @@ function GameApp() {
         />
       )}
 
-      {screen === "summary" && (
+      {activeTab === "summary" && (
         <SummaryScreen
           players={game.players}
           scores={game.scores}
@@ -151,28 +139,29 @@ function GameApp() {
         />
       )}
 
-      <BottomNav activeTab={activeTab} onTabChange={handleTabChange} />
-
-      {showSettings && (
-        <SettingsPanel
-          settings={game.settings}
-          onUpdateSettings={game.updateSettings}
-          onClose={() => setShowSettings(false)}
-          onEndGame={handleEndGame}
-        />
-      )}
-
-      {showSaveLoad && (
+      {activeTab === "save" && (
         <SaveLoadDialog
-          mode={showSaveLoad}
+          mode="save"
           savedGames={game.getSavedGames()}
           onSave={handleSaveSlot}
           onLoad={handleLoadSlot}
           onRename={handleRenameSlot}
           onDelete={handleDeleteSlot}
-          onClose={() => setShowSaveLoad(null)}
+          onClose={() => setActiveTab("game")}
         />
       )}
+
+      {activeTab === "settings" && (
+        <SettingsPanel
+          settings={game.settings}
+          players={game.players}
+          onUpdateSettings={game.updateSettings}
+          onAddPlayer={game.addPlayer}
+          onEndGame={handleEndGame}
+        />
+      )}
+
+      <BottomNav activeTab={activeTab} onTabChange={handleTabChange} />
     </div>
   );
 }
