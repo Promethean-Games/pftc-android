@@ -37,22 +37,8 @@ export function SaveLoadDialog({ mode, savedGames, onSave, onLoad, onRename, onD
 
   const autosave = savedGames[AUTOSAVE_KEY];
   
-  // Get all manual slots (default 3 + any custom named ones that aren't autosave)
-  const allSlotNames = new Set([...MANUAL_SLOTS]);
-  Object.keys(savedGames).forEach((key) => {
-    if (key !== AUTOSAVE_KEY) {
-      allSlotNames.add(key);
-    }
-  });
-  
-  const slots = Array.from(allSlotNames).sort((a, b) => {
-    const aDefault = MANUAL_SLOTS.indexOf(a);
-    const bDefault = MANUAL_SLOTS.indexOf(b);
-    if (aDefault !== -1 && bDefault !== -1) return aDefault - bDefault;
-    if (aDefault !== -1) return -1;
-    if (bDefault !== -1) return 1;
-    return a.localeCompare(b);
-  });
+  // Only show the 3 fixed manual slots
+  const slots = MANUAL_SLOTS;
 
   const handleRename = (oldSlot: string) => {
     const newName = editingName.trim();
@@ -79,8 +65,8 @@ export function SaveLoadDialog({ mode, savedGames, onSave, onLoad, onRename, onD
   };
 
   return (
-    <div className="fixed inset-0 bg-background z-50 overflow-y-auto">
-      <div className="p-6 pb-8">
+    <div className="fixed inset-0 bg-background z-50 flex flex-col">
+      <div className="flex-1 overflow-y-auto p-6 pb-24">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-2xl font-bold">{mode === "save" ? "Save Game" : "Load Game"}</h2>
           <Button
@@ -257,6 +243,18 @@ export function SaveLoadDialog({ mode, savedGames, onSave, onLoad, onRename, onD
             );
           })}
         </div>
+      </div>
+
+      {/* Footer Nav */}
+      <div className="fixed bottom-0 left-0 right-0 bg-background border-t p-4">
+        <Button
+          variant="outline"
+          className="w-full h-12"
+          onClick={onClose}
+          data-testid="button-footer-close"
+        >
+          Close
+        </Button>
       </div>
 
       {/* Confirmation Modal */}
