@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider, useTheme } from "@/components/ThemeProvider";
 import { GameProvider, useGame } from "@/contexts/GameContext";
+import { TournamentProvider } from "@/contexts/TournamentContext";
 import { SplashScreen } from "@/components/SplashScreen";
 import { PlayerSetup } from "@/components/PlayerSetup";
 import { GameScreen } from "@/components/GameScreen";
@@ -174,9 +175,11 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <ThemeProvider>
-          <GameProvider>
-            <GameApp />
-          </GameProvider>
+          <TournamentProvider>
+            <GameProvider>
+              <GameApp />
+            </GameProvider>
+          </TournamentProvider>
         </ThemeProvider>
         <Toaster />
       </TooltipProvider>
