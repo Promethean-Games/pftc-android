@@ -24,6 +24,8 @@ export const tournamentPlayers = pgTable("tournament_players", {
   playerName: text("player_name").notNull(),
   deviceId: text("device_id"),
   groupName: text("group_name"),
+  universalId: text("universal_id"),
+  contactInfo: text("contact_info"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

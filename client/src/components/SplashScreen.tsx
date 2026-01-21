@@ -2,10 +2,13 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { Trophy } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Trophy, Settings, Shield } from "lucide-react";
 import { LOGO_URL } from "@/lib/constants";
 import { useTournament } from "@/contexts/TournamentContext";
 import { PlayerSelectionDialog } from "./PlayerSelectionDialog";
+import { TDSignInModal } from "./TDSignInModal";
+import { DirectorPortal } from "./DirectorPortal";
 
 interface SplashScreenProps {
   onNewGame: () => void;
@@ -16,7 +19,24 @@ export function SplashScreen({ onNewGame, onLoadGame }: SplashScreenProps) {
   const [roomCodeInput, setRoomCodeInput] = useState("");
   const [joinError, setJoinError] = useState<string | null>(null);
   const [showPlayerSelection, setShowPlayerSelection] = useState(false);
+  const [showTDSignIn, setShowTDSignIn] = useState(false);
+  const [showDirectorPortal, setShowDirectorPortal] = useState(false);
   const tournament = useTournament();
+
+  const handleTDSignInSuccess = async (roomCode: string, isNewTournament: boolean, pin: string) => {
+    // Server has already verified the PIN, join the tournament
+    const success = await tournament.joinRoom(roomCode);
+    if (success || isNewTournament) {
+      // Mark as director and store PIN for secure operations
+      tournament.setIsDirector(true);
+      tournament.setDirectorCredentials(pin);
+      setShowDirectorPortal(true);
+    }
+  };
+
+  if (showDirectorPortal) {
+    return <DirectorPortal onClose={() => setShowDirectorPortal(false)} />;
+  }
 
   const handleJoinRoom = async () => {
     if (!roomCodeInput.trim()) return;
@@ -31,7 +51,32 @@ export function SplashScreen({ onNewGame, onLoadGame }: SplashScreenProps) {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen p-6">
+    <div className="flex flex-col items-center justify-center min-h-screen p-6 relative">
+      {/* TD Sign-In Gear Icon - Upper Right */}
+      <div className="absolute top-4 right-4">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button 
+              variant="ghost" 
+              size="icon"
+              className="text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-950"
+              data-testid="button-td-menu"
+            >
+              <Settings className="w-6 h-6" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem 
+              onClick={() => setShowTDSignIn(true)}
+              data-testid="menu-item-td-signin"
+            >
+              <Shield className="w-4 h-4 mr-2 text-green-600" />
+              TD Sign-In
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
       <div className="mb-8">
         <img 
           src={LOGO_URL} 
@@ -129,6 +174,12 @@ export function SplashScreen({ onNewGame, onLoadGame }: SplashScreenProps) {
           onClose={() => setShowPlayerSelection(false)}
         />
       )}
+
+      <TDSignInModal
+        isOpen={showTDSignIn}
+        onClose={() => setShowTDSignIn(false)}
+        onSuccess={handleTDSignInSuccess}
+      />
     </div>
   );
 }

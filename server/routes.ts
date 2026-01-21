@@ -13,6 +13,8 @@ const addPlayerSchema = z.object({
   playerName: z.string().min(1, "Player name is required"),
   deviceId: z.string().nullable().optional(),
   groupName: z.string().nullable().optional(),
+  universalId: z.string().nullable().optional(),
+  contactInfo: z.string().nullable().optional(),
 });
 
 const syncScoreSchema = z.object({
@@ -34,6 +36,10 @@ const assignDeviceSchema = z.object({
 
 const batchScoreSchema = z.object({
   scores: z.array(syncScoreSchema),
+});
+
+const directorActionSchema = z.object({
+  directorPin: z.string().min(1, "Director PIN is required"),
 });
 
 function generateRoomCode(): string {
@@ -108,13 +114,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Close tournament
+  // Close tournament (director only)
   app.post("/api/tournaments/:roomCode/close", async (req, res) => {
     try {
       const tournament = await storage.getTournamentByCode(req.params.roomCode);
       if (!tournament) {
         return res.status(404).json({ error: "Tournament not found" });
       }
+      
+      // Verify director PIN
+      const { directorPin } = req.body;
+      const isDirector = await storage.verifyDirectorPin(req.params.roomCode, directorPin);
+      if (!isDirector) {
+        return res.status(403).json({ error: "Invalid director credentials" });
+      }
+      
       await storage.closeTournament(tournament.id);
       res.json({ success: true });
     } catch (error) {
@@ -156,6 +170,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         playerName: parsed.data.playerName,
         deviceId: parsed.data.deviceId || null,
         groupName: parsed.data.groupName || null,
+        universalId: parsed.data.universalId || null,
+        contactInfo: parsed.data.contactInfo || null,
       });
 
       res.json(player);
@@ -201,10 +217,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Remove player from tournament
+  // Update player info (director only)
+  app.patch("/api/tournaments/:roomCode/players/:playerId", async (req, res) => {
+    try {
+      // Get tournament and verify director PIN
+      const tournament = await storage.getTournamentByCode(req.params.roomCode);
+      if (!tournament) {
+        return res.status(404).json({ error: "Tournament not found" });
+      }
+      
+      const { directorPin, ...playerData } = req.body;
+      const isDirector = await storage.verifyDirectorPin(req.params.roomCode, directorPin);
+      if (!isDirector) {
+        return res.status(403).json({ error: "Invalid director credentials" });
+      }
+      
+      // Verify player belongs to this tournament
+      const players = await storage.getPlayersInTournament(tournament.id);
+      const playerId = parseInt(req.params.playerId);
+      const playerExists = players.some(p => p.id === playerId);
+      if (!playerExists) {
+        return res.status(404).json({ error: "Player not found in this tournament" });
+      }
+      
+      const parsed = addPlayerSchema.partial().safeParse(playerData);
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.errors[0]?.message || "Invalid request" });
+      }
+      
+      const player = await storage.updatePlayer(playerId, {
+        playerName: parsed.data.playerName,
+        groupName: parsed.data.groupName,
+        universalId: parsed.data.universalId,
+        contactInfo: parsed.data.contactInfo,
+      });
+      res.json(player);
+    } catch (error) {
+      console.error("Error updating player:", error);
+      res.status(500).json({ error: "Failed to update player" });
+    }
+  });
+
+  // Remove player from tournament (director only)
   app.delete("/api/tournaments/:roomCode/players/:playerId", async (req, res) => {
     try {
-      await storage.removePlayerFromTournament(parseInt(req.params.playerId));
+      // Get tournament and verify director PIN
+      const tournament = await storage.getTournamentByCode(req.params.roomCode);
+      if (!tournament) {
+        return res.status(404).json({ error: "Tournament not found" });
+      }
+      
+      const directorPin = req.query.directorPin as string;
+      const isDirector = await storage.verifyDirectorPin(req.params.roomCode, directorPin);
+      if (!isDirector) {
+        return res.status(403).json({ error: "Invalid director credentials" });
+      }
+      
+      // Verify player belongs to this tournament
+      const players = await storage.getPlayersInTournament(tournament.id);
+      const playerId = parseInt(req.params.playerId);
+      const playerExists = players.some(p => p.id === playerId);
+      if (!playerExists) {
+        return res.status(404).json({ error: "Player not found in this tournament" });
+      }
+      
+      await storage.removePlayerFromTournament(playerId);
       res.json({ success: true });
     } catch (error) {
       console.error("Error removing player:", error);

@@ -26,6 +26,7 @@ export interface IStorage {
   getPlayersInTournament(tournamentId: number): Promise<TournamentPlayer[]>;
   getPlayersByDevice(tournamentId: number, deviceId: string): Promise<TournamentPlayer[]>;
   assignDeviceToPlayer(playerId: number, deviceId: string): Promise<void>;
+  updatePlayer(playerId: number, data: Partial<Pick<TournamentPlayer, "playerName" | "groupName" | "universalId" | "contactInfo">>): Promise<TournamentPlayer>;
   removePlayerFromTournament(playerId: number): Promise<void>;
 
   // Score operations
@@ -91,6 +92,21 @@ export class DatabaseStorage implements IStorage {
       .update(tournamentPlayers)
       .set({ deviceId })
       .where(eq(tournamentPlayers.id, playerId));
+  }
+
+  async updatePlayer(playerId: number, data: Partial<Pick<TournamentPlayer, "playerName" | "groupName" | "universalId" | "contactInfo">>): Promise<TournamentPlayer> {
+    const updateData: Record<string, string | null | undefined> = {};
+    if (data.playerName !== undefined) updateData.playerName = data.playerName;
+    if (data.groupName !== undefined) updateData.groupName = data.groupName;
+    if (data.universalId !== undefined) updateData.universalId = data.universalId;
+    if (data.contactInfo !== undefined) updateData.contactInfo = data.contactInfo;
+    
+    const [updated] = await db
+      .update(tournamentPlayers)
+      .set(updateData)
+      .where(eq(tournamentPlayers.id, playerId))
+      .returning();
+    return updated;
   }
 
   async removePlayerFromTournament(playerId: number): Promise<void> {

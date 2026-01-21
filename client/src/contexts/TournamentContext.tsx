@@ -23,12 +23,15 @@ interface TournamentContextValue {
 
   joinRoom: (code: string) => Promise<boolean>;
   leaveRoom: () => void;
+  setIsDirector: (value: boolean) => void;
+  setDirectorCredentials: (pin: string) => void;
   assignPlayersToDevice: (playerIds: number[]) => Promise<void>;
   syncScore: (tournamentPlayerId: number, hole: number, par: number, strokes: number, scratches: number, penalties: number) => Promise<void>;
   refreshLeaderboard: () => Promise<void>;
   verifyDirectorPin: (pin: string) => Promise<boolean>;
   createTournament: (name: string, directorPin: string) => Promise<TournamentInfo | null>;
-  addPlayerToTournament: (playerName: string, groupName?: string) => Promise<TournamentPlayer | null>;
+  addPlayerToTournament: (playerName: string, groupName?: string, universalId?: string, contactInfo?: string) => Promise<TournamentPlayer | null>;
+  updatePlayer: (playerId: number, data: { playerName?: string; groupName?: string; universalId?: string; contactInfo?: string }) => Promise<TournamentPlayer | null>;
   removePlayerFromTournament: (playerId: number) => Promise<void>;
   closeTournament: () => Promise<void>;
 }
@@ -61,6 +64,7 @@ export function TournamentProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isDirector, setIsDirector] = useState(false);
+  const [directorPin, setDirectorPin] = useState<string | null>(null);
   const deviceId = getDeviceId();
 
   const refreshLeaderboard = useCallback(async () => {
@@ -184,6 +188,7 @@ export function TournamentProvider({ children }: { children: ReactNode }) {
       const data = await response.json();
       if (data.isValid) {
         setIsDirector(true);
+        setDirectorPin(pin); // Store for subsequent director operations
       }
       return data.isValid;
     } catch (err) {
@@ -191,13 +196,14 @@ export function TournamentProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const createTournament = async (name: string, directorPin: string): Promise<TournamentInfo | null> => {
+  const createTournament = async (name: string, pin: string): Promise<TournamentInfo | null> => {
     try {
-      const response = await apiRequest("POST", "/api/tournaments", { name, directorPin });
+      const response = await apiRequest("POST", "/api/tournaments", { name, directorPin: pin });
       const tournament = await response.json();
       setRoomCode(tournament.roomCode);
       setTournamentInfo(tournament);
       setIsDirector(true);
+      setDirectorPin(pin); // Store for subsequent director operations
       localStorage.setItem("tournamentRoomCode", tournament.roomCode);
       return tournament;
     } catch (err) {
@@ -206,12 +212,14 @@ export function TournamentProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const addPlayerToTournament = async (playerName: string, groupName?: string): Promise<TournamentPlayer | null> => {
+  const addPlayerToTournament = async (playerName: string, groupName?: string, universalId?: string, contactInfo?: string): Promise<TournamentPlayer | null> => {
     if (!roomCode) return null;
     try {
       const response = await apiRequest("POST", `/api/tournaments/${roomCode}/players`, {
         playerName,
         groupName,
+        universalId,
+        contactInfo,
       });
       const player = await response.json();
       await refreshPlayers();
@@ -222,10 +230,26 @@ export function TournamentProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const removePlayerFromTournament = async (playerId: number) => {
-    if (!roomCode) return;
+  const updatePlayer = async (playerId: number, data: { playerName?: string; groupName?: string; universalId?: string; contactInfo?: string }): Promise<TournamentPlayer | null> => {
+    if (!roomCode || !directorPin) return null;
     try {
-      await apiRequest("DELETE", `/api/tournaments/${roomCode}/players/${playerId}`);
+      const response = await apiRequest("PATCH", `/api/tournaments/${roomCode}/players/${playerId}`, {
+        ...data,
+        directorPin, // Include PIN for server-side verification
+      });
+      const player = await response.json();
+      await refreshPlayers();
+      return player;
+    } catch (err) {
+      console.error("Failed to update player:", err);
+      return null;
+    }
+  };
+
+  const removePlayerFromTournament = async (playerId: number) => {
+    if (!roomCode || !directorPin) return;
+    try {
+      await apiRequest("DELETE", `/api/tournaments/${roomCode}/players/${playerId}?directorPin=${encodeURIComponent(directorPin)}`);
       await refreshPlayers();
       await refreshLeaderboard();
     } catch (err) {
@@ -234,9 +258,9 @@ export function TournamentProvider({ children }: { children: ReactNode }) {
   };
 
   const closeTournament = async () => {
-    if (!roomCode) return;
+    if (!roomCode || !directorPin) return;
     try {
-      await apiRequest("POST", `/api/tournaments/${roomCode}/close`);
+      await apiRequest("POST", `/api/tournaments/${roomCode}/close`, { directorPin });
       if (tournamentInfo) {
         setTournamentInfo({ ...tournamentInfo, isActive: false });
       }
@@ -260,12 +284,15 @@ export function TournamentProvider({ children }: { children: ReactNode }) {
         isDirector,
         joinRoom,
         leaveRoom,
+        setIsDirector,
+        setDirectorCredentials: (pin: string) => setDirectorPin(pin),
         assignPlayersToDevice,
         syncScore,
         refreshLeaderboard,
         verifyDirectorPin,
         createTournament,
         addPlayerToTournament,
+        updatePlayer,
         removePlayerFromTournament,
         closeTournament,
       }}
