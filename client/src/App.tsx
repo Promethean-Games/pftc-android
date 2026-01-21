@@ -148,6 +148,8 @@ function GameApp() {
           onLoad={handleLoadSlot}
           onRename={handleRenameSlot}
           onDelete={handleDeleteSlot}
+          onEndGame={handleEndGame}
+          onNewGame={handleNewGame}
           onClose={() => setActiveTab("game")}
         />
       )}

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { Save, FolderOpen, Pencil, Check, Trash2, Clock } from "lucide-react";
+import { Save, FolderOpen, Pencil, Check, Trash2, Clock, Flag, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { GameSession } from "@shared/schema";
 import {
@@ -23,16 +23,18 @@ interface SaveLoadDialogProps {
   onLoad?: (slot: string) => void;
   onRename?: (oldSlot: string, newSlot: string) => void;
   onDelete?: (slot: string) => void;
+  onEndGame?: () => void;
+  onNewGame?: () => void;
   onClose: () => void;
 }
 
 const AUTOSAVE_KEY = "__autosave__";
 const MANUAL_SLOTS = ["Slot 1", "Slot 2", "Slot 3"];
 
-export function SaveLoadDialog({ mode, savedGames, onSave, onLoad, onRename, onDelete, onClose }: SaveLoadDialogProps) {
+export function SaveLoadDialog({ mode, savedGames, onSave, onLoad, onRename, onDelete, onEndGame, onNewGame, onClose }: SaveLoadDialogProps) {
   const [editingSlot, setEditingSlot] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
-  const [confirmAction, setConfirmAction] = useState<{ type: "overwrite" | "delete"; slot: string } | null>(null);
+  const [confirmAction, setConfirmAction] = useState<{ type: "overwrite" | "delete" | "endGame" | "newGame"; slot: string } | null>(null);
   const { toast } = useToast();
 
   const autosave = savedGames[AUTOSAVE_KEY];
@@ -60,6 +62,13 @@ export function SaveLoadDialog({ mode, savedGames, onSave, onLoad, onRename, onD
     } else if (confirmAction.type === "delete") {
       onDelete?.(confirmAction.slot);
       toast({ title: "Save Deleted", description: `Deleted ${confirmAction.slot}` });
+    } else if (confirmAction.type === "endGame") {
+      onEndGame?.();
+      toast({ title: "Game Ended", description: "Game has been completed" });
+      onClose();
+    } else if (confirmAction.type === "newGame") {
+      onNewGame?.();
+      toast({ title: "New Game", description: "Starting a new game" });
     }
     setConfirmAction(null);
   };
@@ -108,6 +117,35 @@ export function SaveLoadDialog({ mode, savedGames, onSave, onLoad, onRename, onD
               {mode === "save" ? "Save Slots" : "Saved Games"}
             </h3>
           </div>
+
+          {/* Game Actions - Save mode only */}
+          {mode === "save" && (
+            <div className="pt-4 border-t space-y-3">
+              <h3 className="text-sm font-medium text-muted-foreground mb-3">
+                Game Actions
+              </h3>
+              <div className="grid grid-cols-2 gap-3">
+                <Button
+                  variant="outline"
+                  className="h-12"
+                  onClick={() => setConfirmAction({ type: "endGame", slot: "" })}
+                  data-testid="button-end-game"
+                >
+                  <Flag className="w-4 h-4 mr-2" />
+                  End Game
+                </Button>
+                <Button
+                  variant="outline"
+                  className="h-12"
+                  onClick={() => setConfirmAction({ type: "newGame", slot: "" })}
+                  data-testid="button-new-game"
+                >
+                  <Plus className="w-4 h-4 mr-2" />
+                  New Game
+                </Button>
+              </div>
+            </div>
+          )}
 
           {slots.map((slot) => {
             const savedGame = savedGames[slot];
@@ -242,22 +280,29 @@ export function SaveLoadDialog({ mode, savedGames, onSave, onLoad, onRename, onD
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {confirmAction?.type === "overwrite" ? "Overwrite Save?" : "Delete Save?"}
+              {confirmAction?.type === "overwrite" && "Overwrite Save?"}
+              {confirmAction?.type === "delete" && "Delete Save?"}
+              {confirmAction?.type === "endGame" && "End Game?"}
+              {confirmAction?.type === "newGame" && "Start New Game?"}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {confirmAction?.type === "overwrite"
-                ? `This will overwrite the saved game in "${confirmAction.slot}". This action cannot be undone.`
-                : `This will permanently delete the saved game "${confirmAction?.slot}". This action cannot be undone.`}
+              {confirmAction?.type === "overwrite" && `This will overwrite the saved game in "${confirmAction.slot}". This action cannot be undone.`}
+              {confirmAction?.type === "delete" && `This will permanently delete the saved game "${confirmAction?.slot}". This action cannot be undone.`}
+              {confirmAction?.type === "endGame" && "This will mark the current game as complete. You can still view the summary."}
+              {confirmAction?.type === "newGame" && "This will start a new game. Make sure to save your current game first if you want to keep it."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel data-testid="button-cancel-confirm">Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleConfirmAction}
-              className={confirmAction?.type === "delete" ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : ""}
+              className={confirmAction?.type === "delete" || confirmAction?.type === "newGame" ? "bg-destructive text-destructive-foreground hover:bg-destructive/90" : ""}
               data-testid="button-confirm-action"
             >
-              {confirmAction?.type === "overwrite" ? "Overwrite" : "Delete"}
+              {confirmAction?.type === "overwrite" && "Overwrite"}
+              {confirmAction?.type === "delete" && "Delete"}
+              {confirmAction?.type === "endGame" && "End Game"}
+              {confirmAction?.type === "newGame" && "Start New Game"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -253,14 +253,6 @@ export function GameScreen({
 
       {/* Par Selection */}
       <div className={cn("flex items-center gap-3 mb-3", leftHandedMode && "flex-row-reverse")}>
-        <Button
-          variant="outline"
-          onClick={() => setShowDrawDialog(true)}
-          className="h-11 px-4"
-          data-testid="button-draw"
-        >
-          DRAW
-        </Button>
         <label htmlFor="par-select" className="text-base font-medium">Par:</label>
         <Select value={par > 0 ? par.toString() : ""} onValueChange={(v) => setPar(parseInt(v))}>
           <SelectTrigger className="w-32 h-11" id="par-select" data-testid="select-par">
