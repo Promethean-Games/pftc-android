@@ -1,38 +1,167 @@
-import { type User, type InsertUser } from "@shared/schema";
-import { randomUUID } from "crypto";
-
-// modify the interface with any CRUD methods
-// you might need
+import {
+  tournaments,
+  tournamentPlayers,
+  tournamentScores,
+  type Tournament,
+  type InsertTournament,
+  type TournamentPlayer,
+  type InsertTournamentPlayer,
+  type TournamentScore,
+  type InsertTournamentScore,
+  type LeaderboardEntry,
+} from "@shared/schema";
+import { db } from "./db";
+import { eq, and, sql, desc } from "drizzle-orm";
 
 export interface IStorage {
-  getUser(id: string): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
+  // Tournament operations
+  createTournament(tournament: InsertTournament): Promise<Tournament>;
+  getTournamentByCode(roomCode: string): Promise<Tournament | undefined>;
+  getTournament(id: number): Promise<Tournament | undefined>;
+  closeTournament(id: number): Promise<void>;
+  verifyDirectorPin(roomCode: string, pin: string): Promise<boolean>;
+
+  // Tournament player operations
+  addPlayerToTournament(player: InsertTournamentPlayer): Promise<TournamentPlayer>;
+  getPlayersInTournament(tournamentId: number): Promise<TournamentPlayer[]>;
+  getPlayersByDevice(tournamentId: number, deviceId: string): Promise<TournamentPlayer[]>;
+  assignDeviceToPlayer(playerId: number, deviceId: string): Promise<void>;
+  removePlayerFromTournament(playerId: number): Promise<void>;
+
+  // Score operations
+  upsertScore(score: InsertTournamentScore): Promise<TournamentScore>;
+  getPlayerScores(tournamentPlayerId: number): Promise<TournamentScore[]>;
+  getLeaderboard(tournamentId: number): Promise<LeaderboardEntry[]>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<string, User>;
-
-  constructor() {
-    this.users = new Map();
+export class DatabaseStorage implements IStorage {
+  async createTournament(tournament: InsertTournament): Promise<Tournament> {
+    const [created] = await db.insert(tournaments).values(tournament).returning();
+    return created;
   }
 
-  async getUser(id: string): Promise<User | undefined> {
-    return this.users.get(id);
+  async getTournamentByCode(roomCode: string): Promise<Tournament | undefined> {
+    const [tournament] = await db
+      .select()
+      .from(tournaments)
+      .where(eq(tournaments.roomCode, roomCode.toUpperCase()));
+    return tournament || undefined;
   }
 
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+  async getTournament(id: number): Promise<Tournament | undefined> {
+    const [tournament] = await db.select().from(tournaments).where(eq(tournaments.id, id));
+    return tournament || undefined;
   }
 
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const id = randomUUID();
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
-    return user;
+  async closeTournament(id: number): Promise<void> {
+    await db.update(tournaments).set({ isActive: false }).where(eq(tournaments.id, id));
+  }
+
+  async verifyDirectorPin(roomCode: string, pin: string): Promise<boolean> {
+    const tournament = await this.getTournamentByCode(roomCode);
+    return tournament?.directorPin === pin;
+  }
+
+  async addPlayerToTournament(player: InsertTournamentPlayer): Promise<TournamentPlayer> {
+    const [created] = await db.insert(tournamentPlayers).values(player).returning();
+    return created;
+  }
+
+  async getPlayersInTournament(tournamentId: number): Promise<TournamentPlayer[]> {
+    return db
+      .select()
+      .from(tournamentPlayers)
+      .where(eq(tournamentPlayers.tournamentId, tournamentId));
+  }
+
+  async getPlayersByDevice(tournamentId: number, deviceId: string): Promise<TournamentPlayer[]> {
+    return db
+      .select()
+      .from(tournamentPlayers)
+      .where(
+        and(
+          eq(tournamentPlayers.tournamentId, tournamentId),
+          eq(tournamentPlayers.deviceId, deviceId)
+        )
+      );
+  }
+
+  async assignDeviceToPlayer(playerId: number, deviceId: string): Promise<void> {
+    await db
+      .update(tournamentPlayers)
+      .set({ deviceId })
+      .where(eq(tournamentPlayers.id, playerId));
+  }
+
+  async removePlayerFromTournament(playerId: number): Promise<void> {
+    await db.delete(tournamentScores).where(eq(tournamentScores.tournamentPlayerId, playerId));
+    await db.delete(tournamentPlayers).where(eq(tournamentPlayers.id, playerId));
+  }
+
+  async upsertScore(score: InsertTournamentScore): Promise<TournamentScore> {
+    const existing = await db
+      .select()
+      .from(tournamentScores)
+      .where(
+        and(
+          eq(tournamentScores.tournamentPlayerId, score.tournamentPlayerId),
+          eq(tournamentScores.hole, score.hole)
+        )
+      );
+
+    if (existing.length > 0) {
+      const [updated] = await db
+        .update(tournamentScores)
+        .set({
+          par: score.par,
+          strokes: score.strokes,
+          scratches: score.scratches,
+          penalties: score.penalties,
+          updatedAt: new Date(),
+        })
+        .where(eq(tournamentScores.id, existing[0].id))
+        .returning();
+      return updated;
+    }
+
+    const [created] = await db.insert(tournamentScores).values(score).returning();
+    return created;
+  }
+
+  async getPlayerScores(tournamentPlayerId: number): Promise<TournamentScore[]> {
+    return db
+      .select()
+      .from(tournamentScores)
+      .where(eq(tournamentScores.tournamentPlayerId, tournamentPlayerId));
+  }
+
+  async getLeaderboard(tournamentId: number): Promise<LeaderboardEntry[]> {
+    const players = await this.getPlayersInTournament(tournamentId);
+    const leaderboard: LeaderboardEntry[] = [];
+
+    for (const player of players) {
+      const scores = await this.getPlayerScores(player.id);
+      const totalStrokes = scores.reduce((sum, s) => sum + s.strokes + s.scratches + s.penalties, 0);
+      const totalPar = scores.reduce((sum, s) => sum + s.par, 0);
+
+      leaderboard.push({
+        playerId: player.id,
+        playerName: player.playerName,
+        groupName: player.groupName,
+        totalStrokes,
+        totalPar,
+        holesCompleted: scores.length,
+        relativeToPar: totalStrokes - totalPar,
+      });
+    }
+
+    return leaderboard.sort((a, b) => {
+      if (a.holesCompleted !== b.holesCompleted) {
+        return b.holesCompleted - a.holesCompleted;
+      }
+      return a.relativeToPar - b.relativeToPar;
+    });
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
