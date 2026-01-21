@@ -8,6 +8,7 @@ import { getScoreCallout } from "@/lib/game-utils";
 import { cn } from "@/lib/utils";
 import { DrawDialog } from "./DrawDialog";
 import { TableSetupDialog } from "./TableSetupDialog";
+import { useTournament } from "@/contexts/TournamentContext";
 
 interface GameScreenProps {
   players: Player[];
@@ -49,6 +50,7 @@ export function GameScreen({
   const [lastHole, setLastHole] = useState(currentHole);
   const isInitialMount = useRef(true);
   const lastPlayerId = useRef(currentPlayer.id);
+  const tournament = useTournament();
   
   // Swipe gesture handling
   const touchStartX = useRef<number | null>(null);
@@ -133,6 +135,37 @@ export function GameScreen({
     }
     onUpdateScore({ par, strokes, scratches, penalties });
   }, [par, strokes, scratches, penalties]);
+
+  // Sync scores to tournament server when connected (only on meaningful changes)
+  const lastSyncedScore = useRef<string>("");
+  
+  useEffect(() => {
+    if (!tournament.isConnected || isInitialMount.current || par === 0) return;
+    
+    // Find matching tournament player by name (case-insensitive)
+    const tournamentPlayer = tournament.myPlayers.find(
+      tp => tp.playerName.toLowerCase().trim() === currentPlayer.name.toLowerCase().trim()
+    );
+    
+    if (!tournamentPlayer) return;
+    
+    // Create a score key to avoid duplicate syncs
+    const scoreKey = `${tournamentPlayer.id}-${currentHole}-${par}-${strokes}-${scratches}-${penalties}`;
+    if (scoreKey === lastSyncedScore.current) return;
+    
+    // Debounce: only sync when strokes > 0 (hole has been played)
+    if (strokes > 0) {
+      lastSyncedScore.current = scoreKey;
+      tournament.syncScore(
+        tournamentPlayer.id,
+        currentHole,
+        par,
+        strokes,
+        scratches,
+        penalties
+      );
+    }
+  }, [par, strokes, scratches, penalties, tournament.isConnected, currentHole, currentPlayer.name, tournament.myPlayers]);
 
   const playerStats = (scores[currentPlayer.id] || []).reduce((acc, score) => ({
     scratches: acc.scratches + score.scratches,

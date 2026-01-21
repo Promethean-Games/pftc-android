@@ -44,7 +44,6 @@ export const tournamentScores = pgTable("tournament_scores", {
   strokes: integer("strokes").notNull(),
   scratches: integer("scratches").notNull().default(0),
   penalties: integer("penalties").notNull().default(0),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
 export const tournamentScoresRelations = relations(tournamentScores, ({ one }) => ({
@@ -57,7 +56,7 @@ export const tournamentScoresRelations = relations(tournamentScores, ({ one }) =
 // Insert schemas for database operations
 export const insertTournamentSchema = createInsertSchema(tournaments).omit({ id: true, createdAt: true });
 export const insertTournamentPlayerSchema = createInsertSchema(tournamentPlayers).omit({ id: true, createdAt: true });
-export const insertTournamentScoreSchema = createInsertSchema(tournamentScores).omit({ id: true, updatedAt: true });
+export const insertTournamentScoreSchema = createInsertSchema(tournamentScores).omit({ id: true });
 
 // Types from database
 export type Tournament = typeof tournaments.$inferSelect;

@@ -117,7 +117,6 @@ export class DatabaseStorage implements IStorage {
           strokes: score.strokes,
           scratches: score.scratches,
           penalties: score.penalties,
-          updatedAt: new Date(),
         })
         .where(eq(tournamentScores.id, existing[0].id))
         .returning();

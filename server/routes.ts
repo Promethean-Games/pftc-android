@@ -4,6 +4,38 @@ import { storage } from "./storage";
 import { insertTournamentSchema, insertTournamentPlayerSchema, insertTournamentScoreSchema } from "@shared/schema";
 import { z } from "zod";
 
+const createTournamentSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  directorPin: z.string().min(1, "Director PIN is required"),
+});
+
+const addPlayerSchema = z.object({
+  playerName: z.string().min(1, "Player name is required"),
+  deviceId: z.string().nullable().optional(),
+  groupName: z.string().nullable().optional(),
+});
+
+const syncScoreSchema = z.object({
+  tournamentPlayerId: z.number().int().positive(),
+  hole: z.number().int().positive(),
+  par: z.number().int().min(0),
+  strokes: z.number().int().min(0),
+  scratches: z.number().int().min(0).optional(),
+  penalties: z.number().int().min(0).optional(),
+});
+
+const verifyDirectorSchema = z.object({
+  pin: z.string().min(1, "PIN is required"),
+});
+
+const assignDeviceSchema = z.object({
+  deviceId: z.string().min(1, "Device ID is required"),
+});
+
+const batchScoreSchema = z.object({
+  scores: z.array(syncScoreSchema),
+});
+
 function generateRoomCode(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   let code = "";
@@ -17,9 +49,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create a new tournament room
   app.post("/api/tournaments", async (req, res) => {
     try {
-      const { name, directorPin } = req.body;
-      if (!name || !directorPin) {
-        return res.status(400).json({ error: "Name and director PIN are required" });
+      const parsed = createTournamentSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.errors[0]?.message || "Invalid request" });
       }
 
       let roomCode = generateRoomCode();
@@ -28,11 +60,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         roomCode = generateRoomCode();
         attempts++;
       }
+      if (attempts >= 10 && await storage.getTournamentByCode(roomCode)) {
+        return res.status(500).json({ error: "Failed to generate unique room code" });
+      }
 
       const tournament = await storage.createTournament({
         roomCode,
-        name,
-        directorPin,
+        name: parsed.data.name,
+        directorPin: parsed.data.directorPin,
         isActive: true,
       });
 
@@ -61,8 +96,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Verify director PIN
   app.post("/api/tournaments/:roomCode/verify-director", async (req, res) => {
     try {
-      const { pin } = req.body;
-      const isValid = await storage.verifyDirectorPin(req.params.roomCode, pin);
+      const parsed = verifyDirectorSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.errors[0]?.message || "Invalid request" });
+      }
+      const isValid = await storage.verifyDirectorPin(req.params.roomCode, parsed.data.pin);
       res.json({ isValid });
     } catch (error) {
       console.error("Error verifying PIN:", error);
@@ -108,16 +146,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Tournament not found" });
       }
 
-      const { playerName, deviceId, groupName } = req.body;
-      if (!playerName) {
-        return res.status(400).json({ error: "Player name is required" });
+      const parsed = addPlayerSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.errors[0]?.message || "Invalid request" });
       }
 
       const player = await storage.addPlayerToTournament({
         tournamentId: tournament.id,
-        playerName,
-        deviceId: deviceId || null,
-        groupName: groupName || null,
+        playerName: parsed.data.playerName,
+        deviceId: parsed.data.deviceId || null,
+        groupName: parsed.data.groupName || null,
       });
 
       res.json(player);
@@ -130,8 +168,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Assign device to player
   app.post("/api/tournaments/:roomCode/players/:playerId/assign", async (req, res) => {
     try {
-      const { deviceId } = req.body;
-      await storage.assignDeviceToPlayer(parseInt(req.params.playerId), deviceId);
+      const parsed = assignDeviceSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.errors[0]?.message || "Invalid request" });
+      }
+      await storage.assignDeviceToPlayer(parseInt(req.params.playerId), parsed.data.deviceId);
       res.json({ success: true });
     } catch (error) {
       console.error("Error assigning device:", error);
@@ -179,18 +220,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Tournament not found" });
       }
 
-      const { tournamentPlayerId, hole, par, strokes, scratches, penalties } = req.body;
-      if (!tournamentPlayerId || hole === undefined) {
-        return res.status(400).json({ error: "Player ID and hole are required" });
+      const parsed = syncScoreSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.errors[0]?.message || "Invalid request" });
       }
 
       const score = await storage.upsertScore({
-        tournamentPlayerId,
-        hole,
-        par: par || 0,
-        strokes: strokes || 0,
-        scratches: scratches || 0,
-        penalties: penalties || 0,
+        tournamentPlayerId: parsed.data.tournamentPlayerId,
+        hole: parsed.data.hole,
+        par: parsed.data.par,
+        strokes: parsed.data.strokes,
+        scratches: parsed.data.scratches || 0,
+        penalties: parsed.data.penalties || 0,
       });
 
       res.json(score);
@@ -232,18 +273,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Tournament not found" });
       }
 
-      const { scores } = req.body;
-      if (!Array.isArray(scores)) {
-        return res.status(400).json({ error: "Scores array required" });
+      const parsed = batchScoreSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.errors[0]?.message || "Invalid request" });
       }
 
       const results = [];
-      for (const score of scores) {
+      for (const score of parsed.data.scores) {
         const saved = await storage.upsertScore({
           tournamentPlayerId: score.tournamentPlayerId,
           hole: score.hole,
-          par: score.par || 0,
-          strokes: score.strokes || 0,
+          par: score.par,
+          strokes: score.strokes,
           scratches: score.scratches || 0,
           penalties: score.penalties || 0,
         });
