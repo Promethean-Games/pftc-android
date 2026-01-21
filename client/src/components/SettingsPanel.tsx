@@ -61,12 +61,13 @@ export function SettingsPanel({ settings, players, onUpdateSettings, onAddPlayer
     setTitleTapCount(newCount);
     if (newCount >= 5) {
       setTitleTapCount(0);
-      if (tournament.isConnected) {
-        if (tournament.isDirector) {
-          setShowDirectorPortal(true);
-        } else {
-          setShowPinPrompt(true);
-        }
+      // If not connected, open director portal to create tournament
+      // If connected as director, open portal directly
+      // If connected but not director, ask for PIN
+      if (!tournament.isConnected || tournament.isDirector) {
+        setShowDirectorPortal(true);
+      } else {
+        setShowPinPrompt(true);
       }
     }
     setTimeout(() => setTitleTapCount(0), 2000);
@@ -83,7 +84,7 @@ export function SettingsPanel({ settings, players, onUpdateSettings, onAddPlayer
     }
   };
 
-  if (showDirectorPortal && tournament.isConnected) {
+  if (showDirectorPortal) {
     return <DirectorPortal onClose={() => setShowDirectorPortal(false)} />;
   }
 
