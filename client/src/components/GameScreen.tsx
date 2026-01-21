@@ -47,6 +47,8 @@ export function GameScreen({
   const [pendingPar, setPendingPar] = useState<number | null>(null);
   const [drawConfirmTime, setDrawConfirmTime] = useState<number | null>(null);
   const [lastHole, setLastHole] = useState(currentHole);
+  const isInitialMount = useRef(true);
+  const lastPlayerId = useRef(currentPlayer.id);
   
   // Swipe gesture handling
   const touchStartX = useRef<number | null>(null);
@@ -112,6 +114,11 @@ export function GameScreen({
   }, []);
 
   useEffect(() => {
+    // Track player changes to avoid updating score during player switch
+    if (currentPlayer.id !== lastPlayerId.current) {
+      lastPlayerId.current = currentPlayer.id;
+      isInitialMount.current = true;
+    }
     setPar(currentScore.par || 0);
     setStrokes(currentScore.strokes || 0);
     setScratches(currentScore.scratches || 0);
@@ -119,6 +126,11 @@ export function GameScreen({
   }, [currentPlayer.id, currentHole, currentScore]);
 
   useEffect(() => {
+    // Skip the initial mount and player switches to avoid double updates
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
     onUpdateScore({ par, strokes, scratches, penalties });
   }, [par, strokes, scratches, penalties]);
 
