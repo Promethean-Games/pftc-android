@@ -122,14 +122,11 @@ export function GameScreen({
     onUpdateScore({ par, strokes, scratches, penalties });
   }, [par, strokes, scratches, penalties]);
 
-  const totalStats = players.reduce((acc, player) => {
-    const playerScores = scores[player.id] || [];
-    return playerScores.reduce((sum, score) => ({
-      scratches: sum.scratches + score.scratches,
-      strokes: sum.strokes + score.strokes,
-      penalties: sum.penalties + score.penalties,
-    }), acc);
-  }, { scratches: 0, strokes: 0, penalties: 0 });
+  const playerStats = (scores[currentPlayer.id] || []).reduce((acc, score) => ({
+    scratches: acc.scratches + score.scratches,
+    strokes: acc.strokes + score.strokes + score.scratches + score.penalties,
+    penalties: acc.penalties + score.penalties,
+  }), { scratches: 0, strokes: 0, penalties: 0 });
 
   const handleMercy = () => {
     if (par > 0) {
@@ -234,15 +231,15 @@ export function GameScreen({
       <div className="grid grid-cols-3 gap-4 mb-4">
         <div className="text-center">
           <div className="text-xs uppercase text-muted-foreground font-semibold">Scratches</div>
-          <div className="text-2xl font-bold" data-testid="text-scratches">{totalStats.scratches}</div>
+          <div className="text-2xl font-bold" data-testid="text-scratches">{playerStats.scratches}</div>
         </div>
         <div className="text-center">
           <div className="text-xs uppercase text-muted-foreground font-semibold">Total Strokes</div>
-          <div className="text-2xl font-bold" data-testid="text-total-strokes">{totalStats.strokes}</div>
+          <div className="text-2xl font-bold" data-testid="text-total-strokes">{playerStats.strokes}</div>
         </div>
         <div className="text-center">
           <div className="text-xs uppercase text-muted-foreground font-semibold">Penalties</div>
-          <div className="text-2xl font-bold" data-testid="text-penalties">{totalStats.penalties}</div>
+          <div className="text-2xl font-bold" data-testid="text-penalties">{playerStats.penalties}</div>
         </div>
       </div>
 
