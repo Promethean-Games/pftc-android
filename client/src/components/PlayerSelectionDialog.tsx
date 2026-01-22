@@ -15,20 +15,23 @@ export function PlayerSelectionDialog({ onClose, onStartGame }: PlayerSelectionD
   const [selectedPlayerIds, setSelectedPlayerIds] = useState<number[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [hasAssigned, setHasAssigned] = useState(false);
+  const [assignedPlayerNames, setAssignedPlayerNames] = useState<string[]>([]);
 
   useEffect(() => {
     setSelectedPlayerIds(tournament.myPlayers.map(p => p.id));
     if (tournament.myPlayers.length > 0) {
       setHasAssigned(true);
+      setAssignedPlayerNames(tournament.myPlayers.map(p => p.playerName));
     }
   }, [tournament.myPlayers]);
 
   useEffect(() => {
+    if (!hasAssigned) return;
     const interval = setInterval(() => {
       tournament.refreshLeaderboard();
     }, 3000);
     return () => clearInterval(interval);
-  }, [tournament]);
+  }, [tournament, hasAssigned]);
 
   useEffect(() => {
     if (hasAssigned && tournament.tournamentInfo?.isStarted && onStartGame) {
@@ -46,6 +49,10 @@ export function PlayerSelectionDialog({ onClose, onStartGame }: PlayerSelectionD
 
   const handleConfirm = async () => {
     setIsSaving(true);
+    const selectedNames = tournament.allPlayers
+      .filter(p => selectedPlayerIds.includes(p.id))
+      .map(p => p.playerName);
+    setAssignedPlayerNames(selectedNames);
     await tournament.assignPlayersToDevice(selectedPlayerIds);
     setIsSaving(false);
     setHasAssigned(true);
@@ -59,6 +66,10 @@ export function PlayerSelectionDialog({ onClose, onStartGame }: PlayerSelectionD
   }, {} as Record<string, typeof tournament.allPlayers>);
 
   if (hasAssigned && !tournament.tournamentInfo?.isStarted) {
+    const playerNames = tournament.myPlayers.length > 0 
+      ? tournament.myPlayers.map(p => p.playerName)
+      : assignedPlayerNames;
+    
     return (
       <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
         <Card className="w-full max-w-md p-6 text-center">
@@ -72,9 +83,9 @@ export function PlayerSelectionDialog({ onClose, onStartGame }: PlayerSelectionD
           <div className="bg-muted/50 rounded-lg p-4 mb-4">
             <p className="text-sm text-muted-foreground">Your players:</p>
             <div className="flex flex-wrap gap-2 mt-2 justify-center">
-              {tournament.myPlayers.map(p => (
-                <span key={p.id} className="px-2 py-1 bg-green-500/20 text-green-600 rounded text-sm font-medium">
-                  {p.playerName}
+              {playerNames.map((name, idx) => (
+                <span key={idx} className="px-2 py-1 bg-green-500/20 text-green-600 rounded text-sm font-medium">
+                  {name}
                 </span>
               ))}
             </div>
