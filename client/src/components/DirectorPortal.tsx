@@ -18,9 +18,14 @@ import {
   Edit2,
   Mail,
   Hash,
-  Sun,
-  Moon,
-  Palette
+  Palette,
+  Shuffle,
+  Grid3X3,
+  Wand2,
+  ChevronDown,
+  ChevronUp,
+  UserPlus,
+  AlertCircle
 } from "lucide-react";
 import { useTournament } from "@/contexts/TournamentContext";
 
@@ -58,6 +63,12 @@ export function DirectorPortal({ onClose }: DirectorPortalProps) {
     }
     return "default";
   });
+
+  // Group management settings
+  const [groupSize, setGroupSize] = useState(4);
+  const [isAutoAssigning, setIsAutoAssigning] = useState(false);
+  const [isShuffling, setIsShuffling] = useState(false);
+  const [showGroupTools, setShowGroupTools] = useState(false);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -121,6 +132,64 @@ export function DirectorPortal({ onClose }: DirectorPortalProps) {
       });
       setEditingPlayer(null);
     }
+  };
+
+  // Auto-assign players to groups evenly
+  const handleAutoAssignGroups = async () => {
+    if (tournament.allPlayers.length === 0) return;
+    setIsAutoAssigning(true);
+    
+    const players = [...tournament.allPlayers];
+    const numGroups = Math.ceil(players.length / groupSize);
+    const updates: { playerId: number; groupName: string }[] = [];
+    
+    players.forEach((player, index) => {
+      const groupNum = (index % numGroups) + 1;
+      updates.push({ 
+        playerId: player.id, 
+        groupName: `Group ${groupNum}` 
+      });
+    });
+    
+    await tournament.batchUpdatePlayerGroups(updates);
+    setIsAutoAssigning(false);
+  };
+
+  // Shuffle players randomly into groups
+  const handleShuffleGroups = async () => {
+    if (tournament.allPlayers.length === 0) return;
+    setIsShuffling(true);
+    
+    // Fisher-Yates shuffle
+    const players = [...tournament.allPlayers];
+    for (let i = players.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [players[i], players[j]] = [players[j], players[i]];
+    }
+    
+    const numGroups = Math.ceil(players.length / groupSize);
+    const updates: { playerId: number; groupName: string }[] = [];
+    
+    players.forEach((player, index) => {
+      const groupNum = Math.floor(index / groupSize) + 1;
+      updates.push({ 
+        playerId: player.id, 
+        groupName: `Group ${Math.min(groupNum, numGroups)}` 
+      });
+    });
+    
+    await tournament.batchUpdatePlayerGroups(updates);
+    setIsShuffling(false);
+  };
+
+  // Clear all group assignments
+  const handleClearGroups = async () => {
+    if (tournament.allPlayers.length === 0) return;
+    const updates = tournament.allPlayers.map(player => ({
+      playerId: player.id,
+      groupName: null as string | null,
+    }));
+    await tournament.batchUpdatePlayerGroups(updates);
   };
 
   const groupedPlayers = tournament.allPlayers.reduce((acc, player) => {
@@ -370,10 +439,123 @@ export function DirectorPortal({ onClose }: DirectorPortalProps) {
         {/* Players Tab */}
         {activeTab === "players" && (
           <div className="space-y-4">
+            {/* Group Management Tools */}
+            <Card className="p-4">
+              <button
+                onClick={() => setShowGroupTools(!showGroupTools)}
+                className="w-full flex items-center justify-between"
+                data-testid="button-toggle-group-tools"
+              >
+                <h3 className="font-semibold flex items-center gap-2">
+                  <Wand2 className="w-4 h-4" />
+                  Group Management Tools
+                </h3>
+                {showGroupTools ? (
+                  <ChevronUp className="w-4 h-4 opacity-60" />
+                ) : (
+                  <ChevronDown className="w-4 h-4 opacity-60" />
+                )}
+              </button>
+              
+              {showGroupTools && (
+                <div className="mt-4 space-y-4">
+                  {/* Group Size Config */}
+                  <div className="flex items-center gap-3">
+                    <Label htmlFor="group-size" className="text-sm whitespace-nowrap">
+                      Players per group:
+                    </Label>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => setGroupSize(Math.max(2, groupSize - 1))}
+                        disabled={groupSize <= 2}
+                        data-testid="button-decrease-group-size"
+                      >
+                        -
+                      </Button>
+                      <span className="w-8 text-center font-bold text-lg">{groupSize}</span>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => setGroupSize(Math.min(8, groupSize + 1))}
+                        disabled={groupSize >= 8}
+                        data-testid="button-increase-group-size"
+                      >
+                        +
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Quick Stats */}
+                  <div className="grid grid-cols-3 gap-2 text-center">
+                    <div className="p-2 rounded-lg bg-black/5 dark:bg-white/5">
+                      <p className="text-2xl font-bold">{tournament.allPlayers.length}</p>
+                      <p className="text-xs opacity-60">Players</p>
+                    </div>
+                    <div className="p-2 rounded-lg bg-black/5 dark:bg-white/5">
+                      <p className="text-2xl font-bold">{Object.keys(groupedPlayers).length}</p>
+                      <p className="text-xs opacity-60">Groups</p>
+                    </div>
+                    <div className="p-2 rounded-lg bg-black/5 dark:bg-white/5">
+                      <p className="text-2xl font-bold">
+                        {Math.ceil(tournament.allPlayers.length / groupSize)}
+                      </p>
+                      <p className="text-xs opacity-60">Target</p>
+                    </div>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={handleAutoAssignGroups}
+                      disabled={isAutoAssigning || tournament.allPlayers.length === 0}
+                      className="flex items-center gap-2"
+                      data-testid="button-auto-assign-groups"
+                    >
+                      <Grid3X3 className="w-4 h-4" />
+                      {isAutoAssigning ? "Assigning..." : "Auto-Assign"}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={handleShuffleGroups}
+                      disabled={isShuffling || tournament.allPlayers.length === 0}
+                      className="flex items-center gap-2"
+                      data-testid="button-shuffle-groups"
+                    >
+                      <Shuffle className="w-4 h-4" />
+                      {isShuffling ? "Shuffling..." : "Shuffle"}
+                    </Button>
+                  </div>
+
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleClearGroups}
+                    disabled={tournament.allPlayers.length === 0}
+                    className="w-full text-destructive hover:text-destructive"
+                    data-testid="button-clear-groups"
+                  >
+                    Clear All Groups
+                  </Button>
+
+                  {tournament.allPlayers.length === 0 && (
+                    <div className="flex items-center gap-2 text-sm opacity-60 justify-center">
+                      <AlertCircle className="w-4 h-4" />
+                      Add players first to use group tools
+                    </div>
+                  )}
+                </div>
+              )}
+            </Card>
+
             {/* Add Player Form */}
             <Card className="p-4">
               <h3 className="font-semibold mb-3 flex items-center gap-2">
-                <Plus className="w-4 h-4" />
+                <UserPlus className="w-4 h-4" />
                 Add Player
               </h3>
               <div className="space-y-3">

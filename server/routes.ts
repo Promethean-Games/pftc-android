@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertTournamentSchema, insertTournamentPlayerSchema, insertTournamentScoreSchema } from "@shared/schema";
+import { insertTournamentSchema, insertTournamentPlayerSchema, insertTournamentScoreSchema, batchUpdateGroupsSchema } from "@shared/schema";
 import { z } from "zod";
 
 const createTournamentSchema = z.object({
@@ -255,6 +255,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating player:", error);
       res.status(500).json({ error: "Failed to update player" });
+    }
+  });
+
+  // Batch update player groups (director only)
+  app.post("/api/tournaments/:roomCode/players/batch-update-groups", async (req, res) => {
+    try {
+      // Validate request body with Zod schema
+      const parsed = batchUpdateGroupsSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.errors[0]?.message || "Invalid request" });
+      }
+      
+      const tournament = await storage.getTournamentByCode(req.params.roomCode);
+      if (!tournament) {
+        return res.status(404).json({ error: "Tournament not found" });
+      }
+      
+      const { directorPin, updates } = parsed.data;
+      const isDirector = await storage.verifyDirectorPin(req.params.roomCode, directorPin);
+      if (!isDirector) {
+        return res.status(403).json({ error: "Invalid director credentials" });
+      }
+      
+      // Verify all players belong to this tournament
+      const players = await storage.getPlayersInTournament(tournament.id);
+      const playerIds = new Set(players.map(p => p.id));
+      
+      for (const update of updates) {
+        if (!playerIds.has(update.playerId)) {
+          return res.status(404).json({ error: `Player ${update.playerId} not found in this tournament` });
+        }
+      }
+      
+      // Apply all updates (convert empty string to null for consistency)
+      const results = [];
+      for (const update of updates) {
+        const groupName = update.groupName || null;
+        const player = await storage.updatePlayer(update.playerId, { groupName });
+        results.push(player);
+      }
+      
+      res.json({ success: true, players: results });
+    } catch (error) {
+      console.error("Error batch updating players:", error);
+      res.status(500).json({ error: "Failed to update players" });
     }
   });
 

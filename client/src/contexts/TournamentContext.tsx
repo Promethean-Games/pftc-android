@@ -34,6 +34,7 @@ interface TournamentContextValue {
   updatePlayer: (playerId: number, data: { playerName?: string; groupName?: string; universalId?: string; contactInfo?: string }) => Promise<TournamentPlayer | null>;
   removePlayerFromTournament: (playerId: number) => Promise<void>;
   closeTournament: () => Promise<void>;
+  batchUpdatePlayerGroups: (updates: { playerId: number; groupName: string | null }[]) => Promise<boolean>;
 }
 
 const TournamentContext = createContext<TournamentContextValue | null>(null);
@@ -269,6 +270,21 @@ export function TournamentProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const batchUpdatePlayerGroups = async (updates: { playerId: number; groupName: string | null }[]): Promise<boolean> => {
+    if (!roomCode || !directorPin) return false;
+    try {
+      await apiRequest("POST", `/api/tournaments/${roomCode}/players/batch-update-groups`, {
+        directorPin,
+        updates,
+      });
+      await refreshPlayers();
+      return true;
+    } catch (err) {
+      console.error("Failed to batch update players:", err);
+      return false;
+    }
+  };
+
   return (
     <TournamentContext.Provider
       value={{
@@ -295,6 +311,7 @@ export function TournamentProvider({ children }: { children: ReactNode }) {
         updatePlayer,
         removePlayerFromTournament,
         closeTournament,
+        batchUpdatePlayerGroups,
       }}
     >
       {children}

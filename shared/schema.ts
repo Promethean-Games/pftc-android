@@ -138,3 +138,14 @@ export const leaderboardEntrySchema = z.object({
 });
 
 export type LeaderboardEntry = z.infer<typeof leaderboardEntrySchema>;
+
+// Batch update schema for group assignments
+export const batchUpdateGroupsSchema = z.object({
+  directorPin: z.string().min(1, "Director PIN is required"),
+  updates: z.array(z.object({
+    playerId: z.number(),
+    groupName: z.string().nullable(),
+  })),
+});
+
+export type BatchUpdateGroups = z.infer<typeof batchUpdateGroupsSchema>;
