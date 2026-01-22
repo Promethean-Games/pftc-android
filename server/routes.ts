@@ -498,6 +498,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           name: tournament.name,
           roomCode: tournament.roomCode,
           isActive: tournament.isActive,
+          isStarted: tournament.isStarted,
         },
         leaderboard,
       });
