@@ -45,6 +45,11 @@ function GameApp() {
     setScreen("game");
   };
 
+  const handleStartTournamentGame = () => {
+    setScreen("game");
+    setActiveTab("game");
+  };
+
   const handleEndGame = () => {
     game.endGame();
     setActiveTab("summary");
@@ -80,7 +85,11 @@ function GameApp() {
   if (screen === "splash") {
     return (
       <>
-        <SplashScreen onNewGame={handleNewGame} onLoadGame={handleLoadGame} />
+        <SplashScreen 
+          onNewGame={handleNewGame} 
+          onLoadGame={handleLoadGame}
+          onStartTournamentGame={handleStartTournamentGame}
+        />
         {showSaveLoad === "load" && (
           <SaveLoadDialog
             mode="load"

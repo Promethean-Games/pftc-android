@@ -25,7 +25,8 @@ import {
   ChevronDown,
   ChevronUp,
   UserPlus,
-  AlertCircle
+  AlertCircle,
+  Play
 } from "lucide-react";
 import { useTournament } from "@/contexts/TournamentContext";
 
@@ -69,6 +70,7 @@ export function DirectorPortal({ onClose }: DirectorPortalProps) {
   const [isAutoAssigning, setIsAutoAssigning] = useState(false);
   const [isShuffling, setIsShuffling] = useState(false);
   const [showGroupTools, setShowGroupTools] = useState(false);
+  const [isStarting, setIsStarting] = useState(false);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -192,6 +194,13 @@ export function DirectorPortal({ onClose }: DirectorPortalProps) {
     await tournament.batchUpdatePlayerGroups(updates);
   };
 
+  // Start tournament
+  const handleStartTournament = async () => {
+    setIsStarting(true);
+    await tournament.startTournament();
+    setIsStarting(false);
+  };
+
   const groupedPlayers = tournament.allPlayers.reduce((acc, player) => {
     const group = player.groupName || "Unassigned";
     if (!acc[group]) acc[group] = [];
@@ -305,13 +314,31 @@ export function DirectorPortal({ onClose }: DirectorPortalProps) {
                 <div>
                   <p className="text-sm opacity-70">Tournament Status</p>
                   <p className="text-2xl font-bold">
-                    {tournament.tournamentInfo?.isActive ? "LIVE" : "Ended"}
+                    {tournament.tournamentInfo?.isStarted ? "IN PROGRESS" : 
+                     tournament.tournamentInfo?.isActive ? "SETUP" : "Ended"}
                   </p>
                 </div>
                 <div className={`w-4 h-4 rounded-full ${
-                  tournament.tournamentInfo?.isActive ? "bg-green-500 animate-pulse" : "bg-gray-400"
+                  tournament.tournamentInfo?.isStarted ? "bg-green-500 animate-pulse" : 
+                  tournament.tournamentInfo?.isActive ? "bg-amber-500" : "bg-gray-400"
                 }`} />
               </div>
+              {tournament.tournamentInfo?.isActive && !tournament.tournamentInfo?.isStarted && (
+                <Button
+                  onClick={handleStartTournament}
+                  disabled={isStarting || tournament.allPlayers.length === 0}
+                  className="w-full mt-3 bg-green-600 hover:bg-green-700"
+                  data-testid="button-start-tournament"
+                >
+                  <Play className="w-4 h-4 mr-2" />
+                  {isStarting ? "Starting..." : "Start Tournament"}
+                </Button>
+              )}
+              {tournament.tournamentInfo?.isStarted && (
+                <p className="text-sm text-green-600 mt-2 text-center font-medium">
+                  Players have been notified and are playing!
+                </p>
+              )}
             </Card>
 
             {/* Stats Grid */}

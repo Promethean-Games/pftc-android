@@ -9,6 +9,7 @@ export const tournaments = pgTable("tournaments", {
   roomCode: text("room_code").notNull().unique(),
   name: text("name").notNull(),
   isActive: boolean("is_active").notNull().default(true),
+  isStarted: boolean("is_started").notNull().default(false),
   directorPin: text("director_pin").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

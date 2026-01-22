@@ -7,6 +7,7 @@ interface TournamentInfo {
   name: string;
   roomCode: string;
   isActive: boolean;
+  isStarted: boolean;
 }
 
 interface TournamentContextValue {
@@ -34,6 +35,7 @@ interface TournamentContextValue {
   updatePlayer: (playerId: number, data: { playerName?: string; groupName?: string; universalId?: string; contactInfo?: string }) => Promise<TournamentPlayer | null>;
   removePlayerFromTournament: (playerId: number) => Promise<void>;
   closeTournament: () => Promise<void>;
+  startTournament: () => Promise<boolean>;
   batchUpdatePlayerGroups: (updates: { playerId: number; groupName: string | null }[]) => Promise<boolean>;
 }
 
@@ -270,6 +272,20 @@ export function TournamentProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const startTournament = async (): Promise<boolean> => {
+    if (!roomCode || !directorPin) return false;
+    try {
+      await apiRequest("POST", `/api/tournaments/${roomCode}/start`, { directorPin });
+      if (tournamentInfo) {
+        setTournamentInfo({ ...tournamentInfo, isStarted: true });
+      }
+      return true;
+    } catch (err) {
+      console.error("Failed to start tournament:", err);
+      return false;
+    }
+  };
+
   const batchUpdatePlayerGroups = async (updates: { playerId: number; groupName: string | null }[]): Promise<boolean> => {
     if (!roomCode || !directorPin) return false;
     try {
@@ -311,6 +327,7 @@ export function TournamentProvider({ children }: { children: ReactNode }) {
         updatePlayer,
         removePlayerFromTournament,
         closeTournament,
+        startTournament,
         batchUpdatePlayerGroups,
       }}
     >

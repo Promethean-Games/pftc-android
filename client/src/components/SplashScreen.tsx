@@ -8,34 +8,38 @@ import { LOGO_URL } from "@/lib/constants";
 import { useTournament } from "@/contexts/TournamentContext";
 import { PlayerSelectionDialog } from "./PlayerSelectionDialog";
 import { TDSignInModal } from "./TDSignInModal";
-import { DirectorPortal } from "./DirectorPortal";
+import { TournamentManagementPage } from "./TournamentManagementPage";
 
 interface SplashScreenProps {
   onNewGame: () => void;
   onLoadGame: () => void;
+  onStartTournamentGame?: () => void;
 }
 
-export function SplashScreen({ onNewGame, onLoadGame }: SplashScreenProps) {
+export function SplashScreen({ onNewGame, onLoadGame, onStartTournamentGame }: SplashScreenProps) {
   const [roomCodeInput, setRoomCodeInput] = useState("");
   const [joinError, setJoinError] = useState<string | null>(null);
   const [showPlayerSelection, setShowPlayerSelection] = useState(false);
   const [showTDSignIn, setShowTDSignIn] = useState(false);
-  const [showDirectorPortal, setShowDirectorPortal] = useState(false);
+  const [showTournamentManagement, setShowTournamentManagement] = useState(false);
+  const [verifiedPin, setVerifiedPin] = useState<string | null>(null);
   const tournament = useTournament();
 
-  const handleTDSignInSuccess = async (roomCode: string, isNewTournament: boolean, pin: string) => {
-    // Server has already verified the PIN, join the tournament
-    const success = await tournament.joinRoom(roomCode);
-    if (success || isNewTournament) {
-      // Mark as director and store PIN for secure operations
-      tournament.setIsDirector(true);
-      tournament.setDirectorCredentials(pin);
-      setShowDirectorPortal(true);
-    }
+  const handleTDSignInSuccess = (pin: string) => {
+    setVerifiedPin(pin);
+    setShowTournamentManagement(true);
   };
 
-  if (showDirectorPortal) {
-    return <DirectorPortal onClose={() => setShowDirectorPortal(false)} />;
+  if (showTournamentManagement && verifiedPin) {
+    return (
+      <TournamentManagementPage 
+        onClose={() => {
+          setShowTournamentManagement(false);
+          setVerifiedPin(null);
+        }} 
+        directorPin={verifiedPin}
+      />
+    );
   }
 
   const handleJoinRoom = async () => {
@@ -172,6 +176,12 @@ export function SplashScreen({ onNewGame, onLoadGame }: SplashScreenProps) {
       {showPlayerSelection && tournament.isConnected && (
         <PlayerSelectionDialog
           onClose={() => setShowPlayerSelection(false)}
+          onStartGame={() => {
+            setShowPlayerSelection(false);
+            if (onStartTournamentGame) {
+              onStartTournamentGame();
+            }
+          }}
         />
       )}
 

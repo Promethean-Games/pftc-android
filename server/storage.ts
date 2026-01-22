@@ -16,10 +16,14 @@ import { eq, and, sql, desc } from "drizzle-orm";
 export interface IStorage {
   // Tournament operations
   createTournament(tournament: InsertTournament): Promise<Tournament>;
+  getAllTournaments(): Promise<Tournament[]>;
   getTournamentByCode(roomCode: string): Promise<Tournament | undefined>;
   getTournament(id: number): Promise<Tournament | undefined>;
   closeTournament(id: number): Promise<void>;
+  startTournament(id: number): Promise<void>;
+  deleteTournament(id: number): Promise<void>;
   verifyDirectorPin(roomCode: string, pin: string): Promise<boolean>;
+  getTournamentBackup(tournamentId: number): Promise<{ tournament: Tournament; players: TournamentPlayer[]; scores: TournamentScore[] }>;
 
   // Tournament player operations
   addPlayerToTournament(player: InsertTournamentPlayer): Promise<TournamentPlayer>;
@@ -41,6 +45,10 @@ export class DatabaseStorage implements IStorage {
     return created;
   }
 
+  async getAllTournaments(): Promise<Tournament[]> {
+    return db.select().from(tournaments).orderBy(desc(tournaments.createdAt));
+  }
+
   async getTournamentByCode(roomCode: string): Promise<Tournament | undefined> {
     const [tournament] = await db
       .select()
@@ -58,9 +66,36 @@ export class DatabaseStorage implements IStorage {
     await db.update(tournaments).set({ isActive: false }).where(eq(tournaments.id, id));
   }
 
+  async startTournament(id: number): Promise<void> {
+    await db.update(tournaments).set({ isStarted: true }).where(eq(tournaments.id, id));
+  }
+
+  async deleteTournament(id: number): Promise<void> {
+    const players = await this.getPlayersInTournament(id);
+    for (const player of players) {
+      await db.delete(tournamentScores).where(eq(tournamentScores.tournamentPlayerId, player.id));
+    }
+    await db.delete(tournamentPlayers).where(eq(tournamentPlayers.tournamentId, id));
+    await db.delete(tournaments).where(eq(tournaments.id, id));
+  }
+
   async verifyDirectorPin(roomCode: string, pin: string): Promise<boolean> {
     const tournament = await this.getTournamentByCode(roomCode);
     return tournament?.directorPin === pin;
+  }
+
+  async getTournamentBackup(tournamentId: number): Promise<{ tournament: Tournament; players: TournamentPlayer[]; scores: TournamentScore[] }> {
+    const tournament = await this.getTournament(tournamentId);
+    if (!tournament) {
+      throw new Error("Tournament not found");
+    }
+    const players = await this.getPlayersInTournament(tournamentId);
+    const scores: TournamentScore[] = [];
+    for (const player of players) {
+      const playerScores = await this.getPlayerScores(player.id);
+      scores.push(...playerScores);
+    }
+    return { tournament, players, scores };
   }
 
   async addPlayerToTournament(player: InsertTournamentPlayer): Promise<TournamentPlayer> {

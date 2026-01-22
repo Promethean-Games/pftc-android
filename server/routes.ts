@@ -51,13 +51,55 @@ function generateRoomCode(): string {
   return code;
 }
 
+const MASTER_DIRECTOR_PIN = "3141";
+
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Create a new tournament room
+  // Verify master director PIN
+  app.post("/api/director/verify", async (req, res) => {
+    try {
+      const { pin } = req.body;
+      if (pin === MASTER_DIRECTOR_PIN) {
+        res.json({ isValid: true });
+      } else {
+        res.json({ isValid: false });
+      }
+    } catch (error) {
+      console.error("Error verifying director:", error);
+      res.status(500).json({ error: "Failed to verify" });
+    }
+  });
+
+  // List all tournaments (requires master director PIN)
+  app.get("/api/tournaments", async (req, res) => {
+    try {
+      const directorPin = req.query.directorPin as string;
+      if (directorPin !== MASTER_DIRECTOR_PIN) {
+        return res.status(403).json({ error: "Invalid director credentials" });
+      }
+      
+      const tournaments = await storage.getAllTournaments();
+      const safeTournaments = tournaments.map(t => {
+        const { directorPin: _, ...safe } = t;
+        return safe;
+      });
+      res.json(safeTournaments);
+    } catch (error) {
+      console.error("Error listing tournaments:", error);
+      res.status(500).json({ error: "Failed to list tournaments" });
+    }
+  });
+
+  // Create a new tournament room (requires master director PIN)
   app.post("/api/tournaments", async (req, res) => {
     try {
       const parsed = createTournamentSchema.safeParse(req.body);
       if (!parsed.success) {
         return res.status(400).json({ error: parsed.error.errors[0]?.message || "Invalid request" });
+      }
+
+      // Verify master director PIN for creation
+      if (parsed.data.directorPin !== MASTER_DIRECTOR_PIN) {
+        return res.status(403).json({ error: "Invalid director credentials" });
       }
 
       let roomCode = generateRoomCode();
@@ -114,7 +156,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Close tournament (director only)
+  // Delete tournament (director only - master PIN or tournament PIN)
+  app.delete("/api/tournaments/:roomCode", async (req, res) => {
+    try {
+      const tournament = await storage.getTournamentByCode(req.params.roomCode);
+      if (!tournament) {
+        return res.status(404).json({ error: "Tournament not found" });
+      }
+      
+      const { directorPin } = req.body;
+      const isMasterDirector = directorPin === MASTER_DIRECTOR_PIN;
+      const isTournamentDirector = await storage.verifyDirectorPin(req.params.roomCode, directorPin);
+      
+      if (!isMasterDirector && !isTournamentDirector) {
+        return res.status(403).json({ error: "Invalid director credentials" });
+      }
+      
+      await storage.deleteTournament(tournament.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting tournament:", error);
+      res.status(500).json({ error: "Failed to delete tournament" });
+    }
+  });
+
+  // Get tournament backup (director only)
+  app.get("/api/tournaments/:roomCode/backup", async (req, res) => {
+    try {
+      const tournament = await storage.getTournamentByCode(req.params.roomCode);
+      if (!tournament) {
+        return res.status(404).json({ error: "Tournament not found" });
+      }
+      
+      const directorPin = req.query.directorPin as string;
+      const isMasterDirector = directorPin === MASTER_DIRECTOR_PIN;
+      const isTournamentDirector = await storage.verifyDirectorPin(req.params.roomCode, directorPin);
+      
+      if (!isMasterDirector && !isTournamentDirector) {
+        return res.status(403).json({ error: "Invalid director credentials" });
+      }
+      
+      const backup = await storage.getTournamentBackup(tournament.id);
+      const { directorPin: _, ...safeTournament } = backup.tournament;
+      res.json({
+        ...backup,
+        tournament: safeTournament,
+        exportedAt: new Date().toISOString(),
+      });
+    } catch (error) {
+      console.error("Error getting tournament backup:", error);
+      res.status(500).json({ error: "Failed to get backup" });
+    }
+  });
+
+  // Start tournament (director only - master PIN or tournament PIN)
+  app.post("/api/tournaments/:roomCode/start", async (req, res) => {
+    try {
+      const tournament = await storage.getTournamentByCode(req.params.roomCode);
+      if (!tournament) {
+        return res.status(404).json({ error: "Tournament not found" });
+      }
+      
+      const { directorPin } = req.body;
+      const isMasterDirector = directorPin === MASTER_DIRECTOR_PIN;
+      const isTournamentDirector = await storage.verifyDirectorPin(req.params.roomCode, directorPin);
+      
+      if (!isMasterDirector && !isTournamentDirector) {
+        return res.status(403).json({ error: "Invalid director credentials" });
+      }
+      
+      await storage.startTournament(tournament.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error starting tournament:", error);
+      res.status(500).json({ error: "Failed to start tournament" });
+    }
+  });
+
+  // Close tournament (director only - master PIN or tournament PIN)
   app.post("/api/tournaments/:roomCode/close", async (req, res) => {
     try {
       const tournament = await storage.getTournamentByCode(req.params.roomCode);
@@ -122,10 +241,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Tournament not found" });
       }
       
-      // Verify director PIN
       const { directorPin } = req.body;
-      const isDirector = await storage.verifyDirectorPin(req.params.roomCode, directorPin);
-      if (!isDirector) {
+      const isMasterDirector = directorPin === MASTER_DIRECTOR_PIN;
+      const isTournamentDirector = await storage.verifyDirectorPin(req.params.roomCode, directorPin);
+      
+      if (!isMasterDirector && !isTournamentDirector) {
         return res.status(403).json({ error: "Invalid director credentials" });
       }
       
