@@ -36,7 +36,14 @@ The server handles tournament creation, player registration, score synchronizati
 1. **Offline-First Local Games**: Single-device gameplay stores all data locally, no server required
 2. **Tournament Mode**: Optional server sync for multi-device tournaments with live leaderboards
 3. **Device-Based Identity**: Devices get unique IDs stored in localStorage for player assignment
-4. **Director PIN System**: Tournament directors authenticate with a PIN to access management features
+4. **Master Director PIN System**: Tournament directors authenticate with master PIN (3141) verified server-side, granting access to create/manage all tournaments
+
+### Tournament Director Flow
+- Access via Settings gear icon on splash screen
+- Enter 4-digit master PIN (3141) - verified server-side via POST /api/director/verify
+- TournamentManagementPage shows all tournaments with create/delete/backup/manage options
+- DirectorPortal provides per-tournament dashboard with player management, groups, and start functionality
+- All director endpoints require master PIN or tournament-specific PIN for authorization
 
 ## External Dependencies
 
