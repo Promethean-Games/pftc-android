@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { X, Users, Check, Clock, Play } from "lucide-react";
+import { X, Users, Check, Play } from "lucide-react";
 import { useTournament } from "@/contexts/TournamentContext";
 
 interface PlayerSelectionDialogProps {
@@ -33,11 +33,7 @@ export function PlayerSelectionDialog({ onClose, onStartGame }: PlayerSelectionD
     return () => clearInterval(interval);
   }, [tournament, hasAssigned]);
 
-  useEffect(() => {
-    if (hasAssigned && tournament.tournamentInfo?.isStarted && onStartGame) {
-      onStartGame();
-    }
-  }, [hasAssigned, tournament.tournamentInfo?.isStarted, onStartGame]);
+  // Auto-start removed - players now have a "Begin Playing" button to start when ready
 
   const handleTogglePlayer = (playerId: number) => {
     setSelectedPlayerIds(prev => 
@@ -65,7 +61,7 @@ export function PlayerSelectionDialog({ onClose, onStartGame }: PlayerSelectionD
     return acc;
   }, {} as Record<string, typeof tournament.allPlayers>);
 
-  if (hasAssigned && !tournament.tournamentInfo?.isStarted) {
+  if (hasAssigned) {
     const playerNames = tournament.myPlayers.length > 0 
       ? tournament.myPlayers.map(p => p.playerName)
       : assignedPlayerNames;
@@ -74,11 +70,11 @@ export function PlayerSelectionDialog({ onClose, onStartGame }: PlayerSelectionD
       <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
         <Card className="w-full max-w-md p-6 text-center">
           <div className="mb-4">
-            <Clock className="w-16 h-16 mx-auto text-amber-500 animate-pulse" />
+            <Play className="w-16 h-16 mx-auto text-green-500" />
           </div>
-          <h2 className="text-2xl font-bold mb-2">Waiting for Tournament to Start</h2>
+          <h2 className="text-2xl font-bold mb-2">Ready to Play!</h2>
           <p className="text-muted-foreground mb-4">
-            The Tournament Director will start the game soon.
+            Head to your starting hole and begin when ready.
           </p>
           <div className="bg-muted/50 rounded-lg p-4 mb-4">
             <p className="text-sm text-muted-foreground">Your players:</p>
@@ -90,39 +86,23 @@ export function PlayerSelectionDialog({ onClose, onStartGame }: PlayerSelectionD
               ))}
             </div>
           </div>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-muted-foreground mb-4">
             Tournament: <span className="font-mono font-bold">{tournament.roomCode}</span>
           </p>
           <Button 
-            variant="outline" 
-            onClick={onClose}
-            className="mt-4"
-          >
-            Leave Tournament
-          </Button>
-        </Card>
-      </div>
-    );
-  }
-
-  if (hasAssigned && tournament.tournamentInfo?.isStarted) {
-    return (
-      <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md p-6 text-center">
-          <div className="mb-4">
-            <Play className="w-16 h-16 mx-auto text-green-500" />
-          </div>
-          <h2 className="text-2xl font-bold mb-2">Tournament Started!</h2>
-          <p className="text-muted-foreground mb-4">
-            Head to your starting hole and begin playing.
-          </p>
-          <Button 
             onClick={onStartGame}
-            className="w-full bg-green-600 hover:bg-green-700"
+            className="w-full bg-green-600 hover:bg-green-700 mb-2"
             data-testid="button-begin-playing"
           >
             <Play className="w-4 h-4 mr-2" />
             Begin Playing
+          </Button>
+          <Button 
+            variant="outline" 
+            onClick={onClose}
+            className="w-full"
+          >
+            Leave Tournament
           </Button>
         </Card>
       </div>
