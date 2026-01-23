@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -68,6 +68,7 @@ export function DirectorPortal({ onClose }: DirectorPortalProps) {
   const [newPlayerUniversalId, setNewPlayerUniversalId] = useState("");
   const [newPlayerContact, setNewPlayerContact] = useState("");
   const [isAdding, setIsAdding] = useState(false);
+  const playerNameInputRef = useRef<HTMLInputElement>(null);
   const [showConfirmClose, setShowConfirmClose] = useState(false);
   const [editingPlayer, setEditingPlayer] = useState<EditPlayerData | null>(null);
   
@@ -199,6 +200,9 @@ export function DirectorPortal({ onClose }: DirectorPortalProps) {
     setNewPlayerContact("");
     setSelectedUniversalPlayer(null);
     setIsAdding(false);
+    
+    // Refocus the player name input for smooth flow
+    setTimeout(() => playerNameInputRef.current?.focus(), 0);
   };
 
   const handleRemovePlayer = async (playerId: number) => {
@@ -789,6 +793,8 @@ export function DirectorPortal({ onClose }: DirectorPortalProps) {
 
                 <div className="flex gap-2">
                   <Input
+                    ref={playerNameInputRef}
+                    autoFocus
                     value={newPlayerName}
                     onChange={(e) => {
                       setNewPlayerName(e.target.value);
