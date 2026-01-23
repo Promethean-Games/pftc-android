@@ -5,7 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider, useTheme } from "@/components/ThemeProvider";
 import { GameProvider, useGame } from "@/contexts/GameContext";
-import { TournamentProvider } from "@/contexts/TournamentContext";
+import { TournamentProvider, useTournament } from "@/contexts/TournamentContext";
 import { SplashScreen } from "@/components/SplashScreen";
 import { PlayerSetup } from "@/components/PlayerSetup";
 import { GameScreen } from "@/components/GameScreen";
@@ -20,6 +20,7 @@ type ActiveTab = "game" | "summary" | "settings" | "save";
 
 function GameApp() {
   const game = useGame();
+  const tournament = useTournament();
   const { theme, setTheme } = useTheme();
   
   const [screen, setScreen] = useState<Screen>("splash");
@@ -46,6 +47,12 @@ function GameApp() {
   };
 
   const handleStartTournamentGame = () => {
+    // Reset local game and populate with tournament players
+    game.resetGame();
+    tournament.myPlayers.forEach((tp, idx) => {
+      game.addPlayer(tp.playerName, idx);
+    });
+    game.startGame();
     setScreen("game");
     setActiveTab("game");
   };
