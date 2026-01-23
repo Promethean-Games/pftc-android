@@ -1,7 +1,49 @@
-import { pgTable, text, serial, integer, boolean, timestamp, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, jsonb, real } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { relations } from "drizzle-orm";
 import { z } from "zod";
+
+// Universal Players - persistent player identities across tournaments
+export const universalPlayers = pgTable("universal_players", {
+  id: serial("id").primaryKey(),
+  name: text("name").notNull(),
+  email: text("email"),
+  contactInfo: text("contact_info"),
+  handicap: real("handicap"),
+  isProvisional: boolean("is_provisional").notNull().default(true),
+  completedTournaments: integer("completed_tournaments").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const universalPlayersRelations = relations(universalPlayers, ({ many }) => ({
+  tournamentHistory: many(playerTournamentHistory),
+  tournamentPlayers: many(tournamentPlayers),
+}));
+
+// Player Tournament History - stores completed tournament results for handicap calculation
+export const playerTournamentHistory = pgTable("player_tournament_history", {
+  id: serial("id").primaryKey(),
+  universalPlayerId: integer("universal_player_id").notNull().references(() => universalPlayers.id),
+  tournamentId: integer("tournament_id").notNull().references(() => tournaments.id),
+  tournamentName: text("tournament_name").notNull(),
+  totalStrokes: integer("total_strokes").notNull(),
+  totalPar: integer("total_par").notNull(),
+  holesPlayed: integer("holes_played").notNull(),
+  relativeToPar: integer("relative_to_par").notNull(),
+  completedAt: timestamp("completed_at").defaultNow().notNull(),
+});
+
+export const playerTournamentHistoryRelations = relations(playerTournamentHistory, ({ one }) => ({
+  universalPlayer: one(universalPlayers, {
+    fields: [playerTournamentHistory.universalPlayerId],
+    references: [universalPlayers.id],
+  }),
+  tournament: one(tournaments, {
+    fields: [playerTournamentHistory.tournamentId],
+    references: [tournaments.id],
+  }),
+}));
 
 // Tournament/Room table - for live leaderboard sync
 export const tournaments = pgTable("tournaments", {
@@ -26,6 +68,7 @@ export const tournamentPlayers = pgTable("tournament_players", {
   deviceId: text("device_id"),
   groupName: text("group_name"),
   universalId: text("universal_id"),
+  universalPlayerId: integer("universal_player_id").references(() => universalPlayers.id),
   contactInfo: text("contact_info"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
@@ -34,6 +77,10 @@ export const tournamentPlayersRelations = relations(tournamentPlayers, ({ one, m
   tournament: one(tournaments, {
     fields: [tournamentPlayers.tournamentId],
     references: [tournaments.id],
+  }),
+  universalPlayer: one(universalPlayers, {
+    fields: [tournamentPlayers.universalPlayerId],
+    references: [universalPlayers.id],
   }),
   scores: many(tournamentScores),
 }));
@@ -57,11 +104,17 @@ export const tournamentScoresRelations = relations(tournamentScores, ({ one }) =
 }));
 
 // Insert schemas for database operations
+export const insertUniversalPlayerSchema = createInsertSchema(universalPlayers).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertPlayerTournamentHistorySchema = createInsertSchema(playerTournamentHistory).omit({ id: true, completedAt: true });
 export const insertTournamentSchema = createInsertSchema(tournaments).omit({ id: true, createdAt: true });
 export const insertTournamentPlayerSchema = createInsertSchema(tournamentPlayers).omit({ id: true, createdAt: true });
 export const insertTournamentScoreSchema = createInsertSchema(tournamentScores).omit({ id: true });
 
 // Types from database
+export type UniversalPlayer = typeof universalPlayers.$inferSelect;
+export type InsertUniversalPlayer = z.infer<typeof insertUniversalPlayerSchema>;
+export type PlayerTournamentHistory = typeof playerTournamentHistory.$inferSelect;
+export type InsertPlayerTournamentHistory = z.infer<typeof insertPlayerTournamentHistorySchema>;
 export type Tournament = typeof tournaments.$inferSelect;
 export type InsertTournament = z.infer<typeof insertTournamentSchema>;
 export type TournamentPlayer = typeof tournamentPlayers.$inferSelect;

@@ -2,6 +2,8 @@ import {
   tournaments,
   tournamentPlayers,
   tournamentScores,
+  universalPlayers,
+  playerTournamentHistory,
   type Tournament,
   type InsertTournament,
   type TournamentPlayer,
@@ -9,9 +11,13 @@ import {
   type TournamentScore,
   type InsertTournamentScore,
   type LeaderboardEntry,
+  type UniversalPlayer,
+  type InsertUniversalPlayer,
+  type PlayerTournamentHistory,
+  type InsertPlayerTournamentHistory,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, sql, desc } from "drizzle-orm";
+import { eq, and, sql, desc, ilike, or } from "drizzle-orm";
 
 export interface IStorage {
   // Tournament operations
@@ -37,6 +43,17 @@ export interface IStorage {
   upsertScore(score: InsertTournamentScore): Promise<TournamentScore>;
   getPlayerScores(tournamentPlayerId: number): Promise<TournamentScore[]>;
   getLeaderboard(tournamentId: number): Promise<LeaderboardEntry[]>;
+
+  // Universal player operations
+  createUniversalPlayer(player: InsertUniversalPlayer): Promise<UniversalPlayer>;
+  getAllUniversalPlayers(): Promise<UniversalPlayer[]>;
+  getUniversalPlayer(id: number): Promise<UniversalPlayer | undefined>;
+  searchUniversalPlayers(query: string): Promise<UniversalPlayer[]>;
+  linkTournamentPlayerToUniversal(tournamentPlayerId: number, universalPlayerId: number): Promise<TournamentPlayer>;
+  addTournamentHistory(history: InsertPlayerTournamentHistory): Promise<PlayerTournamentHistory>;
+  getPlayerTournamentHistory(universalPlayerId: number, limit?: number): Promise<PlayerTournamentHistory[]>;
+  recalculateHandicap(universalPlayerId: number): Promise<UniversalPlayer>;
+  getTournamentPlayers(tournamentId: number): Promise<TournamentPlayer[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -211,6 +228,113 @@ export class DatabaseStorage implements IStorage {
       }
       return a.relativeToPar - b.relativeToPar;
     });
+  }
+
+  // Alias for routes.ts compatibility
+  async getTournamentPlayers(tournamentId: number): Promise<TournamentPlayer[]> {
+    return this.getPlayersInTournament(tournamentId);
+  }
+
+  // Universal player operations
+  async createUniversalPlayer(player: InsertUniversalPlayer): Promise<UniversalPlayer> {
+    const [created] = await db.insert(universalPlayers).values(player).returning();
+    return created;
+  }
+
+  async getAllUniversalPlayers(): Promise<UniversalPlayer[]> {
+    return db.select().from(universalPlayers).orderBy(desc(universalPlayers.createdAt));
+  }
+
+  async getUniversalPlayer(id: number): Promise<UniversalPlayer | undefined> {
+    const [player] = await db.select().from(universalPlayers).where(eq(universalPlayers.id, id));
+    return player || undefined;
+  }
+
+  async searchUniversalPlayers(query: string): Promise<UniversalPlayer[]> {
+    const searchPattern = `%${query}%`;
+    return db
+      .select()
+      .from(universalPlayers)
+      .where(
+        or(
+          ilike(universalPlayers.name, searchPattern),
+          ilike(universalPlayers.email, searchPattern)
+        )
+      )
+      .orderBy(universalPlayers.name)
+      .limit(20);
+  }
+
+  async linkTournamentPlayerToUniversal(tournamentPlayerId: number, universalPlayerId: number): Promise<TournamentPlayer> {
+    const [updated] = await db
+      .update(tournamentPlayers)
+      .set({ universalPlayerId })
+      .where(eq(tournamentPlayers.id, tournamentPlayerId))
+      .returning();
+    return updated;
+  }
+
+  async addTournamentHistory(history: InsertPlayerTournamentHistory): Promise<PlayerTournamentHistory> {
+    const [created] = await db.insert(playerTournamentHistory).values(history).returning();
+    return created;
+  }
+
+  async getPlayerTournamentHistory(universalPlayerId: number, limit: number = 5): Promise<PlayerTournamentHistory[]> {
+    return db
+      .select()
+      .from(playerTournamentHistory)
+      .where(eq(playerTournamentHistory.universalPlayerId, universalPlayerId))
+      .orderBy(desc(playerTournamentHistory.completedAt))
+      .limit(limit);
+  }
+
+  async recalculateHandicap(universalPlayerId: number): Promise<UniversalPlayer> {
+    // Get last 5 completed tournaments
+    const history = await this.getPlayerTournamentHistory(universalPlayerId, 5);
+    
+    if (history.length === 0) {
+      // No history, set null handicap
+      const [updated] = await db
+        .update(universalPlayers)
+        .set({ 
+          handicap: null, 
+          isProvisional: true, 
+          completedTournaments: 0,
+          updatedAt: new Date()
+        })
+        .where(eq(universalPlayers.id, universalPlayerId))
+        .returning();
+      return updated;
+    }
+    
+    // Calculate average strokes over par per 18 holes
+    let totalRelativeToPar = 0;
+    let totalHolesPlayed = 0;
+    
+    for (const result of history) {
+      totalRelativeToPar += result.relativeToPar;
+      totalHolesPlayed += result.holesPlayed;
+    }
+    
+    // Normalize to 18 holes
+    const handicap = totalHolesPlayed > 0 
+      ? (totalRelativeToPar / totalHolesPlayed) * 18
+      : null;
+    
+    const isProvisional = history.length < 5;
+    
+    const [updated] = await db
+      .update(universalPlayers)
+      .set({ 
+        handicap: handicap ? Math.round(handicap * 10) / 10 : null,
+        isProvisional,
+        completedTournaments: history.length,
+        updatedAt: new Date()
+      })
+      .where(eq(universalPlayers.id, universalPlayerId))
+      .returning();
+    
+    return updated;
   }
 }
 

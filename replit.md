@@ -30,7 +30,19 @@ The server handles tournament creation, player registration, score synchronizati
 ### Data Storage
 - **Local Storage**: Game sessions, settings, and device IDs persist in browser localStorage
 - **PostgreSQL**: Tournament data including rooms, players, and scores
-- **Schema Design**: Three main tables - `tournaments`, `tournament_players`, `tournament_scores` with proper foreign key relationships
+- **Schema Design**: Five main tables:
+  - `tournaments` - Tournament rooms with PIN-based director access
+  - `tournament_players` - Players registered to tournaments with optional universal player linkage
+  - `tournament_scores` - Per-hole scores for leaderboard calculation
+  - `universal_players` - Persistent player identities across tournaments for handicap tracking
+  - `player_tournament_history` - Completed tournament results for handicap calculation
+
+### Handicapping System
+- **Universal Player IDs**: Players can be linked to a persistent universal identity that tracks them across tournaments
+- **Handicap Calculation**: Based on average strokes-over-par from last 5 completed tournaments, normalized to 18 holes
+- **Provisional Handicap**: Players with fewer than 5 completed tournaments have a "provisional" flag
+- **Tournament Completion Flow**: When director completes a tournament, results are saved to history and handicaps are recalculated for all linked players
+- **Director UI Integration**: DirectorPortal has "Find Existing Player" search to link tournament players to universal identities
 
 ### Key Design Decisions
 1. **Offline-First Local Games**: Single-device gameplay stores all data locally, no server required

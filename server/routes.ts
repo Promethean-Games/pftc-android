@@ -1,8 +1,22 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertTournamentSchema, insertTournamentPlayerSchema, insertTournamentScoreSchema, batchUpdateGroupsSchema } from "@shared/schema";
+import { insertTournamentSchema, insertTournamentPlayerSchema, insertTournamentScoreSchema, batchUpdateGroupsSchema, insertUniversalPlayerSchema } from "@shared/schema";
 import { z } from "zod";
+
+const createUniversalPlayerSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  email: z.string().email().nullable().optional(),
+  contactInfo: z.string().nullable().optional(),
+});
+
+const searchUniversalPlayerSchema = z.object({
+  query: z.string().min(1, "Search query is required"),
+});
+
+const linkUniversalPlayerSchema = z.object({
+  universalPlayerId: z.number().int().positive(),
+});
 
 const createTournamentSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -538,6 +552,176 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error batch syncing scores:", error);
       res.status(500).json({ error: "Failed to batch sync scores" });
+    }
+  });
+
+  // ===== UNIVERSAL PLAYERS API =====
+
+  // Get all universal players (requires master director PIN)
+  app.get("/api/universal-players", async (req, res) => {
+    try {
+      const directorPin = req.query.directorPin as string;
+      if (directorPin !== MASTER_DIRECTOR_PIN) {
+        return res.status(403).json({ error: "Invalid director credentials" });
+      }
+      
+      const players = await storage.getAllUniversalPlayers();
+      res.json(players);
+    } catch (error) {
+      console.error("Error getting universal players:", error);
+      res.status(500).json({ error: "Failed to get universal players" });
+    }
+  });
+
+  // Search universal players by name/email
+  app.get("/api/universal-players/search", async (req, res) => {
+    try {
+      const directorPin = req.query.directorPin as string;
+      if (directorPin !== MASTER_DIRECTOR_PIN) {
+        return res.status(403).json({ error: "Invalid director credentials" });
+      }
+      
+      const query = req.query.query as string;
+      if (!query || query.length < 1) {
+        return res.status(400).json({ error: "Search query required" });
+      }
+      
+      const players = await storage.searchUniversalPlayers(query);
+      res.json(players);
+    } catch (error) {
+      console.error("Error searching universal players:", error);
+      res.status(500).json({ error: "Failed to search universal players" });
+    }
+  });
+
+  // Create a universal player
+  app.post("/api/universal-players", async (req, res) => {
+    try {
+      const directorPin = req.body.directorPin;
+      if (directorPin !== MASTER_DIRECTOR_PIN) {
+        return res.status(403).json({ error: "Invalid director credentials" });
+      }
+      
+      const parsed = createUniversalPlayerSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.errors[0]?.message || "Invalid request" });
+      }
+      
+      const player = await storage.createUniversalPlayer({
+        name: parsed.data.name,
+        email: parsed.data.email || null,
+        contactInfo: parsed.data.contactInfo || null,
+      });
+      
+      res.json(player);
+    } catch (error) {
+      console.error("Error creating universal player:", error);
+      res.status(500).json({ error: "Failed to create universal player" });
+    }
+  });
+
+  // Get universal player by ID with handicap info
+  app.get("/api/universal-players/:id", async (req, res) => {
+    try {
+      const directorPin = req.query.directorPin as string;
+      if (directorPin !== MASTER_DIRECTOR_PIN) {
+        return res.status(403).json({ error: "Invalid director credentials" });
+      }
+      
+      const playerId = parseInt(req.params.id);
+      if (isNaN(playerId)) {
+        return res.status(400).json({ error: "Invalid player ID" });
+      }
+      
+      const player = await storage.getUniversalPlayer(playerId);
+      if (!player) {
+        return res.status(404).json({ error: "Player not found" });
+      }
+      
+      const history = await storage.getPlayerTournamentHistory(playerId, 5);
+      
+      res.json({ ...player, recentHistory: history });
+    } catch (error) {
+      console.error("Error getting universal player:", error);
+      res.status(500).json({ error: "Failed to get universal player" });
+    }
+  });
+
+  // Link a tournament player to a universal player
+  app.post("/api/tournaments/:roomCode/players/:playerId/link-universal", async (req, res) => {
+    try {
+      const directorPin = req.body.directorPin;
+      if (directorPin !== MASTER_DIRECTOR_PIN) {
+        return res.status(403).json({ error: "Invalid director credentials" });
+      }
+      
+      const tournament = await storage.getTournamentByCode(req.params.roomCode);
+      if (!tournament) {
+        return res.status(404).json({ error: "Tournament not found" });
+      }
+      
+      const playerId = parseInt(req.params.playerId);
+      if (isNaN(playerId)) {
+        return res.status(400).json({ error: "Invalid player ID" });
+      }
+      
+      const parsed = linkUniversalPlayerSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.errors[0]?.message || "Invalid request" });
+      }
+      
+      const updated = await storage.linkTournamentPlayerToUniversal(playerId, parsed.data.universalPlayerId);
+      res.json(updated);
+    } catch (error) {
+      console.error("Error linking universal player:", error);
+      res.status(500).json({ error: "Failed to link universal player" });
+    }
+  });
+
+  // Complete tournament - saves results to history and updates handicaps
+  app.post("/api/tournaments/:roomCode/complete", async (req, res) => {
+    try {
+      const directorPin = req.body.directorPin;
+      if (directorPin !== MASTER_DIRECTOR_PIN) {
+        return res.status(403).json({ error: "Invalid director credentials" });
+      }
+      
+      const tournament = await storage.getTournamentByCode(req.params.roomCode);
+      if (!tournament) {
+        return res.status(404).json({ error: "Tournament not found" });
+      }
+      
+      // Get all players and their scores
+      const players = await storage.getTournamentPlayers(tournament.id);
+      const leaderboard = await storage.getLeaderboard(tournament.id);
+      
+      // Save results for players with universal IDs and recalculate handicaps
+      for (const entry of leaderboard) {
+        const player = players.find(p => p.id === entry.playerId);
+        if (player?.universalPlayerId && entry.holesCompleted > 0) {
+          // Save to history
+          await storage.addTournamentHistory({
+            universalPlayerId: player.universalPlayerId,
+            tournamentId: tournament.id,
+            tournamentName: tournament.name,
+            totalStrokes: entry.totalStrokes,
+            totalPar: entry.totalPar,
+            holesPlayed: entry.holesCompleted,
+            relativeToPar: entry.relativeToPar,
+          });
+          
+          // Recalculate handicap
+          await storage.recalculateHandicap(player.universalPlayerId);
+        }
+      }
+      
+      // Mark tournament as inactive
+      await storage.closeTournament(tournament.id);
+      
+      res.json({ success: true, message: "Tournament completed and handicaps updated" });
+    } catch (error) {
+      console.error("Error completing tournament:", error);
+      res.status(500).json({ error: "Failed to complete tournament" });
     }
   });
 

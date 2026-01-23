@@ -26,9 +26,23 @@ import {
   ChevronUp,
   UserPlus,
   AlertCircle,
-  Play
+  Play,
+  Search,
+  Link2,
+  Star
 } from "lucide-react";
 import { useTournament } from "@/contexts/TournamentContext";
+import { apiRequest } from "@/lib/queryClient";
+
+interface UniversalPlayer {
+  id: number;
+  name: string;
+  email: string | null;
+  contactInfo: string | null;
+  handicap: number | null;
+  isProvisional: boolean;
+  completedTournaments: number;
+}
 
 interface DirectorPortalProps {
   onClose: () => void;
@@ -71,6 +85,63 @@ export function DirectorPortal({ onClose }: DirectorPortalProps) {
   const [isShuffling, setIsShuffling] = useState(false);
   const [showGroupTools, setShowGroupTools] = useState(false);
   const [isStarting, setIsStarting] = useState(false);
+  const [isCompleting, setIsCompleting] = useState(false);
+  const [showConfirmComplete, setShowConfirmComplete] = useState(false);
+
+  // Universal player search
+  const [universalSearchQuery, setUniversalSearchQuery] = useState("");
+  const [universalSearchResults, setUniversalSearchResults] = useState<UniversalPlayer[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [selectedUniversalPlayer, setSelectedUniversalPlayer] = useState<UniversalPlayer | null>(null);
+  const [showUniversalSearch, setShowUniversalSearch] = useState(false);
+
+  const handleSearchUniversalPlayers = async (query: string) => {
+    setUniversalSearchQuery(query);
+    if (query.length < 2) {
+      setUniversalSearchResults([]);
+      return;
+    }
+    setIsSearching(true);
+    try {
+      const directorPin = localStorage.getItem("directorPin") || "3141";
+      const res = await fetch(`/api/universal-players/search?query=${encodeURIComponent(query)}&directorPin=${directorPin}`);
+      if (res.ok) {
+        const data = await res.json();
+        setUniversalSearchResults(data);
+      }
+    } catch (err) {
+      console.error("Search error:", err);
+    }
+    setIsSearching(false);
+  };
+
+  const handleSelectUniversalPlayer = (player: UniversalPlayer) => {
+    setSelectedUniversalPlayer(player);
+    setNewPlayerName(player.name);
+    setNewPlayerContact(player.email || player.contactInfo || "");
+    setUniversalSearchQuery("");
+    setUniversalSearchResults([]);
+    setShowUniversalSearch(false);
+  };
+
+  const handleCreateUniversalPlayer = async (): Promise<UniversalPlayer | null> => {
+    if (!newPlayerName.trim()) return null;
+    try {
+      const directorPin = localStorage.getItem("directorPin") || "3141";
+      const res = await apiRequest("POST", "/api/universal-players", {
+        name: newPlayerName.trim(),
+        email: newPlayerContact.includes("@") ? newPlayerContact.trim() : null,
+        contactInfo: !newPlayerContact.includes("@") ? newPlayerContact.trim() : null,
+        directorPin,
+      });
+      const player = await res.json();
+      setSelectedUniversalPlayer(player);
+      return player;
+    } catch (err) {
+      console.error("Failed to create universal player:", err);
+      return null;
+    }
+  };
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -92,16 +163,39 @@ export function DirectorPortal({ onClose }: DirectorPortalProps) {
   const handleAddPlayer = async () => {
     if (!newPlayerName.trim()) return;
     setIsAdding(true);
-    await tournament.addPlayerToTournament(
+    
+    // Get or create universal player - use returned value directly to avoid async state issues
+    let universalPlayerId = selectedUniversalPlayer?.id;
+    if (!universalPlayerId && newPlayerName.trim()) {
+      const createdPlayer = await handleCreateUniversalPlayer();
+      universalPlayerId = createdPlayer?.id;
+    }
+    
+    const newPlayer = await tournament.addPlayerToTournament(
       newPlayerName.trim(),
       newPlayerGroup.trim() || undefined,
       newPlayerUniversalId.trim() || undefined,
       newPlayerContact.trim() || undefined
     );
+    
+    // Link to universal player using the universalPlayerId FK
+    if (newPlayer && universalPlayerId) {
+      try {
+        const directorPin = localStorage.getItem("directorPin") || "3141";
+        await apiRequest("POST", `/api/tournaments/${tournament.roomCode}/players/${newPlayer.id}/link-universal`, {
+          universalPlayerId,
+          directorPin,
+        });
+      } catch (err) {
+        console.error("Failed to link universal player:", err);
+      }
+    }
+    
     setNewPlayerName("");
     setNewPlayerGroup("");
     setNewPlayerUniversalId("");
     setNewPlayerContact("");
+    setSelectedUniversalPlayer(null);
     setIsAdding(false);
   };
 
@@ -112,6 +206,20 @@ export function DirectorPortal({ onClose }: DirectorPortalProps) {
   const handleCloseTournament = async () => {
     await tournament.closeTournament();
     setShowConfirmClose(false);
+  };
+
+  const handleCompleteTournament = async () => {
+    setIsCompleting(true);
+    try {
+      const directorPin = localStorage.getItem("directorPin") || "3141";
+      await apiRequest("POST", `/api/tournaments/${tournament.roomCode}/complete`, {
+        directorPin,
+      });
+      setShowConfirmComplete(false);
+    } catch (err) {
+      console.error("Failed to complete tournament:", err);
+    }
+    setIsCompleting(false);
   };
 
   const handleEditPlayer = (player: typeof tournament.allPlayers[0]) => {
@@ -586,10 +694,94 @@ export function DirectorPortal({ onClose }: DirectorPortalProps) {
                 Add Player
               </h3>
               <div className="space-y-3">
+                {/* Universal Player Search Toggle */}
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant={showUniversalSearch ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setShowUniversalSearch(!showUniversalSearch)}
+                    className="gap-2"
+                    data-testid="button-toggle-universal-search"
+                  >
+                    <Search className="w-4 h-4" />
+                    {showUniversalSearch ? "Hide Search" : "Find Existing Player"}
+                  </Button>
+                  {selectedUniversalPlayer && (
+                    <div className="flex items-center gap-2 px-2 py-1 bg-green-500/20 text-green-700 dark:text-green-400 rounded text-sm">
+                      <Link2 className="w-3 h-3" />
+                      <span className="truncate max-w-32">{selectedUniversalPlayer.name}</span>
+                      {selectedUniversalPlayer.handicap !== null && (
+                        <span className="font-mono text-xs">
+                          ({selectedUniversalPlayer.isProvisional ? "P" : ""}{selectedUniversalPlayer.handicap?.toFixed(1)})
+                        </span>
+                      )}
+                      <button 
+                        onClick={() => setSelectedUniversalPlayer(null)}
+                        className="hover:text-destructive"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Universal Player Search Results */}
+                {showUniversalSearch && (
+                  <div className="border rounded-lg p-3 space-y-2 bg-muted/30">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 opacity-50" />
+                      <Input
+                        value={universalSearchQuery}
+                        onChange={(e) => handleSearchUniversalPlayers(e.target.value)}
+                        placeholder="Search by name or email..."
+                        className="pl-9"
+                        data-testid="input-universal-search"
+                      />
+                    </div>
+                    {isSearching && <p className="text-xs opacity-60">Searching...</p>}
+                    {universalSearchResults.length > 0 && (
+                      <div className="max-h-40 overflow-y-auto space-y-1">
+                        {universalSearchResults.map(player => (
+                          <button
+                            key={player.id}
+                            onClick={() => handleSelectUniversalPlayer(player)}
+                            className="w-full text-left p-2 rounded hover:bg-muted flex items-center gap-2"
+                            data-testid={`button-select-universal-${player.id}`}
+                          >
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium truncate">{player.name}</p>
+                              <p className="text-xs opacity-60 truncate">{player.email || "No email"}</p>
+                            </div>
+                            {player.handicap !== null ? (
+                              <div className="text-right">
+                                <span className="font-mono text-sm font-bold">
+                                  {player.isProvisional && <Star className="w-3 h-3 inline mr-1 text-amber-500" />}
+                                  {player.handicap.toFixed(1)}
+                                </span>
+                                <p className="text-xs opacity-60">{player.completedTournaments} tournaments</p>
+                              </div>
+                            ) : (
+                              <span className="text-xs opacity-60">New</span>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                    {universalSearchQuery.length >= 2 && universalSearchResults.length === 0 && !isSearching && (
+                      <p className="text-xs opacity-60 text-center py-2">No matching players found</p>
+                    )}
+                  </div>
+                )}
+
                 <div className="flex gap-2">
                   <Input
                     value={newPlayerName}
-                    onChange={(e) => setNewPlayerName(e.target.value)}
+                    onChange={(e) => {
+                      setNewPlayerName(e.target.value);
+                      if (selectedUniversalPlayer && e.target.value !== selectedUniversalPlayer.name) {
+                        setSelectedUniversalPlayer(null);
+                      }
+                    }}
                     placeholder="Player name *"
                     className="flex-1"
                     data-testid="input-director-player-name"
@@ -630,7 +822,7 @@ export function DirectorPortal({ onClose }: DirectorPortalProps) {
                   className="w-full"
                   data-testid="button-director-add-player"
                 >
-                  {isAdding ? "Adding..." : "Add Player"}
+                  {isAdding ? "Adding..." : selectedUniversalPlayer ? "Add Player (Linked)" : "Add Player (New)"}
                 </Button>
               </div>
             </Card>
@@ -764,6 +956,47 @@ export function DirectorPortal({ onClose }: DirectorPortalProps) {
                     {tournament.roomCode || "—"}
                   </p>
                 </div>
+
+                {/* Complete Tournament - Save Results & Update Handicaps */}
+                {showConfirmComplete ? (
+                  <div className="space-y-2 p-3 border border-green-500/30 rounded-lg bg-green-500/5">
+                    <p className="text-sm font-medium text-green-600 dark:text-green-400">
+                      Complete Tournament?
+                    </p>
+                    <p className="text-sm opacity-70">
+                      This will save all player results and update their handicaps based on their performance.
+                    </p>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        className="flex-1"
+                        onClick={() => setShowConfirmComplete(false)}
+                        disabled={isCompleting}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        className="flex-1 bg-green-600 hover:bg-green-700"
+                        onClick={handleCompleteTournament}
+                        disabled={isCompleting}
+                        data-testid="button-confirm-complete-tournament"
+                      >
+                        {isCompleting ? "Saving..." : "Complete & Save"}
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <Button
+                    variant="outline"
+                    className="w-full gap-2 border-green-500/50 text-green-600 hover:bg-green-500/10"
+                    onClick={() => setShowConfirmComplete(true)}
+                    disabled={!tournament.tournamentInfo?.isStarted || !tournament.tournamentInfo?.isActive}
+                    data-testid="button-complete-tournament"
+                  >
+                    <Trophy className="w-4 h-4" />
+                    Complete Tournament & Save Handicaps
+                  </Button>
+                )}
 
                 {showConfirmClose ? (
                   <div className="space-y-2">
