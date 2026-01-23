@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { X, Users, Check, Play } from "lucide-react";
+import { X, Users, Check, Play, RefreshCw } from "lucide-react";
 import { useTournament } from "@/contexts/TournamentContext";
 
 interface PlayerSelectionDialogProps {
@@ -16,6 +16,7 @@ export function PlayerSelectionDialog({ onClose, onStartGame }: PlayerSelectionD
   const [isSaving, setIsSaving] = useState(false);
   const [hasAssigned, setHasAssigned] = useState(false);
   const [assignedPlayerNames, setAssignedPlayerNames] = useState<string[]>([]);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
     setSelectedPlayerIds(tournament.myPlayers.map(p => p.id));
@@ -34,6 +35,12 @@ export function PlayerSelectionDialog({ onClose, onStartGame }: PlayerSelectionD
   }, [tournament, hasAssigned]);
 
   // Auto-start removed - players now have a "Begin Playing" button to start when ready
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await tournament.refreshLeaderboard();
+    setIsRefreshing(false);
+  };
 
   const handleTogglePlayer = (playerId: number) => {
     setSelectedPlayerIds(prev => 
@@ -117,9 +124,20 @@ export function PlayerSelectionDialog({ onClose, onStartGame }: PlayerSelectionD
             <Users className="w-5 h-5" />
             <h2 className="text-lg font-semibold">Select Your Players</h2>
           </div>
-          <Button variant="ghost" size="icon" onClick={onClose}>
-            <X className="w-5 h-5" />
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              data-testid="button-refresh-players"
+            >
+              <RefreshCw className={`w-5 h-5 ${isRefreshing ? 'animate-spin' : ''}`} />
+            </Button>
+            <Button variant="ghost" size="icon" onClick={onClose}>
+              <X className="w-5 h-5" />
+            </Button>
+          </div>
         </div>
 
         <div className="flex-1 overflow-y-auto p-4">
