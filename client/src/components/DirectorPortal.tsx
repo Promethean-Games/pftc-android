@@ -250,6 +250,29 @@ export function DirectorPortal({ onClose }: DirectorPortalProps) {
     });
   };
 
+  const handleLinkPlayer = async (player: typeof tournament.allPlayers[0]) => {
+    try {
+      const directorPin = localStorage.getItem("directorPin") || "3141";
+      
+      const res = await apiRequest("POST", "/api/universal-players", {
+        name: player.playerName,
+        email: null,
+        contactInfo: null,
+        directorPin,
+      });
+      const universalPlayer = await res.json();
+      
+      await apiRequest("POST", `/api/tournaments/${tournament.roomCode}/players/${player.id}/link-universal`, {
+        universalPlayerId: universalPlayer.id,
+        directorPin,
+      });
+      
+      await tournament.refreshPlayers();
+    } catch (err) {
+      console.error("Failed to link player:", err);
+    }
+  };
+
   const handleSavePlayer = async () => {
     if (editingPlayer) {
       await tournament.updatePlayer(editingPlayer.id, {
@@ -866,7 +889,18 @@ export function DirectorPortal({ onClose }: DirectorPortalProps) {
                         className="flex items-center gap-2 p-3 rounded-lg hover:bg-black/5 dark:hover:bg-white/5"
                       >
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium truncate">{player.playerName}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium truncate">{player.playerName}</p>
+                            {player.universalPlayerId ? (
+                              <span className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400" title="Linked for handicapping">
+                                <Link2 className="w-3 h-3" />
+                              </span>
+                            ) : (
+                              <span className="flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400" title="Not linked - no handicap tracking">
+                                <AlertCircle className="w-3 h-3" />
+                              </span>
+                            )}
+                          </div>
                           <p className="text-xs opacity-60 flex items-center gap-1">
                             {player.deviceId ? (
                               <>
@@ -888,6 +922,18 @@ export function DirectorPortal({ onClose }: DirectorPortalProps) {
                             data-testid={`button-unassign-device-${player.id}`}
                           >
                             <Unlink className="w-4 h-4" />
+                          </Button>
+                        )}
+                        {!player.universalPlayerId && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-amber-600 hover:text-amber-700"
+                            onClick={() => handleLinkPlayer(player)}
+                            title="Link for handicap tracking"
+                            data-testid={`button-link-player-${player.id}`}
+                          >
+                            <Link2 className="w-4 h-4" />
                           </Button>
                         )}
                         <Button
