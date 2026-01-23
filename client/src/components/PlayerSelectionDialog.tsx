@@ -26,19 +26,19 @@ export function PlayerSelectionDialog({ onClose, onStartGame }: PlayerSelectionD
     }
   }, [tournament.myPlayers]);
 
+  // Auto-refresh player list every 3 seconds for real-time device connection updates
   useEffect(() => {
-    if (!hasAssigned) return;
     const interval = setInterval(() => {
-      tournament.refreshLeaderboard();
+      tournament.refreshPlayers();
     }, 3000);
     return () => clearInterval(interval);
-  }, [tournament, hasAssigned]);
+  }, [tournament]);
 
   // Auto-start removed - players now have a "Begin Playing" button to start when ready
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
-    await tournament.refreshLeaderboard();
+    await tournament.refreshPlayers();
     setIsRefreshing(false);
   };
 
