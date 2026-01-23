@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { queryClient } from "./lib/queryClient";
+import { queryClient, apiRequest } from "./lib/queryClient";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider, useTheme } from "@/components/ThemeProvider";
@@ -46,13 +46,46 @@ function GameApp() {
     setScreen("game");
   };
 
-  const handleStartTournamentGame = () => {
+  const handleStartTournamentGame = async () => {
+    // Fetch existing scores from server first
+    let serverScores: Record<string, Array<{ hole: number; par: number; strokes: number; scratches: number; penalties: number }>> = {};
+    try {
+      const res = await apiRequest("GET", `/api/tournaments/${tournament.roomCode}/my-scores?deviceId=${tournament.deviceId}`);
+      const data = await res.json();
+      serverScores = data.scores || {};
+    } catch (err) {
+      console.log("No existing scores to restore or error fetching:", err);
+    }
+    
     // Reset local game and populate with tournament players
     game.resetGame();
+    
+    // Add players and restore their scores immediately
     tournament.myPlayers.forEach((tp, idx) => {
       game.addPlayer(tp.playerName, idx);
     });
+    
     game.startGame();
+    
+    // Use a small delay to ensure state is updated, then restore scores
+    setTimeout(() => {
+      tournament.myPlayers.forEach((tp, idx) => {
+        const scores = serverScores[tp.id.toString()];
+        if (scores && game.players[idx]) {
+          const localPlayerId = game.players[idx].id;
+          for (const score of scores) {
+            game.updateScore(localPlayerId, score.hole, {
+              hole: score.hole,
+              par: score.par,
+              strokes: score.strokes,
+              scratches: score.scratches,
+              penalties: score.penalties,
+            });
+          }
+        }
+      });
+    }, 100);
+    
     setScreen("game");
     setActiveTab("game");
   };

@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertTournamentSchema, insertTournamentPlayerSchema, insertTournamentScoreSchema, batchUpdateGroupsSchema, insertUniversalPlayerSchema } from "@shared/schema";
+import { insertTournamentSchema, insertTournamentPlayerSchema, insertTournamentScoreSchema, batchUpdateGroupsSchema, insertUniversalPlayerSchema, type TournamentScore } from "@shared/schema";
 import { z } from "zod";
 
 const createUniversalPlayerSchema = z.object({
@@ -367,6 +367,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error getting device players:", error);
       res.status(500).json({ error: "Failed to get players" });
+    }
+  });
+
+  // Get scores for players assigned to this device (for session restoration)
+  app.get("/api/tournaments/:roomCode/my-scores", async (req, res) => {
+    try {
+      const tournament = await storage.getTournamentByCode(req.params.roomCode);
+      if (!tournament) {
+        return res.status(404).json({ error: "Tournament not found" });
+      }
+
+      const deviceId = req.query.deviceId as string;
+      if (!deviceId) {
+        return res.status(400).json({ error: "Device ID required" });
+      }
+
+      const players = await storage.getPlayersByDevice(tournament.id, deviceId);
+      const allScores: Record<number, TournamentScore[]> = {};
+      
+      for (const player of players) {
+        const scores = await storage.getPlayerScores(player.id);
+        allScores[player.id] = scores;
+      }
+
+      res.json({ players, scores: allScores });
+    } catch (error) {
+      console.error("Error getting device scores:", error);
+      res.status(500).json({ error: "Failed to get scores" });
     }
   });
 
