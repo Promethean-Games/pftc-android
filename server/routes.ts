@@ -330,6 +330,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Unassign device from player (director only)
+  app.post("/api/tournaments/:roomCode/players/:playerId/unassign-device", async (req, res) => {
+    try {
+      const directorPin = req.body.directorPin;
+      if (directorPin !== MASTER_DIRECTOR_PIN) {
+        const tournament = await storage.getTournamentByCode(req.params.roomCode);
+        if (!tournament || tournament.directorPin !== directorPin) {
+          return res.status(403).json({ error: "Invalid director credentials" });
+        }
+      }
+      
+      await storage.unassignDeviceFromPlayer(parseInt(req.params.playerId));
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error unassigning device:", error);
+      res.status(500).json({ error: "Failed to unassign device" });
+    }
+  });
+
   // Get players assigned to this device
   app.get("/api/tournaments/:roomCode/my-players", async (req, res) => {
     try {

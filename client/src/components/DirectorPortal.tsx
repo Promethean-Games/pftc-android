@@ -29,7 +29,9 @@ import {
   Play,
   Search,
   Link2,
-  Star
+  Star,
+  Smartphone,
+  Unlink
 } from "lucide-react";
 import { useTournament } from "@/contexts/TournamentContext";
 import { apiRequest } from "@/lib/queryClient";
@@ -201,6 +203,18 @@ export function DirectorPortal({ onClose }: DirectorPortalProps) {
 
   const handleRemovePlayer = async (playerId: number) => {
     await tournament.removePlayerFromTournament(playerId);
+  };
+
+  const handleUnassignDevice = async (playerId: number) => {
+    try {
+      const directorPin = localStorage.getItem("directorPin") || "3141";
+      await apiRequest("POST", `/api/tournaments/${tournament.roomCode}/players/${playerId}/unassign-device`, {
+        directorPin,
+      });
+      await tournament.refreshPlayers();
+    } catch (err) {
+      console.error("Failed to unassign device:", err);
+    }
   };
 
   const handleCloseTournament = async () => {
@@ -847,10 +861,29 @@ export function DirectorPortal({ onClose }: DirectorPortalProps) {
                       >
                         <div className="flex-1 min-w-0">
                           <p className="font-medium truncate">{player.playerName}</p>
-                          <p className="text-xs opacity-60">
-                            {player.deviceId ? "Device assigned" : "No device"}
+                          <p className="text-xs opacity-60 flex items-center gap-1">
+                            {player.deviceId ? (
+                              <>
+                                <Smartphone className="w-3 h-3" />
+                                Device assigned
+                              </>
+                            ) : (
+                              "No device"
+                            )}
                           </p>
                         </div>
+                        {player.deviceId && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-orange-600 hover:text-orange-700"
+                            onClick={() => handleUnassignDevice(player.id)}
+                            title="Unassign device"
+                            data-testid={`button-unassign-device-${player.id}`}
+                          >
+                            <Unlink className="w-4 h-4" />
+                          </Button>
+                        )}
                         <Button
                           variant="ghost"
                           size="icon"

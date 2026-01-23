@@ -29,6 +29,7 @@ interface TournamentContextValue {
   assignPlayersToDevice: (playerIds: number[]) => Promise<void>;
   syncScore: (tournamentPlayerId: number, hole: number, par: number, strokes: number, scratches: number, penalties: number) => Promise<void>;
   refreshLeaderboard: () => Promise<void>;
+  refreshPlayers: () => Promise<void>;
   verifyDirectorPin: (pin: string) => Promise<boolean>;
   createTournament: (name: string, directorPin: string) => Promise<TournamentInfo | null>;
   addPlayerToTournament: (playerName: string, groupName?: string, universalId?: string, contactInfo?: string) => Promise<TournamentPlayer | null>;
@@ -321,6 +322,7 @@ export function TournamentProvider({ children }: { children: ReactNode }) {
         assignPlayersToDevice,
         syncScore,
         refreshLeaderboard,
+        refreshPlayers,
         verifyDirectorPin,
         createTournament,
         addPlayerToTournament,
