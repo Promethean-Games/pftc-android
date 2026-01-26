@@ -76,3 +76,24 @@ The server handles tournament creation, player registration, score synchronizati
 
 ### Fonts
 - Google Fonts CDN: DM Sans, Fira Code, Geist Mono, Architects Daughter
+
+## Deployment
+
+This app is fully portable and can be deployed outside of Replit.
+
+### Quick Deploy to Render
+1. Push code to GitHub
+2. Connect repository to Render
+3. Render auto-detects `render.yaml` and configures everything
+
+### Environment Variables Required
+- `DATABASE_URL` - PostgreSQL connection string
+- `SESSION_SECRET` - Session encryption key
+- `NODE_ENV=production`
+
+### Build Commands
+- `npm run build` - Build frontend and backend
+- `npm run start` - Start production server
+- `npm run db:push` - Push schema to database
+
+See `DEPLOYMENT.md` for full instructions.
