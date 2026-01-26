@@ -6,6 +6,7 @@ import { z } from "zod";
 // Universal Players - persistent player identities across tournaments
 export const universalPlayers = pgTable("universal_players", {
   id: serial("id").primaryKey(),
+  uniqueCode: text("unique_code").notNull().unique(), // Format: PC7001, PC7002, etc.
   name: text("name").notNull(),
   email: text("email"),
   contactInfo: text("contact_info"),
@@ -52,6 +53,7 @@ export const tournaments = pgTable("tournaments", {
   name: text("name").notNull(),
   isActive: boolean("is_active").notNull().default(true),
   isStarted: boolean("is_started").notNull().default(false),
+  isHandicapped: boolean("is_handicapped").notNull().default(false),
   directorPin: text("director_pin").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

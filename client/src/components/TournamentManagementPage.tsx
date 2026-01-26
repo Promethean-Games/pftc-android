@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { 
   ArrowLeft, 
@@ -13,10 +14,11 @@ import {
   Download, 
   Play,
   Calendar,
-  Settings as SettingsIcon
+  BookUser
 } from "lucide-react";
 import { useTournament } from "@/contexts/TournamentContext";
 import { DirectorPortal } from "./DirectorPortal";
+import { UniversalPlayerPortal } from "./UniversalPlayerPortal";
 
 interface TournamentManagementPageProps {
   onClose: () => void;
@@ -41,6 +43,8 @@ export function TournamentManagementPage({ onClose, directorPin }: TournamentMan
   const [isCreating, setIsCreating] = useState(false);
   const [selectedTournament, setSelectedTournament] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
+  const [showPlayerDirectory, setShowPlayerDirectory] = useState(false);
+  const [isHandicapped, setIsHandicapped] = useState(false);
 
   const fetchTournaments = async () => {
     try {
@@ -65,10 +69,11 @@ export function TournamentManagementPage({ onClose, directorPin }: TournamentMan
     setIsCreating(true);
     
     try {
-      const result = await tournament.createTournament(newTournamentName.trim(), directorPin);
+      const result = await tournament.createTournament(newTournamentName.trim(), directorPin, isHandicapped);
       if (result) {
         setShowCreateDialog(false);
         setNewTournamentName("");
+        setIsHandicapped(false);
         await fetchTournaments();
         setSelectedTournament(result.roomCode);
       }
@@ -129,6 +134,15 @@ export function TournamentManagementPage({ onClose, directorPin }: TournamentMan
     onClose();
   };
 
+  if (showPlayerDirectory) {
+    return (
+      <UniversalPlayerPortal 
+        onClose={() => setShowPlayerDirectory(false)}
+        directorPin={directorPin}
+      />
+    );
+  }
+
   if (selectedTournament) {
     return (
       <DirectorPortal 
@@ -159,14 +173,24 @@ export function TournamentManagementPage({ onClose, directorPin }: TournamentMan
       </div>
 
       <div className="flex-1 p-4 space-y-6">
-        <Button 
-          onClick={() => setShowCreateDialog(true)}
-          className="w-full h-14 text-lg gap-2"
-          data-testid="button-create-tournament"
-        >
-          <Plus className="w-5 h-5" />
-          Create New Tournament
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            onClick={() => setShowCreateDialog(true)}
+            className="flex-1 h-14 text-lg gap-2"
+            data-testid="button-create-tournament"
+          >
+            <Plus className="w-5 h-5" />
+            Create Tournament
+          </Button>
+          <Button 
+            variant="outline"
+            onClick={() => setShowPlayerDirectory(true)}
+            className="h-14 px-4"
+            data-testid="button-player-directory"
+          >
+            <BookUser className="w-5 h-5" />
+          </Button>
+        </div>
 
         {isLoading ? (
           <div className="text-center py-8 text-muted-foreground">Loading tournaments...</div>
@@ -306,6 +330,31 @@ export function TournamentManagementPage({ onClose, directorPin }: TournamentMan
                 autoFocus
               />
             </div>
+            <div className="flex items-center justify-between p-3 rounded-lg border">
+              <div className="space-y-0.5">
+                <Label htmlFor="handicapped-toggle" className="cursor-pointer">Handicapped Tournament</Label>
+                <p className="text-xs text-muted-foreground">
+                  {isHandicapped 
+                    ? "Scores will be adjusted using player handicaps" 
+                    : "All players compete without handicap adjustments"}
+                </p>
+              </div>
+              <Switch
+                id="handicapped-toggle"
+                checked={isHandicapped}
+                onCheckedChange={setIsHandicapped}
+                data-testid="switch-handicapped"
+              />
+            </div>
+            {isHandicapped && (
+              <div className="bg-amber-500/10 rounded-lg p-3 text-sm">
+                <p className="text-amber-600 font-medium">Heads up!</p>
+                <p className="text-muted-foreground mt-1">
+                  Players need 5 completed tournaments for an established handicap. 
+                  Provisional players can still join, but their handicap may be less accurate.
+                </p>
+              </div>
+            )}
             <div className="flex gap-2">
               <Button 
                 variant="outline" 

@@ -31,7 +31,7 @@ interface TournamentContextValue {
   refreshLeaderboard: () => Promise<void>;
   refreshPlayers: () => Promise<void>;
   verifyDirectorPin: (pin: string) => Promise<boolean>;
-  createTournament: (name: string, directorPin: string) => Promise<TournamentInfo | null>;
+  createTournament: (name: string, directorPin: string, isHandicapped?: boolean) => Promise<TournamentInfo | null>;
   addPlayerToTournament: (playerName: string, groupName?: string, universalId?: string, contactInfo?: string) => Promise<TournamentPlayer | null>;
   updatePlayer: (playerId: number, data: { playerName?: string; groupName?: string; universalId?: string; contactInfo?: string }) => Promise<TournamentPlayer | null>;
   removePlayerFromTournament: (playerId: number) => Promise<void>;
@@ -200,9 +200,9 @@ export function TournamentProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const createTournament = async (name: string, pin: string): Promise<TournamentInfo | null> => {
+  const createTournament = async (name: string, pin: string, isHandicapped: boolean = false): Promise<TournamentInfo | null> => {
     try {
-      const response = await apiRequest("POST", "/api/tournaments", { name, directorPin: pin });
+      const response = await apiRequest("POST", "/api/tournaments", { name, directorPin: pin, isHandicapped });
       const tournament = await response.json();
       setRoomCode(tournament.roomCode);
       setTournamentInfo(tournament);

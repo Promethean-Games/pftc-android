@@ -18,9 +18,25 @@ const linkUniversalPlayerSchema = z.object({
   universalPlayerId: z.number().int().positive(),
 });
 
+const updateUniversalPlayerSchema = z.object({
+  directorPin: z.string().min(1, "Director PIN is required"),
+  name: z.string().min(1).optional(),
+  email: z.string().email().nullable().optional(),
+  contactInfo: z.string().nullable().optional(),
+  handicap: z.number().nullable().optional(),
+  isProvisional: z.boolean().optional(),
+});
+
+const mergeUniversalPlayersSchema = z.object({
+  directorPin: z.string().min(1, "Director PIN is required"),
+  sourceId: z.number().int().positive(),
+  targetId: z.number().int().positive(),
+});
+
 const createTournamentSchema = z.object({
   name: z.string().min(1, "Name is required"),
   directorPin: z.string().min(1, "Director PIN is required"),
+  isHandicapped: z.boolean().optional().default(false),
 });
 
 const addPlayerSchema = z.object({
@@ -131,6 +147,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         name: parsed.data.name,
         directorPin: parsed.data.directorPin,
         isActive: true,
+        isHandicapped: parsed.data.isHandicapped,
       });
 
       res.json(tournament);
@@ -654,7 +671,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: parsed.error.errors[0]?.message || "Invalid request" });
       }
       
+      const uniqueCode = await storage.getNextUniqueCode();
+      
       const player = await storage.createUniversalPlayer({
+        uniqueCode,
         name: parsed.data.name,
         email: parsed.data.email || null,
         contactInfo: parsed.data.contactInfo || null,
@@ -664,6 +684,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error creating universal player:", error);
       res.status(500).json({ error: "Failed to create universal player" });
+    }
+  });
+
+  // Update a universal player
+  app.patch("/api/universal-players/:id", async (req, res) => {
+    try {
+      const parsed = updateUniversalPlayerSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.errors[0]?.message || "Invalid request" });
+      }
+      
+      if (parsed.data.directorPin !== MASTER_DIRECTOR_PIN) {
+        return res.status(403).json({ error: "Invalid director credentials" });
+      }
+      
+      const playerId = parseInt(req.params.id);
+      if (isNaN(playerId)) {
+        return res.status(400).json({ error: "Invalid player ID" });
+      }
+      
+      const { name, email, contactInfo, handicap, isProvisional } = parsed.data;
+      const updateData: Record<string, any> = {};
+      if (name !== undefined) updateData.name = name;
+      if (email !== undefined) updateData.email = email;
+      if (contactInfo !== undefined) updateData.contactInfo = contactInfo;
+      if (handicap !== undefined) updateData.handicap = handicap;
+      if (isProvisional !== undefined) updateData.isProvisional = isProvisional;
+      
+      const player = await storage.updateUniversalPlayer(playerId, updateData);
+      res.json(player);
+    } catch (error) {
+      console.error("Error updating universal player:", error);
+      res.status(500).json({ error: "Failed to update universal player" });
+    }
+  });
+
+  // Delete a universal player
+  app.delete("/api/universal-players/:id", async (req, res) => {
+    try {
+      const directorPin = req.query.directorPin as string;
+      if (directorPin !== MASTER_DIRECTOR_PIN) {
+        return res.status(403).json({ error: "Invalid director credentials" });
+      }
+      
+      const playerId = parseInt(req.params.id);
+      if (isNaN(playerId)) {
+        return res.status(400).json({ error: "Invalid player ID" });
+      }
+      
+      await storage.deleteUniversalPlayer(playerId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting universal player:", error);
+      res.status(500).json({ error: "Failed to delete universal player" });
+    }
+  });
+
+  // Merge two universal players (source into target)
+  app.post("/api/universal-players/merge", async (req, res) => {
+    try {
+      const parsed = mergeUniversalPlayersSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({ error: parsed.error.errors[0]?.message || "Invalid request" });
+      }
+      
+      if (parsed.data.directorPin !== MASTER_DIRECTOR_PIN) {
+        return res.status(403).json({ error: "Invalid director credentials" });
+      }
+      
+      if (parsed.data.sourceId === parsed.data.targetId) {
+        return res.status(400).json({ error: "Cannot merge a player into themselves" });
+      }
+      
+      const mergedPlayer = await storage.mergeUniversalPlayers(parsed.data.sourceId, parsed.data.targetId);
+      res.json(mergedPlayer);
+    } catch (error) {
+      console.error("Error merging universal players:", error);
+      res.status(500).json({ error: "Failed to merge universal players" });
     }
   });
 

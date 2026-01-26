@@ -46,10 +46,15 @@ export interface IStorage {
   getLeaderboard(tournamentId: number): Promise<LeaderboardEntry[]>;
 
   // Universal player operations
+  getNextUniqueCode(): Promise<string>;
   createUniversalPlayer(player: InsertUniversalPlayer): Promise<UniversalPlayer>;
   getAllUniversalPlayers(): Promise<UniversalPlayer[]>;
   getUniversalPlayer(id: number): Promise<UniversalPlayer | undefined>;
+  getUniversalPlayerByCode(uniqueCode: string): Promise<UniversalPlayer | undefined>;
   searchUniversalPlayers(query: string): Promise<UniversalPlayer[]>;
+  updateUniversalPlayer(id: number, data: Partial<Pick<UniversalPlayer, "name" | "email" | "contactInfo" | "handicap" | "isProvisional">>): Promise<UniversalPlayer>;
+  deleteUniversalPlayer(id: number): Promise<void>;
+  mergeUniversalPlayers(sourceId: number, targetId: number): Promise<UniversalPlayer>;
   linkTournamentPlayerToUniversal(tournamentPlayerId: number, universalPlayerId: number): Promise<TournamentPlayer>;
   addTournamentHistory(history: InsertPlayerTournamentHistory): Promise<PlayerTournamentHistory>;
   getPlayerTournamentHistory(universalPlayerId: number, limit?: number): Promise<PlayerTournamentHistory[]>;
@@ -244,17 +249,34 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Universal player operations
+  async getNextUniqueCode(): Promise<string> {
+    // Use MAX to get the highest numeric code, then increment
+    const result = await db.execute(sql`
+      SELECT MAX(CAST(SUBSTRING(unique_code FROM 3) AS INTEGER)) as max_num 
+      FROM universal_players 
+      WHERE unique_code LIKE 'PC%'
+    `);
+    
+    const maxNum = (result.rows?.[0] as any)?.max_num || 7000;
+    return `PC${maxNum + 1}`;
+  }
+
   async createUniversalPlayer(player: InsertUniversalPlayer): Promise<UniversalPlayer> {
     const [created] = await db.insert(universalPlayers).values(player).returning();
     return created;
   }
 
   async getAllUniversalPlayers(): Promise<UniversalPlayer[]> {
-    return db.select().from(universalPlayers).orderBy(desc(universalPlayers.createdAt));
+    return db.select().from(universalPlayers).orderBy(universalPlayers.name);
   }
 
   async getUniversalPlayer(id: number): Promise<UniversalPlayer | undefined> {
     const [player] = await db.select().from(universalPlayers).where(eq(universalPlayers.id, id));
+    return player || undefined;
+  }
+
+  async getUniversalPlayerByCode(uniqueCode: string): Promise<UniversalPlayer | undefined> {
+    const [player] = await db.select().from(universalPlayers).where(eq(universalPlayers.uniqueCode, uniqueCode.toUpperCase()));
     return player || undefined;
   }
 
@@ -266,11 +288,35 @@ export class DatabaseStorage implements IStorage {
       .where(
         or(
           ilike(universalPlayers.name, searchPattern),
-          ilike(universalPlayers.email, searchPattern)
+          ilike(universalPlayers.email, searchPattern),
+          ilike(universalPlayers.uniqueCode, searchPattern)
         )
       )
       .orderBy(universalPlayers.name)
       .limit(20);
+  }
+
+  async updateUniversalPlayer(id: number, data: Partial<Pick<UniversalPlayer, "name" | "email" | "contactInfo" | "handicap" | "isProvisional">>): Promise<UniversalPlayer> {
+    const [updated] = await db
+      .update(universalPlayers)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(universalPlayers.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteUniversalPlayer(id: number): Promise<void> {
+    await db.update(tournamentPlayers).set({ universalPlayerId: null }).where(eq(tournamentPlayers.universalPlayerId, id));
+    await db.delete(playerTournamentHistory).where(eq(playerTournamentHistory.universalPlayerId, id));
+    await db.delete(universalPlayers).where(eq(universalPlayers.id, id));
+  }
+
+  async mergeUniversalPlayers(sourceId: number, targetId: number): Promise<UniversalPlayer> {
+    await db.update(tournamentPlayers).set({ universalPlayerId: targetId }).where(eq(tournamentPlayers.universalPlayerId, sourceId));
+    await db.update(playerTournamentHistory).set({ universalPlayerId: targetId }).where(eq(playerTournamentHistory.universalPlayerId, sourceId));
+    await db.delete(universalPlayers).where(eq(universalPlayers.id, sourceId));
+    const target = await this.recalculateHandicap(targetId);
+    return target;
   }
 
   async linkTournamentPlayerToUniversal(tournamentPlayerId: number, universalPlayerId: number): Promise<TournamentPlayer> {
