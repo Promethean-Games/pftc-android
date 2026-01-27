@@ -5,6 +5,7 @@ import { type Server } from "node:http";
 
 import express, { type Express } from "express";
 import runApp from "./app";
+import { initializeDatabase } from "./db";
 
 export async function serveStatic(app: Express, _server: Server) {
   // Get directory of this file (works after esbuild bundling)
@@ -37,5 +38,7 @@ export async function serveStatic(app: Express, _server: Server) {
 }
 
 (async () => {
+  // Initialize database tables before starting the app
+  await initializeDatabase();
   await runApp(serveStatic);
 })();
