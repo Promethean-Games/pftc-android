@@ -65,9 +65,20 @@ The server handles tournament creation, player registration, score synchronizati
 ### Tournament Director Flow
 - Access via Settings gear icon on splash screen
 - Enter 4-digit master PIN (3141) - verified server-side via POST /api/director/verify
-- TournamentManagementPage shows all tournaments with create/delete/backup/manage options
+- TDDashboard provides a unified tabbed interface with two tabs:
+  - **Tournaments Tab**: Create, view, delete, backup, and manage tournaments
+  - **Players Tab (Player Directory)**: Full player management including:
+    - Add/edit/delete universal players
+    - Search players by name, code, or email
+    - Manually add tournament history entries for players
+    - Delete tournament history entries
+    - Set/override handicaps
+    - Merge duplicate player records
 - DirectorPortal provides per-tournament dashboard with player management, groups, and start functionality
 - All director endpoints require master PIN or tournament-specific PIN for authorization
+- Manual History API Endpoints:
+  - `POST /api/universal-players/:playerId/history` - Add manual tournament history
+  - `DELETE /api/universal-players/:playerId/history/:historyId` - Delete history entry
 
 ## External Dependencies
 
