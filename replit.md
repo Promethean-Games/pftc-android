@@ -44,11 +44,23 @@ The server handles tournament creation, player registration, score synchronizati
 - **Tournament Completion Flow**: When director completes a tournament, results are saved to history and handicaps are recalculated for all linked players
 - **Director UI Integration**: DirectorPortal has "Find Existing Player" search to link tournament players to universal identities
 
+### Player Login System
+- **Player Code + PIN Authentication**: Players can log in using their unique player code (e.g., PC7001) and a 4-digit PIN
+- **First-Time PIN Setup**: New players can create a PIN, optionally with Tournament Director authorization
+- **Profile Access**: Logged-in players can view their handicap, tournament history, and personal stats
+- **PIN Management**: Players can change their PIN from the profile page
+- **API Endpoints**:
+  - `POST /api/player/login` - Verify player code + PIN
+  - `POST /api/player/set-pin` - Set or update player PIN
+  - `GET /api/player/:code/profile` - Get player profile (public info)
+  - `GET /api/player/:code/has-pin` - Check if player has PIN set
+
 ### Key Design Decisions
 1. **Offline-First Local Games**: Single-device gameplay stores all data locally, no server required
 2. **Tournament Mode**: Optional server sync for multi-device tournaments with live leaderboards
 3. **Device-Based Identity**: Devices get unique IDs stored in localStorage for player assignment
 4. **Master Director PIN System**: Tournament directors authenticate with master PIN (3141) verified server-side, granting access to create/manage all tournaments
+5. **Player Authentication**: Players authenticate with their unique code + 4-digit PIN for profile access
 
 ### Tournament Director Flow
 - Access via Settings gear icon on splash screen

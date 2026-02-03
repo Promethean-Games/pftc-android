@@ -1,8 +1,11 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import bcrypt from "bcrypt";
 import { storage } from "./storage";
 import { insertTournamentSchema, insertTournamentPlayerSchema, insertTournamentScoreSchema, batchUpdateGroupsSchema, insertUniversalPlayerSchema, type TournamentScore } from "@shared/schema";
 import { z } from "zod";
+
+const SALT_ROUNDS = 10;
 
 const createUniversalPlayerSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -890,11 +893,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "No PIN set. Please ask a Tournament Director to set up your login." });
       }
       
-      if (player.pin !== pin) {
+      // Verify PIN using bcrypt
+      const isPinValid = await bcrypt.compare(pin, player.pin);
+      if (!isPinValid) {
         return res.status(401).json({ error: "Invalid PIN" });
       }
       
-      // Return player profile without the PIN
+      // Return player profile without the PIN hash
       const { pin: _, ...safePlayer } = player;
       const history = await storage.getPlayerTournamentHistory(player.id, 5);
       
@@ -923,16 +928,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Player not found" });
       }
       
-      // Allow setting PIN if: director PIN is valid, or current PIN matches, or no PIN is set yet
+      // Verify authorization: director PIN, current PIN (hashed), or no PIN set yet
       const isDirector = directorPin === MASTER_DIRECTOR_PIN;
-      const isCurrentPinValid = player.pin && player.pin === currentPin;
+      let isCurrentPinValid = false;
+      if (player.pin && currentPin) {
+        isCurrentPinValid = await bcrypt.compare(currentPin, player.pin);
+      }
       const noPinSet = !player.pin;
       
       if (!isDirector && !isCurrentPinValid && !noPinSet) {
         return res.status(401).json({ error: "Invalid credentials" });
       }
       
-      await storage.updateUniversalPlayerPin(player.id, newPin);
+      // Hash the new PIN before storing
+      const hashedPin = await bcrypt.hash(newPin, SALT_ROUNDS);
+      await storage.updateUniversalPlayerPin(player.id, hashedPin);
       
       res.json({ success: true, message: "PIN updated successfully" });
     } catch (error) {
