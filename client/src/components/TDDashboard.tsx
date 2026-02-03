@@ -1,0 +1,65 @@
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { ArrowLeft, Trophy, Users } from "lucide-react";
+import { TournamentManagementTab } from "./TournamentManagementTab";
+import { PlayerDirectoryTab } from "./PlayerDirectoryTab";
+
+interface TDDashboardProps {
+  onClose: () => void;
+  directorPin: string;
+}
+
+export function TDDashboard({ onClose, directorPin }: TDDashboardProps) {
+  const [activeTab, setActiveTab] = useState<"tournaments" | "players">("tournaments");
+
+  return (
+    <div className="min-h-screen bg-background flex flex-col" data-testid="td-dashboard">
+      <header className="bg-primary text-primary-foreground p-4 flex items-center gap-3">
+        <Button
+          size="icon"
+          variant="ghost"
+          onClick={onClose}
+          className="text-primary-foreground"
+          data-testid="button-back"
+        >
+          <ArrowLeft className="h-6 w-6" />
+        </Button>
+        <h1 className="text-xl font-bold flex-1">Tournament Director Dashboard</h1>
+      </header>
+
+      <Tabs 
+        value={activeTab} 
+        onValueChange={(v) => setActiveTab(v as "tournaments" | "players")}
+        className="flex-1 flex flex-col"
+      >
+        <TabsList className="w-full h-auto rounded-none border-b bg-background p-0">
+          <TabsTrigger 
+            value="tournaments"
+            className="flex-1 flex items-center gap-2 py-4 data-[state=active]:bg-muted rounded-none"
+            data-testid="tab-tournaments"
+          >
+            <Trophy className="h-5 w-5" />
+            Tournaments
+          </TabsTrigger>
+          <TabsTrigger 
+            value="players"
+            className="flex-1 flex items-center gap-2 py-4 data-[state=active]:bg-muted rounded-none"
+            data-testid="tab-players"
+          >
+            <Users className="h-5 w-5" />
+            Player Directory
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="tournaments" className="flex-1 m-0 p-0 overflow-auto">
+          <TournamentManagementTab directorPin={directorPin} />
+        </TabsContent>
+
+        <TabsContent value="players" className="flex-1 m-0 p-0 overflow-auto">
+          <PlayerDirectoryTab directorPin={directorPin} />
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}

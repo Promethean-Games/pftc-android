@@ -8,7 +8,7 @@ import { LOGO_URL } from "@/lib/constants";
 import { useTournament } from "@/contexts/TournamentContext";
 import { PlayerSelectionDialog } from "./PlayerSelectionDialog";
 import { TDSignInModal } from "./TDSignInModal";
-import { TournamentManagementPage } from "./TournamentManagementPage";
+import { TDDashboard } from "./TDDashboard";
 import { PlayerLoginDialog, type PlayerProfile, type TournamentHistoryEntry } from "./PlayerLoginDialog";
 import { PlayerProfilePage } from "./PlayerProfilePage";
 
@@ -58,7 +58,7 @@ export function SplashScreen({ onNewGame, onLoadGame, onStartTournamentGame }: S
 
   if (showTournamentManagement && verifiedPin) {
     return (
-      <TournamentManagementPage 
+      <TDDashboard 
         onClose={() => {
           setShowTournamentManagement(false);
           setVerifiedPin(null);
