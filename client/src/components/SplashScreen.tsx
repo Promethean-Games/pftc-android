@@ -2,13 +2,15 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Trophy, Settings, Shield } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
+import { Trophy, Settings, Shield, User } from "lucide-react";
 import { LOGO_URL } from "@/lib/constants";
 import { useTournament } from "@/contexts/TournamentContext";
 import { PlayerSelectionDialog } from "./PlayerSelectionDialog";
 import { TDSignInModal } from "./TDSignInModal";
 import { TournamentManagementPage } from "./TournamentManagementPage";
+import { PlayerLoginDialog, type PlayerProfile, type TournamentHistoryEntry } from "./PlayerLoginDialog";
+import { PlayerProfilePage } from "./PlayerProfilePage";
 
 interface SplashScreenProps {
   onNewGame: () => void;
@@ -23,12 +25,36 @@ export function SplashScreen({ onNewGame, onLoadGame, onStartTournamentGame }: S
   const [showTDSignIn, setShowTDSignIn] = useState(false);
   const [showTournamentManagement, setShowTournamentManagement] = useState(false);
   const [verifiedPin, setVerifiedPin] = useState<string | null>(null);
+  const [showPlayerLogin, setShowPlayerLogin] = useState(false);
+  const [loggedInPlayer, setLoggedInPlayer] = useState<PlayerProfile | null>(null);
+  const [playerHistory, setPlayerHistory] = useState<TournamentHistoryEntry[]>([]);
   const tournament = useTournament();
 
   const handleTDSignInSuccess = (pin: string) => {
     setVerifiedPin(pin);
     setShowTournamentManagement(true);
   };
+
+  const handlePlayerLoginSuccess = (player: PlayerProfile, history: TournamentHistoryEntry[]) => {
+    setLoggedInPlayer(player);
+    setPlayerHistory(history);
+  };
+
+  const handlePlayerLogout = () => {
+    setLoggedInPlayer(null);
+    setPlayerHistory([]);
+  };
+
+  if (loggedInPlayer) {
+    return (
+      <PlayerProfilePage
+        player={loggedInPlayer}
+        history={playerHistory}
+        onLogout={handlePlayerLogout}
+        onBack={handlePlayerLogout}
+      />
+    );
+  }
 
   if (showTournamentManagement && verifiedPin) {
     return (
@@ -70,6 +96,14 @@ export function SplashScreen({ onNewGame, onLoadGame, onStartTournamentGame }: S
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            <DropdownMenuItem 
+              onClick={() => setShowPlayerLogin(true)}
+              data-testid="menu-item-player-login"
+            >
+              <User className="w-4 h-4 mr-2 text-blue-600" />
+              Player Login
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
             <DropdownMenuItem 
               onClick={() => setShowTDSignIn(true)}
               data-testid="menu-item-td-signin"
@@ -189,6 +223,12 @@ export function SplashScreen({ onNewGame, onLoadGame, onStartTournamentGame }: S
         isOpen={showTDSignIn}
         onClose={() => setShowTDSignIn(false)}
         onSuccess={handleTDSignInSuccess}
+      />
+
+      <PlayerLoginDialog
+        isOpen={showPlayerLogin}
+        onClose={() => setShowPlayerLogin(false)}
+        onLoginSuccess={handlePlayerLoginSuccess}
       />
     </div>
   );
