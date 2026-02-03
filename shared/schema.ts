@@ -27,13 +27,15 @@ export const universalPlayersRelations = relations(universalPlayers, ({ many }) 
 export const playerTournamentHistory = pgTable("player_tournament_history", {
   id: serial("id").primaryKey(),
   universalPlayerId: integer("universal_player_id").notNull().references(() => universalPlayers.id),
-  tournamentId: integer("tournament_id").notNull().references(() => tournaments.id),
+  tournamentId: integer("tournament_id").references(() => tournaments.id), // nullable for manual entries
   tournamentName: text("tournament_name").notNull(),
+  courseName: text("course_name"), // optional course name for manual entries
   totalStrokes: integer("total_strokes").notNull(),
   totalPar: integer("total_par").notNull(),
   holesPlayed: integer("holes_played").notNull(),
   relativeToPar: integer("relative_to_par").notNull(),
   completedAt: timestamp("completed_at").defaultNow().notNull(),
+  isManualEntry: boolean("is_manual_entry").default(false),
 });
 
 export const playerTournamentHistoryRelations = relations(playerTournamentHistory, ({ one }) => ({

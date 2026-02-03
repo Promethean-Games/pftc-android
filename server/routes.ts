@@ -795,6 +795,81 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Manually add tournament history for a player (TD only)
+  app.post("/api/universal-players/:playerId/history", async (req, res) => {
+    try {
+      const directorPin = req.body.directorPin;
+      if (directorPin !== MASTER_DIRECTOR_PIN) {
+        return res.status(403).json({ error: "Invalid director credentials" });
+      }
+
+      const playerId = parseInt(req.params.playerId);
+      if (isNaN(playerId)) {
+        return res.status(400).json({ error: "Invalid player ID" });
+      }
+
+      const player = await storage.getUniversalPlayer(playerId);
+      if (!player) {
+        return res.status(404).json({ error: "Player not found" });
+      }
+
+      const { tournamentName, courseName, totalStrokes, totalPar, holesPlayed, completedAt } = req.body;
+      
+      if (!tournamentName || totalStrokes == null || totalPar == null || holesPlayed == null) {
+        return res.status(400).json({ error: "Missing required fields: tournamentName, totalStrokes, totalPar, holesPlayed" });
+      }
+
+      const relativeToPar = totalStrokes - totalPar;
+
+      const history = await storage.addTournamentHistory({
+        universalPlayerId: playerId,
+        tournamentId: null as any, // Manual entry has no tournament ID
+        tournamentName,
+        courseName: courseName || null,
+        totalStrokes,
+        totalPar,
+        holesPlayed,
+        relativeToPar,
+        isManualEntry: true,
+      });
+
+      // Recalculate handicap after adding history
+      await storage.recalculateHandicap(playerId);
+
+      res.json(history);
+    } catch (error) {
+      console.error("Error adding tournament history:", error);
+      res.status(500).json({ error: "Failed to add tournament history" });
+    }
+  });
+
+  // Delete tournament history entry (TD only)
+  app.delete("/api/universal-players/:playerId/history/:historyId", async (req, res) => {
+    try {
+      const directorPin = req.body.directorPin;
+      if (directorPin !== MASTER_DIRECTOR_PIN) {
+        return res.status(403).json({ error: "Invalid director credentials" });
+      }
+
+      const playerId = parseInt(req.params.playerId);
+      const historyId = parseInt(req.params.historyId);
+      
+      if (isNaN(playerId) || isNaN(historyId)) {
+        return res.status(400).json({ error: "Invalid IDs" });
+      }
+
+      await storage.deleteTournamentHistory(historyId);
+      
+      // Recalculate handicap after deleting history
+      await storage.recalculateHandicap(playerId);
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting tournament history:", error);
+      res.status(500).json({ error: "Failed to delete tournament history" });
+    }
+  });
+
   // Link a tournament player to a universal player
   app.post("/api/tournaments/:roomCode/players/:playerId/link-universal", async (req, res) => {
     try {

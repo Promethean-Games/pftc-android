@@ -59,6 +59,7 @@ export interface IStorage {
   linkTournamentPlayerToUniversal(tournamentPlayerId: number, universalPlayerId: number): Promise<TournamentPlayer>;
   addTournamentHistory(history: InsertPlayerTournamentHistory): Promise<PlayerTournamentHistory>;
   getPlayerTournamentHistory(universalPlayerId: number, limit?: number): Promise<PlayerTournamentHistory[]>;
+  deleteTournamentHistory(historyId: number): Promise<void>;
   recalculateHandicap(universalPlayerId: number): Promise<UniversalPlayer>;
   getTournamentPlayers(tournamentId: number): Promise<TournamentPlayer[]>;
 }
@@ -348,6 +349,10 @@ export class DatabaseStorage implements IStorage {
       .where(eq(playerTournamentHistory.universalPlayerId, universalPlayerId))
       .orderBy(desc(playerTournamentHistory.completedAt))
       .limit(limit);
+  }
+
+  async deleteTournamentHistory(historyId: number): Promise<void> {
+    await db.delete(playerTournamentHistory).where(eq(playerTournamentHistory.id, historyId));
   }
 
   async recalculateHandicap(universalPlayerId: number): Promise<UniversalPlayer> {
