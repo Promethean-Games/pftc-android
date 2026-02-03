@@ -53,6 +53,7 @@ export interface IStorage {
   getUniversalPlayerByCode(uniqueCode: string): Promise<UniversalPlayer | undefined>;
   searchUniversalPlayers(query: string): Promise<UniversalPlayer[]>;
   updateUniversalPlayer(id: number, data: Partial<Pick<UniversalPlayer, "name" | "email" | "contactInfo" | "handicap" | "isProvisional">>): Promise<UniversalPlayer>;
+  updateUniversalPlayerPin(id: number, pin: string): Promise<void>;
   deleteUniversalPlayer(id: number): Promise<void>;
   mergeUniversalPlayers(sourceId: number, targetId: number): Promise<UniversalPlayer>;
   linkTournamentPlayerToUniversal(tournamentPlayerId: number, universalPlayerId: number): Promise<TournamentPlayer>;
@@ -303,6 +304,13 @@ export class DatabaseStorage implements IStorage {
       .where(eq(universalPlayers.id, id))
       .returning();
     return updated;
+  }
+
+  async updateUniversalPlayerPin(id: number, pin: string): Promise<void> {
+    await db
+      .update(universalPlayers)
+      .set({ pin, updatedAt: new Date() })
+      .where(eq(universalPlayers.id, id));
   }
 
   async deleteUniversalPlayer(id: number): Promise<void> {
