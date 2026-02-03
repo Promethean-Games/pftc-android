@@ -870,6 +870,111 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ==================== PLAYER LOGIN ENDPOINTS ====================
+
+  // Player login - verify player code + PIN
+  app.post("/api/player/login", async (req, res) => {
+    try {
+      const { playerCode, pin } = req.body;
+      
+      if (!playerCode || !pin) {
+        return res.status(400).json({ error: "Player code and PIN are required" });
+      }
+      
+      const player = await storage.getUniversalPlayerByCode(playerCode.toUpperCase());
+      if (!player) {
+        return res.status(404).json({ error: "Player not found" });
+      }
+      
+      if (!player.pin) {
+        return res.status(400).json({ error: "No PIN set. Please ask a Tournament Director to set up your login." });
+      }
+      
+      if (player.pin !== pin) {
+        return res.status(401).json({ error: "Invalid PIN" });
+      }
+      
+      // Return player profile without the PIN
+      const { pin: _, ...safePlayer } = player;
+      const history = await storage.getPlayerTournamentHistory(player.id, 5);
+      
+      res.json({ player: safePlayer, recentHistory: history });
+    } catch (error) {
+      console.error("Error during player login:", error);
+      res.status(500).json({ error: "Failed to login" });
+    }
+  });
+
+  // Set or update player PIN (by player code, authenticated with current PIN or director PIN)
+  app.post("/api/player/set-pin", async (req, res) => {
+    try {
+      const { playerCode, currentPin, newPin, directorPin } = req.body;
+      
+      if (!playerCode || !newPin) {
+        return res.status(400).json({ error: "Player code and new PIN are required" });
+      }
+      
+      if (!/^\d{4}$/.test(newPin)) {
+        return res.status(400).json({ error: "PIN must be exactly 4 digits" });
+      }
+      
+      const player = await storage.getUniversalPlayerByCode(playerCode.toUpperCase());
+      if (!player) {
+        return res.status(404).json({ error: "Player not found" });
+      }
+      
+      // Allow setting PIN if: director PIN is valid, or current PIN matches, or no PIN is set yet
+      const isDirector = directorPin === MASTER_DIRECTOR_PIN;
+      const isCurrentPinValid = player.pin && player.pin === currentPin;
+      const noPinSet = !player.pin;
+      
+      if (!isDirector && !isCurrentPinValid && !noPinSet) {
+        return res.status(401).json({ error: "Invalid credentials" });
+      }
+      
+      await storage.updateUniversalPlayerPin(player.id, newPin);
+      
+      res.json({ success: true, message: "PIN updated successfully" });
+    } catch (error) {
+      console.error("Error setting player PIN:", error);
+      res.status(500).json({ error: "Failed to set PIN" });
+    }
+  });
+
+  // Get player profile by code (public info only - for display)
+  app.get("/api/player/:code/profile", async (req, res) => {
+    try {
+      const player = await storage.getUniversalPlayerByCode(req.params.code.toUpperCase());
+      if (!player) {
+        return res.status(404).json({ error: "Player not found" });
+      }
+      
+      // Return public profile info (no PIN)
+      const { pin: _, ...safePlayer } = player;
+      const history = await storage.getPlayerTournamentHistory(player.id, 5);
+      
+      res.json({ player: safePlayer, recentHistory: history });
+    } catch (error) {
+      console.error("Error getting player profile:", error);
+      res.status(500).json({ error: "Failed to get profile" });
+    }
+  });
+
+  // Check if player has PIN set (for login flow)
+  app.get("/api/player/:code/has-pin", async (req, res) => {
+    try {
+      const player = await storage.getUniversalPlayerByCode(req.params.code.toUpperCase());
+      if (!player) {
+        return res.status(404).json({ error: "Player not found" });
+      }
+      
+      res.json({ hasPin: !!player.pin, playerName: player.name });
+    } catch (error) {
+      console.error("Error checking player PIN:", error);
+      res.status(500).json({ error: "Failed to check PIN status" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;

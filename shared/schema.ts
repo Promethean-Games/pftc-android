@@ -10,6 +10,7 @@ export const universalPlayers = pgTable("universal_players", {
   name: text("name").notNull(),
   email: text("email"),
   contactInfo: text("contact_info"),
+  pin: text("pin"), // 4-digit PIN for player login
   handicap: real("handicap"),
   isProvisional: boolean("is_provisional").notNull().default(true),
   completedTournaments: integer("completed_tournaments").notNull().default(0),
