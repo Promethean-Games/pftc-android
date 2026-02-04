@@ -564,7 +564,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get player scores (for retroactive score entry)
+  // Get player scores (for retroactive score entry - director only)
   app.get("/api/tournaments/:roomCode/players/:playerId/scores", async (req, res) => {
     try {
       const tournament = await storage.getTournamentByCode(req.params.roomCode);
@@ -572,9 +572,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Tournament not found" });
       }
 
+      // Validate director PIN
+      const directorPin = req.query.directorPin as string;
+      const isMasterDirector = directorPin === MASTER_DIRECTOR_PIN;
+      const isTournamentDirector = await storage.verifyDirectorPin(req.params.roomCode, directorPin);
+      
+      if (!isMasterDirector && !isTournamentDirector) {
+        return res.status(403).json({ error: "Invalid director credentials" });
+      }
+
       const playerId = parseInt(req.params.playerId);
       if (isNaN(playerId)) {
         return res.status(400).json({ error: "Invalid player ID" });
+      }
+
+      // Verify the player belongs to this tournament
+      const players = await storage.getPlayersInTournament(tournament.id);
+      const playerBelongsToTournament = players.some(p => p.id === playerId);
+      if (!playerBelongsToTournament) {
+        return res.status(404).json({ error: "Player not found in this tournament" });
       }
 
       const scores = await storage.getPlayerScores(playerId);

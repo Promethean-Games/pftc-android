@@ -31,7 +31,9 @@ import {
   Link2,
   Star,
   Smartphone,
-  Unlink
+  Unlink,
+  ClipboardList,
+  Save
 } from "lucide-react";
 import { useTournament } from "@/contexts/TournamentContext";
 import { apiRequest } from "@/lib/queryClient";
@@ -58,6 +60,20 @@ interface EditPlayerData {
   groupName: string;
   universalId: string;
   contactInfo: string;
+}
+
+interface HoleScore {
+  hole: number;
+  par: number;
+  strokes: number;
+  scratches: number;
+  penalties: number;
+}
+
+interface ScoreEntryData {
+  playerId: number;
+  playerName: string;
+  scores: HoleScore[];
 }
 
 export function DirectorPortal({ onClose }: DirectorPortalProps) {
@@ -97,6 +113,11 @@ export function DirectorPortal({ onClose }: DirectorPortalProps) {
   const [isSearching, setIsSearching] = useState(false);
   const [selectedUniversalPlayer, setSelectedUniversalPlayer] = useState<UniversalPlayer | null>(null);
   const [showUniversalSearch, setShowUniversalSearch] = useState(false);
+
+  // Score entry state
+  const [scoreEntryPlayer, setScoreEntryPlayer] = useState<ScoreEntryData | null>(null);
+  const [isSavingScores, setIsSavingScores] = useState(false);
+  const [numHoles, setNumHoles] = useState(18);
 
   const handleSearchUniversalPlayers = async (query: string) => {
     setUniversalSearchQuery(query);
@@ -283,6 +304,85 @@ export function DirectorPortal({ onClose }: DirectorPortalProps) {
       });
       setEditingPlayer(null);
     }
+  };
+
+  // Open score entry for a player
+  const handleOpenScoreEntry = async (player: typeof tournament.allPlayers[0]) => {
+    try {
+      const directorPin = localStorage.getItem("directorPin") || "3141";
+      const res = await fetch(`/api/tournaments/${tournament.roomCode}/players/${player.id}/scores?directorPin=${encodeURIComponent(directorPin)}`);
+      const existingScores = res.ok ? await res.json() : [];
+      
+      // Determine number of holes from existing scores or default to 18
+      const maxHole = existingScores.length > 0 
+        ? Math.max(...existingScores.map((s: HoleScore) => s.hole)) 
+        : 18;
+      const holesCount = Math.max(maxHole, 18);
+      setNumHoles(holesCount);
+      
+      // Initialize scores for all holes
+      const scores: HoleScore[] = [];
+      for (let i = 1; i <= holesCount; i++) {
+        const existing = existingScores.find((s: HoleScore) => s.hole === i);
+        scores.push({
+          hole: i,
+          par: existing?.par || 0,
+          strokes: existing?.strokes || 0,
+          scratches: existing?.scratches || 0,
+          penalties: existing?.penalties || 0,
+        });
+      }
+      
+      setScoreEntryPlayer({
+        playerId: player.id,
+        playerName: player.playerName,
+        scores,
+      });
+    } catch (err) {
+      console.error("Failed to load player scores:", err);
+    }
+  };
+
+  // Update a single hole score
+  const handleUpdateHoleScore = (hole: number, field: keyof HoleScore, value: number) => {
+    if (!scoreEntryPlayer) return;
+    setScoreEntryPlayer({
+      ...scoreEntryPlayer,
+      scores: scoreEntryPlayer.scores.map(s => 
+        s.hole === hole ? { ...s, [field]: value } : s
+      ),
+    });
+  };
+
+  // Save all scores for a player
+  const handleSaveScores = async () => {
+    if (!scoreEntryPlayer) return;
+    setIsSavingScores(true);
+    
+    try {
+      // Filter out holes with no scores entered
+      const scoresToSave = scoreEntryPlayer.scores.filter(s => s.par > 0 && s.strokes > 0);
+      
+      if (scoresToSave.length > 0) {
+        await apiRequest("POST", `/api/tournaments/${tournament.roomCode}/scores/batch`, {
+          scores: scoresToSave.map(s => ({
+            tournamentPlayerId: scoreEntryPlayer.playerId,
+            hole: s.hole,
+            par: s.par,
+            strokes: s.strokes,
+            scratches: s.scratches,
+            penalties: s.penalties,
+          })),
+        });
+      }
+      
+      await tournament.refreshLeaderboard();
+      setScoreEntryPlayer(null);
+    } catch (err) {
+      console.error("Failed to save scores:", err);
+    }
+    
+    setIsSavingScores(false);
   };
 
   // Auto-assign players to groups evenly
@@ -939,6 +1039,16 @@ export function DirectorPortal({ onClose }: DirectorPortalProps) {
                         <Button
                           variant="ghost"
                           size="icon"
+                          className="h-8 w-8 text-blue-600 hover:text-blue-700"
+                          onClick={() => handleOpenScoreEntry(player)}
+                          title="Enter scores"
+                          data-testid={`button-enter-scores-${player.id}`}
+                        >
+                          <ClipboardList className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           className="h-8 w-8"
                           onClick={() => handleEditPlayer(player)}
                           data-testid={`button-edit-player-${player.id}`}
@@ -1187,6 +1297,171 @@ export function DirectorPortal({ onClose }: DirectorPortalProps) {
                 >
                   Save Changes
                 </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Score Entry Dialog */}
+      <Dialog open={!!scoreEntryPlayer} onOpenChange={(open) => !open && setScoreEntryPlayer(null)}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-hidden flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ClipboardList className="w-5 h-5" />
+              Enter Scores: {scoreEntryPlayer?.playerName}
+            </DialogTitle>
+          </DialogHeader>
+          {scoreEntryPlayer && (
+            <div className="flex-1 overflow-hidden flex flex-col">
+              <div className="flex items-center gap-3 mb-4">
+                <Label className="text-sm whitespace-nowrap">Number of holes:</Label>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const newNum = Math.max(1, numHoles - 1);
+                      setNumHoles(newNum);
+                      setScoreEntryPlayer({
+                        ...scoreEntryPlayer,
+                        scores: scoreEntryPlayer.scores.slice(0, newNum),
+                      });
+                    }}
+                    disabled={numHoles <= 1}
+                    data-testid="button-decrease-holes"
+                  >
+                    -
+                  </Button>
+                  <span className="w-8 text-center font-bold">{numHoles}</span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const newNum = Math.min(36, numHoles + 1);
+                      setNumHoles(newNum);
+                      if (scoreEntryPlayer.scores.length < newNum) {
+                        setScoreEntryPlayer({
+                          ...scoreEntryPlayer,
+                          scores: [
+                            ...scoreEntryPlayer.scores,
+                            { hole: newNum, par: 0, strokes: 0, scratches: 0, penalties: 0 },
+                          ],
+                        });
+                      }
+                    }}
+                    disabled={numHoles >= 36}
+                    data-testid="button-increase-holes"
+                  >
+                    +
+                  </Button>
+                </div>
+              </div>
+              
+              <div className="flex-1 overflow-y-auto space-y-2 pr-2">
+                <div className="grid grid-cols-[auto_1fr_1fr_1fr_1fr] gap-2 text-xs font-medium opacity-70 sticky top-0 bg-background py-1">
+                  <span className="w-12 text-center">Hole</span>
+                  <span className="text-center">Par</span>
+                  <span className="text-center">Strokes</span>
+                  <span className="text-center">Scratch</span>
+                  <span className="text-center">Penalty</span>
+                </div>
+                {scoreEntryPlayer.scores.map((score) => (
+                  <div 
+                    key={score.hole} 
+                    className="grid grid-cols-[auto_1fr_1fr_1fr_1fr] gap-2 items-center"
+                  >
+                    <span className="w-12 text-center font-bold text-sm bg-muted rounded py-1">
+                      {score.hole}
+                    </span>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={15}
+                      value={score.par || ""}
+                      onChange={(e) => handleUpdateHoleScore(score.hole, "par", parseInt(e.target.value) || 0)}
+                      className="text-center h-9"
+                      placeholder="0"
+                      data-testid={`input-par-${score.hole}`}
+                    />
+                    <Input
+                      type="number"
+                      min={0}
+                      max={20}
+                      value={score.strokes || ""}
+                      onChange={(e) => handleUpdateHoleScore(score.hole, "strokes", parseInt(e.target.value) || 0)}
+                      className="text-center h-9"
+                      placeholder="0"
+                      data-testid={`input-strokes-${score.hole}`}
+                    />
+                    <Input
+                      type="number"
+                      min={0}
+                      max={10}
+                      value={score.scratches || ""}
+                      onChange={(e) => handleUpdateHoleScore(score.hole, "scratches", parseInt(e.target.value) || 0)}
+                      className="text-center h-9"
+                      placeholder="0"
+                      data-testid={`input-scratches-${score.hole}`}
+                    />
+                    <Input
+                      type="number"
+                      min={0}
+                      max={10}
+                      value={score.penalties || ""}
+                      onChange={(e) => handleUpdateHoleScore(score.hole, "penalties", parseInt(e.target.value) || 0)}
+                      className="text-center h-9"
+                      placeholder="0"
+                      data-testid={`input-penalties-${score.hole}`}
+                    />
+                  </div>
+                ))}
+              </div>
+
+              <div className="pt-4 border-t mt-4 space-y-3">
+                <div className="flex justify-between text-sm">
+                  <span className="opacity-70">Total Par:</span>
+                  <span className="font-mono font-bold">
+                    {scoreEntryPlayer.scores.reduce((sum, s) => sum + s.par, 0)}
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="opacity-70">Total Score:</span>
+                  <span className="font-mono font-bold">
+                    {scoreEntryPlayer.scores.reduce((sum, s) => sum + s.strokes + s.scratches + s.penalties, 0)}
+                  </span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="opacity-70">Relative to Par:</span>
+                  <span className={`font-mono font-bold ${
+                    scoreEntryPlayer.scores.reduce((sum, s) => sum + s.strokes + s.scratches + s.penalties - s.par, 0) < 0 
+                      ? "text-green-600" 
+                      : scoreEntryPlayer.scores.reduce((sum, s) => sum + s.strokes + s.scratches + s.penalties - s.par, 0) > 0 
+                        ? "text-red-500" 
+                        : ""
+                  }`}>
+                    {scoreEntryPlayer.scores.reduce((sum, s) => sum + s.strokes + s.scratches + s.penalties - s.par, 0) > 0 ? "+" : ""}
+                    {scoreEntryPlayer.scores.reduce((sum, s) => sum + s.strokes + s.scratches + s.penalties - s.par, 0)}
+                  </span>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => setScoreEntryPlayer(null)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    className="flex-1 gap-2"
+                    onClick={handleSaveScores}
+                    disabled={isSavingScores}
+                    data-testid="button-save-scores"
+                  >
+                    <Save className="w-4 h-4" />
+                    {isSavingScores ? "Saving..." : "Save Scores"}
+                  </Button>
+                </div>
               </div>
             </div>
           )}
