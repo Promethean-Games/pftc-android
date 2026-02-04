@@ -21,7 +21,7 @@ export async function initializeDatabase() {
     await pool.query(`
       CREATE TABLE IF NOT EXISTS universal_players (
         id SERIAL PRIMARY KEY,
-        unique_code TEXT NOT NULL UNIQUE,
+        unique_code TEXT UNIQUE,
         name TEXT NOT NULL,
         email TEXT,
         contact_info TEXT,
@@ -88,8 +88,49 @@ export async function initializeDatabase() {
     `);
     
     console.log("Database tables ready!");
+    
+    // Migrate existing players without unique codes
+    await migrateUniqueCodes();
   } catch (error) {
     console.error("Failed to initialize database tables:", error);
     throw error;
+  }
+}
+
+// Migration: Populate unique codes for existing players that don't have them
+async function migrateUniqueCodes() {
+  try {
+    const result = await pool.query(`
+      SELECT id FROM universal_players WHERE unique_code IS NULL ORDER BY id
+    `);
+    
+    if (result.rows.length === 0) {
+      return; // No migration needed
+    }
+    
+    console.log(`Migrating ${result.rows.length} players without unique codes...`);
+    
+    // Get the highest existing unique code number
+    const maxResult = await pool.query(`
+      SELECT MAX(CAST(SUBSTRING(unique_code FROM 3) AS INTEGER)) as max_num 
+      FROM universal_players 
+      WHERE unique_code IS NOT NULL AND unique_code ~ '^PC[0-9]+$'
+    `);
+    
+    let nextNum = (maxResult.rows[0]?.max_num || 7000) + 1;
+    
+    for (const row of result.rows) {
+      const uniqueCode = `PC${nextNum}`;
+      await pool.query(
+        `UPDATE universal_players SET unique_code = $1 WHERE id = $2`,
+        [uniqueCode, row.id]
+      );
+      console.log(`  Assigned ${uniqueCode} to player ${row.id}`);
+      nextNum++;
+    }
+    
+    console.log("Unique code migration complete!");
+  } catch (error) {
+    console.error("Error migrating unique codes:", error);
   }
 }

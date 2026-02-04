@@ -1,12 +1,13 @@
 import { pgTable, text, serial, integer, boolean, timestamp, jsonb, real } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import { z } from "zod";
 
 // Universal Players - persistent player identities across tournaments
 export const universalPlayers = pgTable("universal_players", {
   id: serial("id").primaryKey(),
-  uniqueCode: text("unique_code").notNull().unique(), // Format: PC7001, PC7002, etc.
+  // Note: uniqueCode is nullable to allow migration of existing data, but should always be populated on insert
+  uniqueCode: text("unique_code").unique(), // Format: PC7001, PC7002, etc.
   name: text("name").notNull(),
   email: text("email"),
   contactInfo: text("contact_info"),
