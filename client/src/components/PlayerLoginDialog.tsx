@@ -33,6 +33,8 @@ export interface TournamentHistoryEntry {
   totalPar: number;
   relativeToPar: number;
   holesPlayed: number;
+  totalScratches: number | null;
+  totalPenalties: number | null;
   completedAt: string;
 }
 

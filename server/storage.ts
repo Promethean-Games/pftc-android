@@ -316,6 +316,8 @@ export class DatabaseStorage implements IStorage {
       const scores = await this.getPlayerScores(player.id);
       const totalStrokes = scores.reduce((sum, s) => sum + s.strokes + s.scratches + s.penalties, 0);
       const totalPar = scores.reduce((sum, s) => sum + s.par, 0);
+      const totalScratches = scores.reduce((sum, s) => sum + s.scratches, 0);
+      const totalPenalties = scores.reduce((sum, s) => sum + s.penalties, 0);
 
       leaderboard.push({
         playerId: player.id,
@@ -325,6 +327,8 @@ export class DatabaseStorage implements IStorage {
         totalPar,
         holesCompleted: scores.length,
         relativeToPar: totalStrokes - totalPar,
+        totalScratches,
+        totalPenalties,
       });
     }
 

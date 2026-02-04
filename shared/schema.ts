@@ -35,6 +35,8 @@ export const playerTournamentHistory = pgTable("player_tournament_history", {
   totalPar: integer("total_par").notNull(),
   holesPlayed: integer("holes_played").notNull(),
   relativeToPar: integer("relative_to_par").notNull(),
+  totalScratches: integer("total_scratches").default(0),
+  totalPenalties: integer("total_penalties").default(0),
   completedAt: timestamp("completed_at").defaultNow().notNull(),
   isManualEntry: boolean("is_manual_entry").default(false),
 });
@@ -195,6 +197,8 @@ export const leaderboardEntrySchema = z.object({
   totalPar: z.number(),
   holesCompleted: z.number(),
   relativeToPar: z.number(),
+  totalScratches: z.number(),
+  totalPenalties: z.number(),
 });
 
 export type LeaderboardEntry = z.infer<typeof leaderboardEntrySchema>;

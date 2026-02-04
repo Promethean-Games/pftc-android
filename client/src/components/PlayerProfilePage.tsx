@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { ArrowLeft, Trophy, Target, TrendingUp, Lock, Calendar, LogOut, Loader2 } from "lucide-react";
+import { ArrowLeft, Trophy, Target, TrendingUp, Lock, Calendar, LogOut, Loader2, AlertTriangle, Ban } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import type { PlayerProfile, TournamentHistoryEntry } from "./PlayerLoginDialog";
 
@@ -135,6 +135,22 @@ export function PlayerProfilePage({ player, history, onLogout, onBack }: PlayerP
                       >
                         {formatRelativeToPar(entry.relativeToPar)}
                       </Badge>
+                      {((entry.totalScratches ?? 0) > 0 || (entry.totalPenalties ?? 0) > 0) && (
+                        <div className="flex items-center justify-end gap-2 mt-1 text-xs text-muted-foreground">
+                          {(entry.totalScratches ?? 0) > 0 && (
+                            <span className="flex items-center gap-0.5" title="Scratches">
+                              <Ban className="w-3 h-3" />
+                              {entry.totalScratches}
+                            </span>
+                          )}
+                          {(entry.totalPenalties ?? 0) > 0 && (
+                            <span className="flex items-center gap-0.5" title="Penalties">
+                              <AlertTriangle className="w-3 h-3" />
+                              {entry.totalPenalties}
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}

@@ -968,6 +968,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             totalPar: entry.totalPar,
             holesPlayed: entry.holesCompleted,
             relativeToPar: entry.relativeToPar,
+            totalScratches: entry.totalScratches,
+            totalPenalties: entry.totalPenalties,
           });
           
           // Recalculate handicap
