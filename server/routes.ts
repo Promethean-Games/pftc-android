@@ -564,6 +564,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get player scores (for retroactive score entry)
+  app.get("/api/tournaments/:roomCode/players/:playerId/scores", async (req, res) => {
+    try {
+      const tournament = await storage.getTournamentByCode(req.params.roomCode);
+      if (!tournament) {
+        return res.status(404).json({ error: "Tournament not found" });
+      }
+
+      const playerId = parseInt(req.params.playerId);
+      if (isNaN(playerId)) {
+        return res.status(400).json({ error: "Invalid player ID" });
+      }
+
+      const scores = await storage.getPlayerScores(playerId);
+      res.json(scores);
+    } catch (error) {
+      console.error("Error getting player scores:", error);
+      res.status(500).json({ error: "Failed to get player scores" });
+    }
+  });
+
   // Get leaderboard
   app.get("/api/tournaments/:roomCode/leaderboard", async (req, res) => {
     try {
