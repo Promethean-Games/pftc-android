@@ -19,12 +19,23 @@ import {
 import { db } from "./db";
 import { eq, and, sql, desc, ilike, or } from "drizzle-orm";
 
+export interface TournamentStats {
+  playerCount: number;
+  mostHolesCompleted: number;
+  leastHolesCompleted: number;
+  averageScore: number | null;
+  averageRelativeToPar: number | null;
+  playersWithScores: number;
+}
+
 export interface IStorage {
   // Tournament operations
   createTournament(tournament: InsertTournament): Promise<Tournament>;
   getAllTournaments(): Promise<Tournament[]>;
+  getAllTournamentsWithStats(): Promise<(Tournament & { stats: TournamentStats })[]>;
   getTournamentByCode(roomCode: string): Promise<Tournament | undefined>;
   getTournament(id: number): Promise<Tournament | undefined>;
+  getTournamentStats(tournamentId: number): Promise<TournamentStats>;
   closeTournament(id: number): Promise<void>;
   startTournament(id: number): Promise<void>;
   deleteTournament(id: number): Promise<void>;
@@ -72,6 +83,86 @@ export class DatabaseStorage implements IStorage {
 
   async getAllTournaments(): Promise<Tournament[]> {
     return db.select().from(tournaments).orderBy(desc(tournaments.createdAt));
+  }
+
+  async getTournamentStats(tournamentId: number): Promise<TournamentStats> {
+    // Get player count
+    const players = await db
+      .select()
+      .from(tournamentPlayers)
+      .where(eq(tournamentPlayers.tournamentId, tournamentId));
+    
+    const playerCount = players.length;
+    
+    if (playerCount === 0) {
+      return {
+        playerCount: 0,
+        mostHolesCompleted: 0,
+        leastHolesCompleted: 0,
+        averageScore: null,
+        averageRelativeToPar: null,
+        playersWithScores: 0,
+      };
+    }
+
+    // Get scores for each player
+    const playerStats: { holesCompleted: number; totalStrokes: number; totalPar: number }[] = [];
+    
+    for (const player of players) {
+      const scores = await db
+        .select()
+        .from(tournamentScores)
+        .where(eq(tournamentScores.tournamentPlayerId, player.id));
+      
+      if (scores.length > 0) {
+        const totalStrokes = scores.reduce((sum, s) => sum + s.strokes, 0);
+        const totalPar = scores.reduce((sum, s) => sum + s.par, 0);
+        playerStats.push({
+          holesCompleted: scores.length,
+          totalStrokes,
+          totalPar,
+        });
+      }
+    }
+
+    if (playerStats.length === 0) {
+      return {
+        playerCount,
+        mostHolesCompleted: 0,
+        leastHolesCompleted: 0,
+        averageScore: null,
+        averageRelativeToPar: null,
+        playersWithScores: 0,
+      };
+    }
+
+    const mostHolesCompleted = Math.max(...playerStats.map(p => p.holesCompleted));
+    const leastHolesCompleted = Math.min(...playerStats.map(p => p.holesCompleted));
+    const totalStrokes = playerStats.reduce((sum, p) => sum + p.totalStrokes, 0);
+    const totalPar = playerStats.reduce((sum, p) => sum + p.totalPar, 0);
+    const averageScore = totalStrokes / playerStats.length;
+    const averageRelativeToPar = (totalStrokes - totalPar) / playerStats.length;
+
+    return {
+      playerCount,
+      mostHolesCompleted,
+      leastHolesCompleted,
+      averageScore: Math.round(averageScore * 10) / 10,
+      averageRelativeToPar: Math.round(averageRelativeToPar * 10) / 10,
+      playersWithScores: playerStats.length,
+    };
+  }
+
+  async getAllTournamentsWithStats(): Promise<(Tournament & { stats: TournamentStats })[]> {
+    const allTournaments = await this.getAllTournaments();
+    const results: (Tournament & { stats: TournamentStats })[] = [];
+    
+    for (const tournament of allTournaments) {
+      const stats = await this.getTournamentStats(tournament.id);
+      results.push({ ...tournament, stats });
+    }
+    
+    return results;
   }
 
   async getTournamentByCode(roomCode: string): Promise<Tournament | undefined> {

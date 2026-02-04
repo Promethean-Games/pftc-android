@@ -110,7 +110,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ error: "Invalid director credentials" });
       }
       
-      const tournaments = await storage.getAllTournaments();
+      const tournaments = await storage.getAllTournamentsWithStats();
       const safeTournaments = tournaments.map(t => {
         const { directorPin: _, ...safe } = t;
         return safe;

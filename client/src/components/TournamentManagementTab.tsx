@@ -12,7 +12,10 @@ import {
   Trash2, 
   Download, 
   Play,
-  Calendar
+  Calendar,
+  Target,
+  TrendingUp,
+  BarChart3
 } from "lucide-react";
 import { useTournament } from "@/contexts/TournamentContext";
 import { DirectorPortal } from "./DirectorPortal";
@@ -21,13 +24,23 @@ interface TournamentManagementTabProps {
   directorPin: string;
 }
 
+interface TournamentStats {
+  playerCount: number;
+  mostHolesCompleted: number;
+  leastHolesCompleted: number;
+  averageScore: number | null;
+  averageRelativeToPar: number | null;
+  playersWithScores: number;
+}
+
 interface TournamentSummary {
   id: number;
   roomCode: string;
   name: string;
   isActive: boolean;
+  isHandicapped?: boolean;
   createdAt: string;
-  playerCount?: number;
+  stats: TournamentStats;
 }
 
 export function TournamentManagementTab({ directorPin }: TournamentManagementTabProps) {
@@ -172,16 +185,39 @@ export function TournamentManagementTab({ directorPin }: TournamentManagementTab
                       <div className="flex items-center gap-2">
                         <Trophy className="w-4 h-4 text-amber-500" />
                         <h3 className="font-semibold truncate">{t.name}</h3>
-                      </div>
-                      <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
-                        <span className="font-mono">{t.roomCode}</span>
-                        {t.playerCount !== undefined && (
-                          <span className="flex items-center gap-1">
-                            <Users className="w-3 h-3" />
-                            {t.playerCount} players
-                          </span>
+                        {t.isHandicapped && (
+                          <span className="text-xs bg-amber-500/20 text-amber-600 px-1.5 py-0.5 rounded">HC</span>
                         )}
                       </div>
+                      <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground flex-wrap">
+                        <span className="font-mono">{t.roomCode}</span>
+                        <span className="flex items-center gap-1">
+                          <Users className="w-3 h-3" />
+                          {t.stats.playerCount} players
+                        </span>
+                      </div>
+                      {t.stats.playersWithScores > 0 && (
+                        <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground flex-wrap">
+                          <span className="flex items-center gap-1" title="Holes completed range">
+                            <Target className="w-3 h-3" />
+                            {t.stats.leastHolesCompleted === t.stats.mostHolesCompleted 
+                              ? `${t.stats.mostHolesCompleted} holes`
+                              : `${t.stats.leastHolesCompleted}-${t.stats.mostHolesCompleted} holes`}
+                          </span>
+                          {t.stats.averageScore !== null && (
+                            <span className="flex items-center gap-1" title="Average score">
+                              <BarChart3 className="w-3 h-3" />
+                              Avg: {t.stats.averageScore}
+                            </span>
+                          )}
+                          {t.stats.averageRelativeToPar !== null && (
+                            <span className={`flex items-center gap-1 ${t.stats.averageRelativeToPar <= 0 ? 'text-green-600' : 'text-red-500'}`} title="Average relative to par">
+                              <TrendingUp className="w-3 h-3" />
+                              {t.stats.averageRelativeToPar > 0 ? '+' : ''}{t.stats.averageRelativeToPar}
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
                     <div className="flex items-center gap-1">
                       <Button
@@ -228,8 +264,39 @@ export function TournamentManagementTab({ directorPin }: TournamentManagementTab
                 >
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold truncate">{t.name}</h3>
-                      <span className="text-sm text-muted-foreground font-mono">{t.roomCode}</span>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold truncate">{t.name}</h3>
+                        {t.isHandicapped && (
+                          <span className="text-xs bg-amber-500/20 text-amber-600 px-1.5 py-0.5 rounded">HC</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground flex-wrap">
+                        <span className="font-mono">{t.roomCode}</span>
+                        <span className="flex items-center gap-1">
+                          <Users className="w-3 h-3" />
+                          {t.stats.playerCount} players
+                        </span>
+                      </div>
+                      {t.stats.playersWithScores > 0 && (
+                        <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground flex-wrap">
+                          <span className="flex items-center gap-1">
+                            <Target className="w-3 h-3" />
+                            {t.stats.mostHolesCompleted} holes
+                          </span>
+                          {t.stats.averageScore !== null && (
+                            <span className="flex items-center gap-1">
+                              <BarChart3 className="w-3 h-3" />
+                              Avg: {t.stats.averageScore}
+                            </span>
+                          )}
+                          {t.stats.averageRelativeToPar !== null && (
+                            <span className={`flex items-center gap-1 ${t.stats.averageRelativeToPar <= 0 ? 'text-green-600' : 'text-red-500'}`}>
+                              <TrendingUp className="w-3 h-3" />
+                              {t.stats.averageRelativeToPar > 0 ? '+' : ''}{t.stats.averageRelativeToPar}
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
                     <div className="flex items-center gap-1">
                       <Button
