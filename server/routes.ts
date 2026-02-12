@@ -1531,6 +1531,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/push/send", async (req, res) => {
+    try {
+      const { directorPin, title, body, tournamentRoomCode } = req.body;
+      if (directorPin !== MASTER_DIRECTOR_PIN) {
+        return res.status(403).json({ error: "Invalid director credentials" });
+      }
+      if (!title || !body) {
+        return res.status(400).json({ error: "Title and body are required" });
+      }
+      if (!pushEnabled) {
+        return res.status(503).json({ error: "Push notifications are not configured" });
+      }
+
+      let subs;
+      if (tournamentRoomCode) {
+        subs = await storage.getSubscriptionsForTournament(tournamentRoomCode);
+      } else {
+        subs = await storage.getAllPushSubscriptions();
+      }
+
+      const payload = JSON.stringify({
+        title,
+        body,
+        tag: `custom-${Date.now()}`,
+        url: tournamentRoomCode ? `/?room=${tournamentRoomCode}` : "/",
+      });
+
+      let sentCount = 0;
+      await Promise.allSettled(
+        subs.map(async (sub) => {
+          try {
+            await webpush.sendNotification(
+              { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+              payload
+            );
+            sentCount++;
+          } catch (err: any) {
+            if (err.statusCode === 404 || err.statusCode === 410) {
+              await storage.removePushSubscription(sub.endpoint);
+            }
+          }
+        })
+      );
+
+      res.json({ success: true, sentCount, message: `Sent to ${sentCount} device(s)` });
+    } catch (error) {
+      console.error("Error sending custom notification:", error);
+      res.status(500).json({ error: "Failed to send notification" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;
