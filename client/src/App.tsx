@@ -26,6 +26,7 @@ function GameApp() {
   const [screen, setScreen] = useState<Screen>("splash");
   const [activeTab, setActiveTab] = useState<ActiveTab>("game");
   const [showSaveLoad, setShowSaveLoad] = useState<"load" | null>(null);
+  const [viewOnly, setViewOnly] = useState(false);
 
   // Sync theme with game settings
   useEffect(() => {
@@ -34,6 +35,7 @@ function GameApp() {
 
   const handleNewGame = () => {
     game.resetGame();
+    setViewOnly(false);
     setScreen("setup");
   };
 
@@ -90,12 +92,19 @@ function GameApp() {
     setActiveTab("game");
   };
 
+  const handleViewOnly = () => {
+    setViewOnly(true);
+    setScreen("game");
+    setActiveTab("summary");
+  };
+
   const handleEndGame = () => {
     game.endGame();
     setActiveTab("summary");
   };
 
   const handleTabChange = (tab: ActiveTab) => {
+    if (viewOnly && (tab === "game" || tab === "save")) return;
     setActiveTab(tab);
   };
 
@@ -129,6 +138,7 @@ function GameApp() {
           onNewGame={handleNewGame} 
           onLoadGame={handleLoadGame}
           onStartTournamentGame={handleStartTournamentGame}
+          onViewOnly={handleViewOnly}
         />
         {showSaveLoad === "load" && (
           <SaveLoadDialog
@@ -214,7 +224,7 @@ function GameApp() {
         />
       )}
 
-      <BottomNav activeTab={activeTab} onTabChange={handleTabChange} />
+      <BottomNav activeTab={activeTab} onTabChange={handleTabChange} viewOnly={viewOnly} />
     </div>
   );
 }

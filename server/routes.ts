@@ -1024,6 +1024,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch("/api/player/:code/profile", async (req, res) => {
+    try {
+      const { pin, email, phoneNumber, tShirtSize, name } = req.body;
+      const code = req.params.code.toUpperCase();
+      
+      if (!pin) {
+        return res.status(400).json({ error: "PIN is required for authentication" });
+      }
+      
+      const player = await storage.getUniversalPlayerByCode(code);
+      if (!player) {
+        return res.status(404).json({ error: "Player not found" });
+      }
+      
+      if (!player.pin) {
+        return res.status(400).json({ error: "No PIN set" });
+      }
+      
+      const isPinValid = await bcrypt.compare(pin, player.pin);
+      if (!isPinValid) {
+        return res.status(401).json({ error: "Invalid PIN" });
+      }
+      
+      const updateData: Record<string, string | null> = {};
+      if (email !== undefined) updateData.email = email || null;
+      if (phoneNumber !== undefined) updateData.phoneNumber = phoneNumber || null;
+      if (tShirtSize !== undefined) updateData.tShirtSize = tShirtSize || null;
+      if (name !== undefined && name.trim()) updateData.name = name.trim();
+      
+      const updated = await storage.updateUniversalPlayer(player.id, updateData);
+      const { pin: _, ...safePlayer } = updated;
+      
+      res.json({ player: safePlayer });
+    } catch (error) {
+      console.error("Error updating player profile:", error);
+      res.status(500).json({ error: "Failed to update profile" });
+    }
+  });
+
   // Set or update player PIN (by player code, authenticated with current PIN or director PIN)
   app.post("/api/player/set-pin", async (req, res) => {
     try {

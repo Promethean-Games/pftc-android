@@ -47,11 +47,13 @@ The server handles tournament creation, player registration, score synchronizati
 ### Player Login System
 - **Player Code + PIN Authentication**: Players can log in using their unique player code (e.g., PC7001) and a 4-digit PIN
 - **First-Time PIN Setup**: New players can create a PIN, optionally with Tournament Director authorization
-- **Profile Access**: Logged-in players can view their handicap, tournament history, and personal stats
+- **Profile Access**: Logged-in players can view/edit their profile (name, email, phone, t-shirt size), handicap, and tournament history
 - **PIN Management**: Players can change their PIN from the profile page
+- **View Only / Spectator Mode**: Users joining a tournament can choose "View Only" to watch the leaderboard without scoring
 - **API Endpoints**:
   - `POST /api/player/login` - Verify player code + PIN
   - `POST /api/player/set-pin` - Set or update player PIN
+  - `PATCH /api/player/:code/profile` - Update player profile (PIN-authenticated)
   - `GET /api/player/:code/profile` - Get player profile (public info)
   - `GET /api/player/:code/has-pin` - Check if player has PIN set
 

@@ -63,7 +63,7 @@ export interface IStorage {
   getUniversalPlayer(id: number): Promise<UniversalPlayer | undefined>;
   getUniversalPlayerByCode(uniqueCode: string): Promise<UniversalPlayer | undefined>;
   searchUniversalPlayers(query: string): Promise<UniversalPlayer[]>;
-  updateUniversalPlayer(id: number, data: Partial<Pick<UniversalPlayer, "name" | "email" | "contactInfo" | "handicap" | "isProvisional">>): Promise<UniversalPlayer>;
+  updateUniversalPlayer(id: number, data: Partial<Pick<UniversalPlayer, "name" | "email" | "phoneNumber" | "tShirtSize" | "contactInfo" | "handicap" | "isProvisional">>): Promise<UniversalPlayer>;
   updateUniversalPlayerPin(id: number, pin: string): Promise<void>;
   deleteUniversalPlayer(id: number): Promise<void>;
   mergeUniversalPlayers(sourceId: number, targetId: number): Promise<UniversalPlayer>;
@@ -393,7 +393,7 @@ export class DatabaseStorage implements IStorage {
       .limit(20);
   }
 
-  async updateUniversalPlayer(id: number, data: Partial<Pick<UniversalPlayer, "name" | "email" | "contactInfo" | "handicap" | "isProvisional">>): Promise<UniversalPlayer> {
+  async updateUniversalPlayer(id: number, data: Partial<Pick<UniversalPlayer, "name" | "email" | "phoneNumber" | "tShirtSize" | "contactInfo" | "handicap" | "isProvisional">>): Promise<UniversalPlayer> {
     const [updated] = await db
       .update(universalPlayers)
       .set({ ...data, updatedAt: new Date() })

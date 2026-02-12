@@ -2,15 +2,16 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { X, Users, Check, Play, RefreshCw } from "lucide-react";
+import { X, Users, Check, Play, RefreshCw, Eye } from "lucide-react";
 import { useTournament } from "@/contexts/TournamentContext";
 
 interface PlayerSelectionDialogProps {
   onClose: () => void;
   onStartGame?: () => void;
+  onViewOnly?: () => void;
 }
 
-export function PlayerSelectionDialog({ onClose, onStartGame }: PlayerSelectionDialogProps) {
+export function PlayerSelectionDialog({ onClose, onStartGame, onViewOnly }: PlayerSelectionDialogProps) {
   const tournament = useTournament();
   const [selectedPlayerIds, setSelectedPlayerIds] = useState<number[]>([]);
   const [isSaving, setIsSaving] = useState(false);
@@ -141,6 +142,18 @@ export function PlayerSelectionDialog({ onClose, onStartGame }: PlayerSelectionD
         </div>
 
         <div className="flex-1 overflow-y-auto p-4">
+          {onViewOnly && (
+            <Button
+              variant="outline"
+              className="w-full mb-4 border-dashed"
+              onClick={onViewOnly}
+              data-testid="button-view-only"
+            >
+              <Eye className="w-4 h-4 mr-2" />
+              View Only (Spectator)
+            </Button>
+          )}
+
           <p className="text-sm text-muted-foreground mb-4">
             Choose which players you'll be scoring for on this device.
           </p>

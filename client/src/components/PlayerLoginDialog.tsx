@@ -9,7 +9,7 @@ import { apiRequest } from "@/lib/queryClient";
 interface PlayerLoginDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onLoginSuccess: (player: PlayerProfile, history: TournamentHistoryEntry[]) => void;
+  onLoginSuccess: (player: PlayerProfile, history: TournamentHistoryEntry[], pin: string) => void;
 }
 
 export interface PlayerProfile {
@@ -17,6 +17,8 @@ export interface PlayerProfile {
   uniqueCode: string;
   name: string;
   email: string | null;
+  phoneNumber: string | null;
+  tShirtSize: string | null;
   contactInfo: string | null;
   handicap: string;
   isProvisional: boolean;
@@ -110,7 +112,7 @@ export function PlayerLoginDialog({ isOpen, onClose, onLoginSuccess }: PlayerLog
         return;
       }
 
-      onLoginSuccess(data.player, data.recentHistory);
+      onLoginSuccess(data.player, data.recentHistory, pin);
       handleClose();
     } catch (err) {
       setError("Failed to login");

@@ -4,20 +4,32 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { ArrowLeft, Trophy, Target, TrendingUp, Lock, Calendar, LogOut, Loader2, AlertTriangle, Ban } from "lucide-react";
+import { ArrowLeft, Trophy, Target, TrendingUp, Lock, Calendar, LogOut, Loader2, AlertTriangle, Ban, Mail, Phone, Shirt, Pencil, Save, X } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import type { PlayerProfile, TournamentHistoryEntry } from "./PlayerLoginDialog";
 
 interface PlayerProfilePageProps {
   player: PlayerProfile;
   history: TournamentHistoryEntry[];
+  playerPin: string;
   onLogout: () => void;
   onBack: () => void;
+  onPlayerUpdated?: (player: PlayerProfile) => void;
 }
 
-export function PlayerProfilePage({ player, history, onLogout, onBack }: PlayerProfilePageProps) {
+const T_SHIRT_SIZES = ["XS", "S", "M", "L", "XL", "2XL", "3XL"];
+
+export function PlayerProfilePage({ player, history, playerPin, onLogout, onBack, onPlayerUpdated }: PlayerProfilePageProps) {
   const [showChangePinDialog, setShowChangePinDialog] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editName, setEditName] = useState(player.name);
+  const [editEmail, setEditEmail] = useState(player.email || "");
+  const [editPhone, setEditPhone] = useState(player.phoneNumber || "");
+  const [editShirtSize, setEditShirtSize] = useState(player.tShirtSize || "");
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
@@ -31,6 +43,57 @@ export function PlayerProfilePage({ player, history, onLogout, onBack }: PlayerP
     if (rel === 0) return "E";
     return rel > 0 ? `+${rel}` : rel.toString();
   };
+
+  const handleStartEdit = () => {
+    setEditName(player.name);
+    setEditEmail(player.email || "");
+    setEditPhone(player.phoneNumber || "");
+    setEditShirtSize(player.tShirtSize || "");
+    setSaveError(null);
+    setIsEditing(true);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    setSaveError(null);
+  };
+
+  const handleSaveProfile = async () => {
+    setIsSaving(true);
+    setSaveError(null);
+
+    try {
+      const response = await apiRequest("PATCH", `/api/player/${player.uniqueCode}/profile`, {
+        pin: playerPin,
+        name: editName.trim() || undefined,
+        email: editEmail.trim() || undefined,
+        phoneNumber: editPhone.trim() || undefined,
+        tShirtSize: editShirtSize || undefined,
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        setSaveError(data.error || "Failed to update profile");
+        return;
+      }
+
+      if (onPlayerUpdated) {
+        onPlayerUpdated(data.player);
+      }
+      setIsEditing(false);
+    } catch (err) {
+      setSaveError("Failed to update profile");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const avgStrokes = history.length > 0
+    ? Math.round(history.reduce((sum, h) => sum + h.totalStrokes, 0) / history.length)
+    : 0;
+  const avgRelPar = history.length > 0
+    ? (history.reduce((sum, h) => sum + h.relativeToPar, 0) / history.length).toFixed(1)
+    : "0";
 
   return (
     <div className="min-h-screen bg-background">
@@ -49,7 +112,7 @@ export function PlayerProfilePage({ player, history, onLogout, onBack }: PlayerP
       <div className="p-4 space-y-4 max-w-lg mx-auto">
         <Card>
           <CardHeader className="pb-2">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
               <CardTitle className="text-xl">{player.name}</CardTitle>
               <Badge variant="outline" className="font-mono text-lg" data-testid="badge-player-code">
                 {player.uniqueCode}
@@ -79,21 +142,136 @@ export function PlayerProfilePage({ player, history, onLogout, onBack }: PlayerP
               </div>
             </div>
 
-            {player.email && (
-              <div className="text-sm text-muted-foreground">
-                <span className="font-medium">Email:</span> {player.email}
+            {history.length > 0 && (
+              <div className="grid grid-cols-2 gap-4">
+                <div className="text-center p-3 bg-muted rounded-lg">
+                  <p className="text-lg font-bold">{avgStrokes}</p>
+                  <p className="text-xs text-muted-foreground">Avg Strokes</p>
+                </div>
+                <div className="text-center p-3 bg-muted rounded-lg">
+                  <p className="text-lg font-bold">{avgRelPar}</p>
+                  <p className="text-xs text-muted-foreground">Avg vs Par</p>
+                </div>
               </div>
             )}
 
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={() => setShowChangePinDialog(true)}
-              data-testid="button-change-pin"
-            >
-              <Lock className="w-4 h-4 mr-2" />
-              Change PIN
-            </Button>
+            {!isEditing ? (
+              <div className="space-y-2">
+                {player.email && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Mail className="w-4 h-4" />
+                    <span>{player.email}</span>
+                  </div>
+                )}
+                {player.phoneNumber && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Phone className="w-4 h-4" />
+                    <span>{player.phoneNumber}</span>
+                  </div>
+                )}
+                {player.tShirtSize && (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Shirt className="w-4 h-4" />
+                    <span>T-Shirt: {player.tShirtSize}</span>
+                  </div>
+                )}
+
+                <div className="flex gap-2 pt-2">
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={handleStartEdit}
+                    data-testid="button-edit-profile"
+                  >
+                    <Pencil className="w-4 h-4 mr-2" />
+                    Edit Profile
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => setShowChangePinDialog(true)}
+                    data-testid="button-change-pin"
+                  >
+                    <Lock className="w-4 h-4 mr-2" />
+                    Change PIN
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-3 pt-2 border-t">
+                <div className="space-y-1">
+                  <Label htmlFor="editName">Name</Label>
+                  <Input
+                    id="editName"
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    placeholder="Your name"
+                    data-testid="input-edit-name"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="editEmail">Email</Label>
+                  <Input
+                    id="editEmail"
+                    type="email"
+                    value={editEmail}
+                    onChange={(e) => setEditEmail(e.target.value)}
+                    placeholder="your@email.com"
+                    data-testid="input-edit-email"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="editPhone">Phone</Label>
+                  <Input
+                    id="editPhone"
+                    type="tel"
+                    value={editPhone}
+                    onChange={(e) => setEditPhone(e.target.value)}
+                    placeholder="(555) 123-4567"
+                    data-testid="input-edit-phone"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label>T-Shirt Size</Label>
+                  <Select value={editShirtSize} onValueChange={setEditShirtSize}>
+                    <SelectTrigger data-testid="select-shirt-size">
+                      <SelectValue placeholder="Select size" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {T_SHIRT_SIZES.map(size => (
+                        <SelectItem key={size} value={size}>{size}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {saveError && (
+                  <p className="text-sm text-destructive text-center">{saveError}</p>
+                )}
+
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={handleCancelEdit}
+                    disabled={isSaving}
+                    data-testid="button-cancel-edit"
+                  >
+                    <X className="w-4 h-4 mr-2" />
+                    Cancel
+                  </Button>
+                  <Button
+                    className="flex-1"
+                    onClick={handleSaveProfile}
+                    disabled={isSaving || !editName.trim()}
+                    data-testid="button-save-profile"
+                  >
+                    {isSaving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
+                    Save
+                  </Button>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -101,7 +279,7 @@ export function PlayerProfilePage({ player, history, onLogout, onBack }: PlayerP
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-lg">
               <TrendingUp className="w-5 h-5" />
-              Recent Tournaments
+              Tournament History
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -114,20 +292,23 @@ export function PlayerProfilePage({ player, history, onLogout, onBack }: PlayerP
                 {history.map((entry) => (
                   <div
                     key={entry.id}
-                    className="flex items-center justify-between p-3 bg-muted rounded-lg"
+                    className="flex items-center justify-between gap-2 p-3 bg-muted rounded-lg"
                     data-testid={`history-entry-${entry.id}`}
                   >
-                    <div className="flex-1">
-                      <p className="font-medium text-sm">{entry.tournamentName}</p>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm truncate">{entry.tournamentName}</p>
                       {entry.courseName && (
-                        <p className="text-xs text-muted-foreground">{entry.courseName}</p>
+                        <p className="text-xs text-muted-foreground truncate">{entry.courseName}</p>
                       )}
-                      <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                        <Calendar className="w-3 h-3" />
-                        {formatDate(entry.completedAt)}
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1 flex-wrap">
+                        <span className="flex items-center gap-1">
+                          <Calendar className="w-3 h-3" />
+                          {formatDate(entry.completedAt)}
+                        </span>
+                        <span>{entry.holesPlayed} holes</span>
                       </div>
                     </div>
-                    <div className="text-right">
+                    <div className="text-right shrink-0">
                       <p className="text-lg font-bold">{entry.totalStrokes}</p>
                       <Badge
                         variant={entry.relativeToPar <= 0 ? "default" : "secondary"}

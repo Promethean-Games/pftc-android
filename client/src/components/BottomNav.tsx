@@ -5,15 +5,20 @@ import { cn } from "@/lib/utils";
 interface BottomNavProps {
   activeTab: "game" | "summary" | "settings" | "save";
   onTabChange: (tab: "game" | "summary" | "settings" | "save") => void;
+  viewOnly?: boolean;
 }
 
-export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
-  const tabs = [
+export function BottomNav({ activeTab, onTabChange, viewOnly }: BottomNavProps) {
+  const allTabs = [
     { id: "game" as const, icon: Home, label: "Game" },
-    { id: "summary" as const, icon: Trophy, label: "Summary" },
+    { id: "summary" as const, icon: Trophy, label: "Leaderboard" },
     { id: "save" as const, icon: Save, label: "Save" },
     { id: "settings" as const, icon: SettingsIcon, label: "Settings" },
   ];
+
+  const tabs = viewOnly
+    ? allTabs.filter(t => t.id === "summary" || t.id === "settings")
+    : allTabs;
 
   return (
     <div className="fixed bottom-0 left-0 right-0 h-16 bg-card border-t flex items-center z-40">

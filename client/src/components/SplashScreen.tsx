@@ -16,9 +16,10 @@ interface SplashScreenProps {
   onNewGame: () => void;
   onLoadGame: () => void;
   onStartTournamentGame?: () => void;
+  onViewOnly?: () => void;
 }
 
-export function SplashScreen({ onNewGame, onLoadGame, onStartTournamentGame }: SplashScreenProps) {
+export function SplashScreen({ onNewGame, onLoadGame, onStartTournamentGame, onViewOnly }: SplashScreenProps) {
   const [roomCodeInput, setRoomCodeInput] = useState("");
   const [joinError, setJoinError] = useState<string | null>(null);
   const [showPlayerSelection, setShowPlayerSelection] = useState(false);
@@ -28,6 +29,7 @@ export function SplashScreen({ onNewGame, onLoadGame, onStartTournamentGame }: S
   const [showPlayerLogin, setShowPlayerLogin] = useState(false);
   const [loggedInPlayer, setLoggedInPlayer] = useState<PlayerProfile | null>(null);
   const [playerHistory, setPlayerHistory] = useState<TournamentHistoryEntry[]>([]);
+  const [playerPin, setPlayerPin] = useState<string | null>(null);
   const tournament = useTournament();
 
   const handleTDSignInSuccess = (pin: string) => {
@@ -35,23 +37,27 @@ export function SplashScreen({ onNewGame, onLoadGame, onStartTournamentGame }: S
     setShowTournamentManagement(true);
   };
 
-  const handlePlayerLoginSuccess = (player: PlayerProfile, history: TournamentHistoryEntry[]) => {
+  const handlePlayerLoginSuccess = (player: PlayerProfile, history: TournamentHistoryEntry[], pin: string) => {
     setLoggedInPlayer(player);
     setPlayerHistory(history);
+    setPlayerPin(pin);
   };
 
   const handlePlayerLogout = () => {
     setLoggedInPlayer(null);
     setPlayerHistory([]);
+    setPlayerPin(null);
   };
 
-  if (loggedInPlayer) {
+  if (loggedInPlayer && playerPin) {
     return (
       <PlayerProfilePage
         player={loggedInPlayer}
         history={playerHistory}
+        playerPin={playerPin}
         onLogout={handlePlayerLogout}
         onBack={handlePlayerLogout}
+        onPlayerUpdated={(updatedPlayer) => setLoggedInPlayer(updatedPlayer)}
       />
     );
   }
@@ -214,6 +220,12 @@ export function SplashScreen({ onNewGame, onLoadGame, onStartTournamentGame }: S
             setShowPlayerSelection(false);
             if (onStartTournamentGame) {
               onStartTournamentGame();
+            }
+          }}
+          onViewOnly={() => {
+            setShowPlayerSelection(false);
+            if (onViewOnly) {
+              onViewOnly();
             }
           }}
         />

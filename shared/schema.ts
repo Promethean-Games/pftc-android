@@ -10,6 +10,8 @@ export const universalPlayers = pgTable("universal_players", {
   uniqueCode: text("unique_code").unique(), // Format: PC7001, PC7002, etc.
   name: text("name").notNull(),
   email: text("email"),
+  phoneNumber: text("phone_number"),
+  tShirtSize: text("t_shirt_size"),
   contactInfo: text("contact_info"),
   pin: text("pin"), // 4-digit PIN for player login
   handicap: real("handicap"),
