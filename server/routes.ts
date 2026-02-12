@@ -1383,6 +1383,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Remove player PIN (director only)
+  app.post("/api/player/:code/remove-pin", async (req, res) => {
+    try {
+      const { directorPin } = req.body;
+      if (directorPin !== MASTER_DIRECTOR_PIN) {
+        return res.status(403).json({ error: "Invalid director credentials" });
+      }
+
+      const player = await storage.getUniversalPlayerByCode(req.params.code.toUpperCase());
+      if (!player) {
+        return res.status(404).json({ error: "Player not found" });
+      }
+
+      await storage.updateUniversalPlayerPin(player.id, null);
+      res.json({ success: true, message: "PIN removed successfully" });
+    } catch (error) {
+      console.error("Error removing player PIN:", error);
+      res.status(500).json({ error: "Failed to remove PIN" });
+    }
+  });
+
   // Get player profile by code (public info only - for display)
   app.get("/api/player/:code/profile", async (req, res) => {
     try {

@@ -26,7 +26,8 @@ import {
   OctagonAlert,
   ArrowUpDown,
   Activity,
-  Radio
+  Radio,
+  KeyRound
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -699,27 +700,53 @@ export function PlayerDirectoryTab({ directorPin }: PlayerDirectoryTabProps) {
                   {isSaving ? "Saving..." : "Save Profile"}
                 </Button>
 
-                <div className="border-t pt-3 flex gap-2">
+                <div className="border-t pt-3 space-y-2">
                   <Button
                     variant="outline"
-                    className="flex-1"
-                    onClick={() => {
-                      setShowMergeDialog(showPlayerDialog);
+                    className="w-full"
+                    onClick={async () => {
+                      if (!showPlayerDialog?.uniqueCode) return;
+                      try {
+                        setIsSaving(true);
+                        await apiRequest("POST", `/api/player/${showPlayerDialog.uniqueCode}/remove-pin`, {
+                          directorPin,
+                        });
+                        toast({ title: "PIN removed", description: "Player can now set a new PIN on their next login." });
+                      } catch (err) {
+                        console.error("Failed to remove PIN:", err);
+                        toast({ title: "Failed to remove PIN", variant: "destructive" });
+                      } finally {
+                        setIsSaving(false);
+                      }
                     }}
-                    data-testid="button-merge"
+                    disabled={isSaving}
+                    data-testid="button-remove-pin"
                   >
-                    <Merge className="w-4 h-4 mr-1.5" />
-                    Merge
+                    <KeyRound className="w-4 h-4 mr-1.5" />
+                    Remove PIN
                   </Button>
-                  <Button
-                    variant="outline"
-                    className="flex-1 text-destructive"
-                    onClick={() => setShowDeleteDialog(showPlayerDialog)}
-                    data-testid="button-delete"
-                  >
-                    <Trash2 className="w-4 h-4 mr-1.5" />
-                    Delete
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => {
+                        setShowMergeDialog(showPlayerDialog);
+                      }}
+                      data-testid="button-merge"
+                    >
+                      <Merge className="w-4 h-4 mr-1.5" />
+                      Merge
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="flex-1 text-destructive"
+                      onClick={() => setShowDeleteDialog(showPlayerDialog)}
+                      data-testid="button-delete"
+                    >
+                      <Trash2 className="w-4 h-4 mr-1.5" />
+                      Delete
+                    </Button>
+                  </div>
                 </div>
               </TabsContent>
               

@@ -46,7 +46,6 @@ export function PlayerLoginDialog({ isOpen, onClose, onLoginSuccess }: PlayerLog
   const [pin, setPin] = useState("");
   const [newPin, setNewPin] = useState("");
   const [confirmPin, setConfirmPin] = useState("");
-  const [directorPin, setDirectorPin] = useState("");
   const [playerName, setPlayerName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -57,7 +56,6 @@ export function PlayerLoginDialog({ isOpen, onClose, onLoginSuccess }: PlayerLog
     setPin("");
     setNewPin("");
     setConfirmPin("");
-    setDirectorPin("");
     setPlayerName("");
     setError(null);
     setIsLoading(false);
@@ -140,8 +138,7 @@ export function PlayerLoginDialog({ isOpen, onClose, onLoginSuccess }: PlayerLog
     try {
       const response = await apiRequest("POST", "/api/player/set-pin", {
         playerCode: playerCode.toUpperCase(),
-        newPin,
-        directorPin: directorPin || undefined
+        newPin
       });
       const data = await response.json();
 
@@ -297,25 +294,6 @@ export function PlayerLoginDialog({ isOpen, onClose, onLoginSuccess }: PlayerLog
                   maxLength={4}
                   data-testid="input-confirm-pin"
                 />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="directorPin">Director PIN (optional)</Label>
-                <Input
-                  id="directorPin"
-                  type="password"
-                  inputMode="numeric"
-                  pattern="\d{4}"
-                  value={directorPin}
-                  onChange={(e) => setDirectorPin(e.target.value.replace(/\D/g, "").slice(0, 4))}
-                  placeholder="Director's PIN if required"
-                  className="font-mono text-center tracking-widest"
-                  maxLength={4}
-                  data-testid="input-director-pin-setup"
-                />
-                <p className="text-xs text-muted-foreground">
-                  First-time setup may require Tournament Director authorization
-                </p>
               </div>
 
               {error && (
