@@ -46,3 +46,4 @@ integrations = ["javascript_database:1.0.0"]
 [userenv.shared]
 VAPID_PUBLIC_KEY = "BGDSJ3QIrJeaHeD3nxhL2fbvFXlx1AxTbSQHWRghXmdbKRQVxAqG520O-23mf4xiDp1G6yc1lkbGeRM2jsG1EY0"
 VAPID_SUBJECT = "mailto:admin@parforthecourse.app"
+VAPID_PRIVATE_KEY_BACKUP = "Db-V_02FwKLyY78spGl8XJDsdMCDz2QMTc5wTbBfYyc"

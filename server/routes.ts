@@ -9,17 +9,27 @@ import { z } from "zod";
 const SALT_ROUNDS = 10;
 
 const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || "";
-const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || "";
 const VAPID_SUBJECT = process.env.VAPID_SUBJECT || "mailto:admin@parforthecourse.app";
 
 let pushEnabled = false;
-if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
-  try {
-    webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
-    pushEnabled = true;
-    console.log("Web push notifications enabled");
-  } catch (err) {
-    console.warn("Failed to initialize web push - notifications disabled:", (err as Error).message);
+if (VAPID_PUBLIC_KEY) {
+  const candidates = [
+    (process.env.VAPID_PRIVATE_KEY || "").trim().replace(/^[:\s\n]+/, ''),
+    (process.env.VAPID_PRIVATE_KEY_BACKUP || "").trim(),
+  ].filter(Boolean);
+
+  for (const key of candidates) {
+    try {
+      webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, key);
+      pushEnabled = true;
+      console.log("Web push notifications enabled");
+      break;
+    } catch {
+      // try next candidate
+    }
+  }
+  if (!pushEnabled) {
+    console.warn("Failed to initialize web push - no valid VAPID private key found");
   }
 }
 
