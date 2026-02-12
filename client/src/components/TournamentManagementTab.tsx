@@ -5,17 +5,23 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useToast } from "@/hooks/use-toast";
 import { 
   Plus, 
   Trophy, 
   Users, 
   Trash2, 
   Download, 
+  Upload,
   Play,
   Calendar,
   Target,
   TrendingUp,
-  BarChart3
+  BarChart3,
+  Archive,
+  RotateCcw,
+  FileDown,
+  FileUp
 } from "lucide-react";
 import { useTournament } from "@/contexts/TournamentContext";
 import { DirectorPortal } from "./DirectorPortal";
@@ -52,7 +58,11 @@ export function TournamentManagementTab({ directorPin }: TournamentManagementTab
   const [isCreating, setIsCreating] = useState(false);
   const [selectedTournament, setSelectedTournament] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
+  const [showArchiveConfirm, setShowArchiveConfirm] = useState<string | null>(null);
   const [isHandicapped, setIsHandicapped] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const { toast } = useToast();
 
   const fetchTournaments = async () => {
     try {
@@ -137,6 +147,135 @@ export function TournamentManagementTab({ directorPin }: TournamentManagementTab
     }
   };
 
+  const handleArchiveTournament = async (roomCode: string) => {
+    try {
+      const response = await fetch(`/api/tournaments/${roomCode}/close`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ directorPin }),
+      });
+      if (response.ok) {
+        toast({ title: "Tournament Archived", description: "Tournament has been moved to archives" });
+        await fetchTournaments();
+        setShowArchiveConfirm(null);
+      }
+    } catch (err) {
+      console.error("Failed to archive tournament:", err);
+    }
+  };
+
+  const handleUnarchiveTournament = async (roomCode: string) => {
+    try {
+      const response = await fetch(`/api/tournaments/${roomCode}/reopen`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ directorPin }),
+      });
+      if (response.ok) {
+        toast({ title: "Tournament Restored", description: "Tournament is now live again" });
+        await fetchTournaments();
+      }
+    } catch (err) {
+      console.error("Failed to unarchive tournament:", err);
+    }
+  };
+
+  const handleImportTournament = () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".json";
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      setIsImporting(true);
+      try {
+        const text = await file.text();
+        const backup = JSON.parse(text);
+        const response = await fetch("/api/tournaments/import", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ directorPin, backup }),
+        });
+        if (response.ok) {
+          const result = await response.json();
+          toast({ 
+            title: "Tournament Imported", 
+            description: `${result.playersImported} players, ${result.scoresImported} scores imported` 
+          });
+          await fetchTournaments();
+        } else {
+          const err = await response.json();
+          toast({ title: "Import Failed", description: err.error || "Invalid file format", variant: "destructive" });
+        }
+      } catch (err) {
+        toast({ title: "Import Failed", description: "Could not read the file", variant: "destructive" });
+      } finally {
+        setIsImporting(false);
+      }
+    };
+    input.click();
+  };
+
+  const handleExportAll = async () => {
+    setIsExporting(true);
+    try {
+      const response = await fetch(`/api/export/full?directorPin=${encodeURIComponent(directorPin)}`);
+      if (response.ok) {
+        const data = await response.json();
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `par-for-the-course-export-${new Date().toISOString().split("T")[0]}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        toast({ title: "Export Complete", description: "Full data backup downloaded" });
+      }
+    } catch (err) {
+      toast({ title: "Export Failed", description: "Could not export data", variant: "destructive" });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleImportFull = () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".json";
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      setIsImporting(true);
+      try {
+        const text = await file.text();
+        const data = JSON.parse(text);
+        const response = await fetch("/api/import/full", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ directorPin, data }),
+        });
+        if (response.ok) {
+          const result = await response.json();
+          toast({ 
+            title: "Import Complete", 
+            description: `${result.playersImported} players, ${result.historyImported} history entries, ${result.tournamentsImported} tournaments imported` 
+          });
+          await fetchTournaments();
+        } else {
+          const err = await response.json();
+          toast({ title: "Import Failed", description: err.error || "Invalid file format", variant: "destructive" });
+        }
+      } catch (err) {
+        toast({ title: "Import Failed", description: "Could not read the file", variant: "destructive" });
+      } finally {
+        setIsImporting(false);
+      }
+    };
+    input.click();
+  };
+
   if (selectedTournament) {
     return (
       <DirectorPortal 
@@ -154,14 +293,48 @@ export function TournamentManagementTab({ directorPin }: TournamentManagementTab
 
   return (
     <div className="flex flex-col p-4 space-y-6">
-      <Button 
-        onClick={() => setShowCreateDialog(true)}
-        className="h-14 text-lg gap-2"
-        data-testid="button-create-tournament"
-      >
-        <Plus className="w-5 h-5" />
-        Create Tournament
-      </Button>
+      <div className="flex gap-2">
+        <Button 
+          onClick={() => setShowCreateDialog(true)}
+          className="h-14 text-lg gap-2 flex-1"
+          data-testid="button-create-tournament"
+        >
+          <Plus className="w-5 h-5" />
+          Create Tournament
+        </Button>
+        <Button 
+          variant="outline"
+          onClick={handleImportTournament}
+          disabled={isImporting}
+          className="h-14"
+          data-testid="button-import-tournament"
+        >
+          <Upload className="w-5 h-5" />
+        </Button>
+      </div>
+
+      <div className="flex gap-2">
+        <Button 
+          variant="outline"
+          onClick={handleExportAll}
+          disabled={isExporting}
+          className="flex-1 gap-2"
+          data-testid="button-export-all"
+        >
+          <FileDown className="w-4 h-4" />
+          {isExporting ? "Exporting..." : "Export All Data"}
+        </Button>
+        <Button 
+          variant="outline"
+          onClick={handleImportFull}
+          disabled={isImporting}
+          className="flex-1 gap-2"
+          data-testid="button-import-all"
+        >
+          <FileUp className="w-4 h-4" />
+          {isImporting ? "Importing..." : "Import Data"}
+        </Button>
+      </div>
 
       {isLoading ? (
         <div className="text-center py-8 text-muted-foreground">Loading tournaments...</div>
@@ -234,6 +407,17 @@ export function TournamentManagementTab({ directorPin }: TournamentManagementTab
                       <Button
                         variant="ghost"
                         size="icon"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowArchiveConfirm(t.roomCode);
+                        }}
+                        data-testid={`button-archive-${t.roomCode}`}
+                      >
+                        <Archive className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         className="text-destructive hover:text-destructive"
                         onClick={(e) => {
                           e.stopPropagation();
@@ -253,8 +437,8 @@ export function TournamentManagementTab({ directorPin }: TournamentManagementTab
           {archivedTournaments.length > 0 && (
             <div className="space-y-3">
               <h2 className="text-lg font-semibold flex items-center gap-2 text-muted-foreground">
-                <Calendar className="w-5 h-5" />
-                Archived Tournaments
+                <Archive className="w-5 h-5" />
+                Archived Tournaments ({archivedTournaments.length})
               </h2>
               {archivedTournaments.map(t => (
                 <Card 
@@ -299,6 +483,14 @@ export function TournamentManagementTab({ directorPin }: TournamentManagementTab
                       )}
                     </div>
                     <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleUnarchiveTournament(t.roomCode)}
+                        data-testid={`button-unarchive-${t.roomCode}`}
+                      >
+                        <RotateCcw className="w-4 h-4" />
+                      </Button>
                       <Button
                         variant="ghost"
                         size="icon"
@@ -394,6 +586,41 @@ export function TournamentManagementTab({ directorPin }: TournamentManagementTab
                 data-testid="button-confirm-create"
               >
                 {isCreating ? "Creating..." : "Create"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!showArchiveConfirm} onOpenChange={() => setShowArchiveConfirm(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Archive className="w-5 h-5" />
+              Archive Tournament?
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <p>
+              This will mark the tournament as archived. Players will no longer be able to submit scores.
+            </p>
+            <p className="text-sm text-muted-foreground">
+              You can restore it later from the Archived section.
+            </p>
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                onClick={() => setShowArchiveConfirm(null)}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={() => showArchiveConfirm && handleArchiveTournament(showArchiveConfirm)}
+                className="flex-1"
+                data-testid="button-confirm-archive"
+              >
+                Archive
               </Button>
             </div>
           </div>

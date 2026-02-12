@@ -68,7 +68,7 @@ The server handles tournament creation, player registration, score synchronizati
 - Access via Settings gear icon on splash screen
 - Enter 4-digit master PIN (3141) - verified server-side via POST /api/director/verify
 - TDDashboard provides a unified tabbed interface with two tabs:
-  - **Tournaments Tab**: Create, view, delete, backup, and manage tournaments
+  - **Tournaments Tab**: Create, view, delete, backup, archive/unarchive, import/export tournaments
   - **Players Tab (Player Directory)**: Consolidated player management with unified dialog:
     - Search players by name, code, or email; click player card to open management dialog
     - Profile tab: Edit name, email, phone, t-shirt size; override handicap; merge/delete actions
@@ -80,6 +80,11 @@ The server handles tournament creation, player registration, score synchronizati
 - Manual History API Endpoints:
   - `POST /api/universal-players/:playerId/history` - Add manual tournament history
   - `DELETE /api/universal-players/:playerId/history/:historyId` - Delete history entry
+- Archive/Import/Export API Endpoints:
+  - `POST /api/tournaments/:roomCode/reopen` - Unarchive/reopen a tournament (master PIN)
+  - `POST /api/tournaments/import` - Import a tournament from backup JSON (master PIN)
+  - `GET /api/export/full` - Export all tournaments + universal players as JSON (master PIN)
+  - `POST /api/import/full` - Import full data backup (players + history + tournaments, skips duplicates by code)
 
 ## External Dependencies
 

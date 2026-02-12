@@ -293,6 +293,262 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Reopen/unarchive tournament (director only)
+  app.post("/api/tournaments/:roomCode/reopen", async (req, res) => {
+    try {
+      const tournament = await storage.getTournamentByCode(req.params.roomCode);
+      if (!tournament) {
+        return res.status(404).json({ error: "Tournament not found" });
+      }
+      
+      const { directorPin } = req.body;
+      if (directorPin !== MASTER_DIRECTOR_PIN) {
+        return res.status(403).json({ error: "Invalid director credentials" });
+      }
+      
+      await storage.reopenTournament(tournament.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error reopening tournament:", error);
+      res.status(500).json({ error: "Failed to reopen tournament" });
+    }
+  });
+
+  // Import tournament from backup JSON
+  app.post("/api/tournaments/import", async (req, res) => {
+    try {
+      const { directorPin, backup } = req.body;
+      if (directorPin !== MASTER_DIRECTOR_PIN) {
+        return res.status(403).json({ error: "Invalid director credentials" });
+      }
+
+      if (!backup || !backup.tournament || !backup.players) {
+        return res.status(400).json({ error: "Invalid backup format" });
+      }
+
+      let roomCode = generateRoomCode();
+      let attempts = 0;
+      while (await storage.getTournamentByCode(roomCode) && attempts < 10) {
+        roomCode = generateRoomCode();
+        attempts++;
+      }
+
+      const newTournament = await storage.createTournament({
+        roomCode,
+        name: backup.tournament.name + " (Imported)",
+        directorPin: MASTER_DIRECTOR_PIN,
+        isActive: backup.tournament.isActive ?? false,
+        isHandicapped: backup.tournament.isHandicapped ?? false,
+        isStarted: backup.tournament.isStarted ?? false,
+      });
+
+      const playerIdMap: Record<number, number> = {};
+
+      for (const player of backup.players) {
+        const newPlayer = await storage.addPlayerToTournament({
+          tournamentId: newTournament.id,
+          playerName: player.playerName,
+          deviceId: null,
+          groupName: player.groupName || null,
+          universalId: player.universalId || null,
+          universalPlayerId: player.universalPlayerId || null,
+          contactInfo: player.contactInfo || null,
+        });
+        playerIdMap[player.id] = newPlayer.id;
+      }
+
+      if (backup.scores && Array.isArray(backup.scores)) {
+        for (const score of backup.scores) {
+          const newPlayerId = playerIdMap[score.tournamentPlayerId];
+          if (newPlayerId) {
+            await storage.upsertScore({
+              tournamentPlayerId: newPlayerId,
+              hole: score.hole,
+              par: score.par,
+              strokes: score.strokes,
+              scratches: score.scratches ?? 0,
+              penalties: score.penalties ?? 0,
+            });
+          }
+        }
+      }
+
+      res.json({ 
+        success: true, 
+        roomCode: newTournament.roomCode,
+        name: newTournament.name,
+        playersImported: Object.keys(playerIdMap).length,
+        scoresImported: backup.scores?.length || 0,
+      });
+    } catch (error) {
+      console.error("Error importing tournament:", error);
+      res.status(500).json({ error: "Failed to import tournament" });
+    }
+  });
+
+  // Full data export (all tournaments + all universal players)
+  app.get("/api/export/full", async (req, res) => {
+    try {
+      const directorPin = req.query.directorPin as string;
+      if (directorPin !== MASTER_DIRECTOR_PIN) {
+        return res.status(403).json({ error: "Invalid director credentials" });
+      }
+
+      const allTournaments = await storage.getAllTournaments();
+      const tournamentData = [];
+      for (const t of allTournaments) {
+        const backup = await storage.getTournamentBackup(t.id);
+        const { directorPin: _, ...safeTournament } = backup.tournament;
+        tournamentData.push({
+          tournament: safeTournament,
+          players: backup.players,
+          scores: backup.scores,
+        });
+      }
+
+      const allPlayers = await storage.getAllUniversalPlayers();
+      const playerData = [];
+      for (const p of allPlayers) {
+        const history = await storage.getPlayerTournamentHistory(p.id);
+        const { pin: _, ...safePlayer } = p;
+        playerData.push({
+          player: safePlayer,
+          history,
+        });
+      }
+
+      res.json({
+        exportedAt: new Date().toISOString(),
+        version: 1,
+        tournaments: tournamentData,
+        universalPlayers: playerData,
+      });
+    } catch (error) {
+      console.error("Error exporting full data:", error);
+      res.status(500).json({ error: "Failed to export data" });
+    }
+  });
+
+  // Full data import (universal players + tournament history)
+  app.post("/api/import/full", async (req, res) => {
+    try {
+      const { directorPin, data } = req.body;
+      if (directorPin !== MASTER_DIRECTOR_PIN) {
+        return res.status(403).json({ error: "Invalid director credentials" });
+      }
+
+      if (!data || !data.universalPlayers) {
+        return res.status(400).json({ error: "Invalid import format" });
+      }
+
+      let playersImported = 0;
+      let historyImported = 0;
+      let tournamentsImported = 0;
+
+      for (const entry of data.universalPlayers) {
+        const p = entry.player;
+        const existing = p.uniqueCode ? await storage.getUniversalPlayerByCode(p.uniqueCode) : null;
+        
+        if (!existing) {
+          const uniqueCode = p.uniqueCode || await storage.getNextUniqueCode();
+          const newPlayer = await storage.createUniversalPlayer({
+            name: p.name,
+            email: p.email || null,
+            phoneNumber: p.phoneNumber || null,
+            tShirtSize: p.tShirtSize || null,
+            contactInfo: p.contactInfo || null,
+            uniqueCode,
+            handicap: p.handicap,
+            isProvisional: p.isProvisional ?? true,
+            completedTournaments: p.completedTournaments ?? 0,
+          });
+
+          if (entry.history && Array.isArray(entry.history)) {
+            for (const h of entry.history) {
+              await storage.addTournamentHistory({
+                universalPlayerId: newPlayer.id,
+                tournamentName: h.tournamentName,
+                courseName: h.courseName || null,
+                totalStrokes: h.totalStrokes,
+                totalPar: h.totalPar,
+                holesPlayed: h.holesPlayed,
+                relativeToPar: h.relativeToPar,
+                totalScratches: h.totalScratches ?? 0,
+                totalPenalties: h.totalPenalties ?? 0,
+                isManualEntry: h.isManualEntry ?? true,
+              });
+              historyImported++;
+            }
+          }
+          playersImported++;
+        }
+      }
+
+      if (data.tournaments && Array.isArray(data.tournaments)) {
+        for (const entry of data.tournaments) {
+          let roomCode = generateRoomCode();
+          let attempts = 0;
+          while (await storage.getTournamentByCode(roomCode) && attempts < 10) {
+            roomCode = generateRoomCode();
+            attempts++;
+          }
+
+          const newTournament = await storage.createTournament({
+            roomCode,
+            name: entry.tournament.name + " (Imported)",
+            directorPin: MASTER_DIRECTOR_PIN,
+            isActive: false,
+            isHandicapped: entry.tournament.isHandicapped ?? false,
+            isStarted: entry.tournament.isStarted ?? false,
+          });
+
+          const playerIdMap: Record<number, number> = {};
+          if (entry.players) {
+            for (const player of entry.players) {
+              const newPlayer = await storage.addPlayerToTournament({
+                tournamentId: newTournament.id,
+                playerName: player.playerName,
+                deviceId: null,
+                groupName: player.groupName || null,
+                universalId: player.universalId || null,
+                universalPlayerId: player.universalPlayerId || null,
+                contactInfo: player.contactInfo || null,
+              });
+              playerIdMap[player.id] = newPlayer.id;
+            }
+          }
+
+          if (entry.scores) {
+            for (const score of entry.scores) {
+              const newPlayerId = playerIdMap[score.tournamentPlayerId];
+              if (newPlayerId) {
+                await storage.upsertScore({
+                  tournamentPlayerId: newPlayerId,
+                  hole: score.hole,
+                  par: score.par,
+                  strokes: score.strokes,
+                  scratches: score.scratches ?? 0,
+                  penalties: score.penalties ?? 0,
+                });
+              }
+            }
+          }
+          tournamentsImported++;
+        }
+      }
+
+      res.json({
+        success: true,
+        playersImported,
+        historyImported,
+        tournamentsImported,
+      });
+    } catch (error) {
+      console.error("Error importing full data:", error);
+      res.status(500).json({ error: "Failed to import data" });
+    }
+  });
+
   // Get players in tournament
   app.get("/api/tournaments/:roomCode/players", async (req, res) => {
     try {

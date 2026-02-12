@@ -37,6 +37,7 @@ export interface IStorage {
   getTournament(id: number): Promise<Tournament | undefined>;
   getTournamentStats(tournamentId: number): Promise<TournamentStats>;
   closeTournament(id: number): Promise<void>;
+  reopenTournament(id: number): Promise<void>;
   startTournament(id: number): Promise<void>;
   deleteTournament(id: number): Promise<void>;
   verifyDirectorPin(roomCode: string, pin: string): Promise<boolean>;
@@ -194,6 +195,10 @@ export class DatabaseStorage implements IStorage {
 
   async closeTournament(id: number): Promise<void> {
     await db.update(tournaments).set({ isActive: false }).where(eq(tournaments.id, id));
+  }
+
+  async reopenTournament(id: number): Promise<void> {
+    await db.update(tournaments).set({ isActive: true }).where(eq(tournaments.id, id));
   }
 
   async startTournament(id: number): Promise<void> {
