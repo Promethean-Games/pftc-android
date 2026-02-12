@@ -146,14 +146,14 @@ export function PlayerDirectoryTab({ directorPin }: PlayerDirectoryTabProps) {
         case "tournaments":
           return (b.completedTournaments ?? 0) - (a.completedTournaments ?? 0);
         case "ppt": {
-          const pa = a.ppt ?? -1;
-          const pb = b.ppt ?? -1;
-          return pb - pa;
+          const pa = a.ppt ?? Infinity;
+          const pb = b.ppt ?? Infinity;
+          return pa - pb;
         }
         case "ppc": {
-          const ca = a.ppc ?? -1;
-          const cb = b.ppc ?? -1;
-          return cb - ca;
+          const ca = a.ppc ?? Infinity;
+          const cb = b.ppc ?? Infinity;
+          return ca - cb;
         }
         default:
           return 0;
@@ -452,8 +452,8 @@ export function PlayerDirectoryTab({ directorPin }: PlayerDirectoryTabProps) {
             <SelectItem value="code" data-testid="sort-option-code">Player Number</SelectItem>
             <SelectItem value="handicap" data-testid="sort-option-handicap">Handicap</SelectItem>
             <SelectItem value="tournaments" data-testid="sort-option-tournaments">Tournaments Played</SelectItem>
-            <SelectItem value="ppt" data-testid="sort-option-ppt">PPT (Highest)</SelectItem>
-            <SelectItem value="ppc" data-testid="sort-option-ppc">PPC (Highest)</SelectItem>
+            <SelectItem value="ppt" data-testid="sort-option-ppt">PPT (Lowest)</SelectItem>
+            <SelectItem value="ppc" data-testid="sort-option-ppc">PPC (Lowest)</SelectItem>
           </SelectContent>
         </Select>
         <span className="text-sm text-muted-foreground">{filteredPlayers.length} players</span>
