@@ -1531,6 +1531,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/push/player-status/:playerId", async (req, res) => {
+    try {
+      const directorPin = req.query.directorPin as string;
+      if (directorPin !== MASTER_DIRECTOR_PIN) {
+        return res.status(403).json({ error: "Invalid director credentials" });
+      }
+      const playerId = parseInt(req.params.playerId);
+      if (isNaN(playerId)) {
+        return res.status(400).json({ error: "Invalid player ID" });
+      }
+      const subs = await storage.getSubscriptionsForPlayer(playerId);
+      res.json({ hasSubscription: subs.length > 0, subscriptionCount: subs.length });
+    } catch (error) {
+      console.error("Error checking player push status:", error);
+      res.status(500).json({ error: "Failed to check subscription status" });
+    }
+  });
+
+  app.post("/api/push/send-to-player", async (req, res) => {
+    try {
+      const { directorPin, universalPlayerId, title, body } = req.body;
+      if (directorPin !== MASTER_DIRECTOR_PIN) {
+        return res.status(403).json({ error: "Invalid director credentials" });
+      }
+      if (!title || !body || !universalPlayerId) {
+        return res.status(400).json({ error: "Title, body, and player ID are required" });
+      }
+      if (!pushEnabled) {
+        return res.status(503).json({ error: "Push notifications are not configured" });
+      }
+
+      const subs = await storage.getSubscriptionsForPlayer(universalPlayerId);
+      if (subs.length === 0) {
+        return res.status(404).json({ error: "Player has no active subscriptions" });
+      }
+
+      const payload = JSON.stringify({
+        title,
+        body,
+        tag: `player-${universalPlayerId}-${Date.now()}`,
+        url: "/",
+      });
+
+      let sentCount = 0;
+      await Promise.allSettled(
+        subs.map(async (sub) => {
+          try {
+            await webpush.sendNotification(
+              { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+              payload
+            );
+            sentCount++;
+          } catch (err: any) {
+            if (err.statusCode === 404 || err.statusCode === 410) {
+              await storage.removePushSubscription(sub.endpoint);
+            }
+          }
+        })
+      );
+
+      res.json({ success: true, sentCount, message: `Sent to ${sentCount} device(s)` });
+    } catch (error) {
+      console.error("Error sending player notification:", error);
+      res.status(500).json({ error: "Failed to send notification" });
+    }
+  });
+
   app.post("/api/push/send", async (req, res) => {
     try {
       const { directorPin, title, body, tournamentRoomCode } = req.body;

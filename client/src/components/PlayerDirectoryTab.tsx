@@ -27,7 +27,10 @@ import {
   ArrowUpDown,
   Activity,
   Radio,
-  KeyRound
+  KeyRound,
+  Bell,
+  Send,
+  BellOff
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -89,6 +92,12 @@ export function PlayerDirectoryTab({ directorPin }: PlayerDirectoryTabProps) {
   const [historyHolesPlayed, setHistoryHolesPlayed] = useState("18");
   const [historyPenalties, setHistoryPenalties] = useState("0");
   const [historyScratches, setHistoryScratches] = useState("0");
+  
+  const [playerPushEnabled, setPlayerPushEnabled] = useState(false);
+  const [playerPushLoading, setPlayerPushLoading] = useState(false);
+  const [playerNotifTitle, setPlayerNotifTitle] = useState("");
+  const [playerNotifBody, setPlayerNotifBody] = useState("");
+  const [sendingPlayerNotif, setSendingPlayerNotif] = useState(false);
   
   const nameInputRef = useRef<HTMLInputElement>(null);
 
@@ -184,8 +193,48 @@ export function PlayerDirectoryTab({ directorPin }: PlayerDirectoryTabProps) {
     }
   };
 
+  const checkPlayerPushStatus = async (playerId: number) => {
+    setPlayerPushLoading(true);
+    try {
+      const response = await fetch(`/api/push/player-status/${playerId}?directorPin=${encodeURIComponent(directorPin)}`);
+      if (response.ok) {
+        const data = await response.json();
+        setPlayerPushEnabled(data.hasSubscription);
+      } else {
+        setPlayerPushEnabled(false);
+      }
+    } catch {
+      setPlayerPushEnabled(false);
+    } finally {
+      setPlayerPushLoading(false);
+    }
+  };
+
+  const handleSendPlayerNotification = async () => {
+    if (!showPlayerDialog || !playerNotifTitle.trim() || !playerNotifBody.trim()) return;
+    setSendingPlayerNotif(true);
+    try {
+      await apiRequest("POST", "/api/push/send-to-player", {
+        directorPin,
+        universalPlayerId: showPlayerDialog.id,
+        title: playerNotifTitle.trim(),
+        body: playerNotifBody.trim(),
+      });
+      toast({ title: "Notification sent", description: `Sent to ${showPlayerDialog.name}` });
+      setPlayerNotifTitle("");
+      setPlayerNotifBody("");
+    } catch (err) {
+      console.error("Failed to send notification:", err);
+      toast({ title: "Failed to send notification", variant: "destructive" });
+    } finally {
+      setSendingPlayerNotif(false);
+    }
+  };
+
   const openPlayerDialog = async (player: UniversalPlayer) => {
     try {
+      setPlayerNotifTitle("");
+      setPlayerNotifBody("");
       const response = await fetch(`/api/universal-players/${player.id}?directorPin=${encodeURIComponent(directorPin)}`);
       if (response.ok) {
         const data: PlayerWithHistory = await response.json();
@@ -195,6 +244,7 @@ export function PlayerDirectoryTab({ directorPin }: PlayerDirectoryTabProps) {
         setEditShirtSize(data.tShirtSize || "");
         setHandicapValue(data.handicap?.toString() || "");
         setShowPlayerDialog(data);
+        checkPlayerPushStatus(data.id);
       }
     } catch (err) {
       console.error("Failed to fetch player:", err);
@@ -699,6 +749,49 @@ export function PlayerDirectoryTab({ directorPin }: PlayerDirectoryTabProps) {
                 >
                   {isSaving ? "Saving..." : "Save Profile"}
                 </Button>
+
+                <div className="border-t pt-3 space-y-2">
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-sm font-medium">
+                      {playerPushEnabled ? (
+                        <Bell className="w-4 h-4 text-green-500" />
+                      ) : (
+                        <BellOff className="w-4 h-4 text-muted-foreground" />
+                      )}
+                      Push Notifications
+                      {playerPushLoading && (
+                        <span className="text-xs text-muted-foreground">(checking...)</span>
+                      )}
+                      {!playerPushLoading && !playerPushEnabled && (
+                        <span className="text-xs text-muted-foreground">(not enabled)</span>
+                      )}
+                    </div>
+                    <Input
+                      placeholder="Notification title"
+                      value={playerNotifTitle}
+                      onChange={(e) => setPlayerNotifTitle(e.target.value)}
+                      disabled={!playerPushEnabled || sendingPlayerNotif}
+                      data-testid="input-player-notif-title"
+                    />
+                    <Input
+                      placeholder="Notification message"
+                      value={playerNotifBody}
+                      onChange={(e) => setPlayerNotifBody(e.target.value)}
+                      disabled={!playerPushEnabled || sendingPlayerNotif}
+                      data-testid="input-player-notif-body"
+                    />
+                    <Button
+                      variant="outline"
+                      className="w-full"
+                      onClick={handleSendPlayerNotification}
+                      disabled={!playerPushEnabled || !playerNotifTitle.trim() || !playerNotifBody.trim() || sendingPlayerNotif}
+                      data-testid="button-send-player-notif"
+                    >
+                      <Send className="w-4 h-4 mr-1.5" />
+                      {sendingPlayerNotif ? "Sending..." : "Send Notification"}
+                    </Button>
+                  </div>
+                </div>
 
                 <div className="border-t pt-3 space-y-2">
                   <Button
