@@ -67,7 +67,7 @@ export function PlayerDirectoryTab({ directorPin }: PlayerDirectoryTabProps) {
   const [showPlayerDialog, setShowPlayerDialog] = useState<PlayerWithHistory | null>(null);
   const [showAddHistoryDialog, setShowAddHistoryDialog] = useState(false);
   
-  const [sortBy, setSortBy] = useState<"name" | "handicap" | "code" | "tournaments">("name");
+  const [sortBy, setSortBy] = useState<"name" | "handicap" | "code" | "tournaments" | "ppt" | "ppc">("name");
   
   const [newPlayerName, setNewPlayerName] = useState("");
   const [newPlayerEmail, setNewPlayerEmail] = useState("");
@@ -145,6 +145,16 @@ export function PlayerDirectoryTab({ directorPin }: PlayerDirectoryTabProps) {
         }
         case "tournaments":
           return (b.completedTournaments ?? 0) - (a.completedTournaments ?? 0);
+        case "ppt": {
+          const pa = a.ppt ?? -1;
+          const pb = b.ppt ?? -1;
+          return pb - pa;
+        }
+        case "ppc": {
+          const ca = a.ppc ?? -1;
+          const cb = b.ppc ?? -1;
+          return cb - ca;
+        }
         default:
           return 0;
       }
@@ -442,6 +452,8 @@ export function PlayerDirectoryTab({ directorPin }: PlayerDirectoryTabProps) {
             <SelectItem value="code" data-testid="sort-option-code">Player Number</SelectItem>
             <SelectItem value="handicap" data-testid="sort-option-handicap">Handicap</SelectItem>
             <SelectItem value="tournaments" data-testid="sort-option-tournaments">Tournaments Played</SelectItem>
+            <SelectItem value="ppt" data-testid="sort-option-ppt">PPT (Highest)</SelectItem>
+            <SelectItem value="ppc" data-testid="sort-option-ppc">PPC (Highest)</SelectItem>
           </SelectContent>
         </Select>
         <span className="text-sm text-muted-foreground">{filteredPlayers.length} players</span>
