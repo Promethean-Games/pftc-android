@@ -40,3 +40,9 @@ waitForPort = 5000
 
 [agent]
 integrations = ["javascript_database:1.0.0"]
+
+[userenv]
+
+[userenv.shared]
+VAPID_PUBLIC_KEY = "BAddg5GAn-4mf5Qn_v_Bq0jtIoRqINOLZ3_T5BmtVPl9jOH3x_Jccg0ZFrI9mVHJ-WBBSOOHdYDYk5zTb8j1zjo"
+VAPID_SUBJECT = "mailto:admin@parforthecourse.app"
