@@ -23,7 +23,8 @@ import {
   ChevronRight,
   BarChart3,
   CircleSlash,
-  OctagonAlert
+  OctagonAlert,
+  ArrowUpDown
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -47,6 +48,8 @@ export function PlayerDirectoryTab({ directorPin }: PlayerDirectoryTabProps) {
   const [showMergeDialog, setShowMergeDialog] = useState<UniversalPlayer | null>(null);
   const [showPlayerDialog, setShowPlayerDialog] = useState<PlayerWithHistory | null>(null);
   const [showAddHistoryDialog, setShowAddHistoryDialog] = useState(false);
+  
+  const [sortBy, setSortBy] = useState<"name" | "handicap" | "code" | "tournaments">("name");
   
   const [newPlayerName, setNewPlayerName] = useState("");
   const [newPlayerEmail, setNewPlayerEmail] = useState("");
@@ -88,11 +91,32 @@ export function PlayerDirectoryTab({ directorPin }: PlayerDirectoryTabProps) {
     fetchPlayers();
   }, []);
 
-  const filteredPlayers = players.filter(p => 
-    p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (p.uniqueCode && p.uniqueCode.toLowerCase().includes(searchQuery.toLowerCase())) ||
-    (p.email && p.email.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  const filteredPlayers = players
+    .filter(p => 
+      p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (p.uniqueCode && p.uniqueCode.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (p.email && p.email.toLowerCase().includes(searchQuery.toLowerCase()))
+    )
+    .sort((a, b) => {
+      switch (sortBy) {
+        case "name":
+          return a.name.localeCompare(b.name);
+        case "handicap": {
+          const ha = a.handicap ?? 999;
+          const hb = b.handicap ?? 999;
+          return ha - hb;
+        }
+        case "code": {
+          const na = parseInt(a.uniqueCode?.replace("PC", "") ?? "0", 10);
+          const nb = parseInt(b.uniqueCode?.replace("PC", "") ?? "0", 10);
+          return na - nb;
+        }
+        case "tournaments":
+          return (b.completedTournaments ?? 0) - (a.completedTournaments ?? 0);
+        default:
+          return 0;
+      }
+    });
 
   const handleAddPlayer = async () => {
     if (!newPlayerName.trim()) return;
@@ -360,6 +384,22 @@ export function PlayerDirectoryTab({ directorPin }: PlayerDirectoryTabProps) {
           <Plus className="w-4 h-4 mr-2" />
           Add Player
         </Button>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <ArrowUpDown className="w-4 h-4 text-muted-foreground shrink-0" />
+        <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
+          <SelectTrigger className="w-[180px]" data-testid="select-sort">
+            <SelectValue placeholder="Sort by..." />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="name" data-testid="sort-option-name">Name (A-Z)</SelectItem>
+            <SelectItem value="code" data-testid="sort-option-code">Player Number</SelectItem>
+            <SelectItem value="handicap" data-testid="sort-option-handicap">Handicap</SelectItem>
+            <SelectItem value="tournaments" data-testid="sort-option-tournaments">Tournaments Played</SelectItem>
+          </SelectContent>
+        </Select>
+        <span className="text-sm text-muted-foreground">{filteredPlayers.length} players</span>
       </div>
 
       {isLoading ? (
