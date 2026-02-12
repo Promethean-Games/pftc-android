@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Trophy, Users, RefreshCw } from "lucide-react";
-import type { Player, HoleScore } from "@shared/schema";
+import { Trophy, Users, RefreshCw, Target, OctagonAlert, CircleSlash } from "lucide-react";
+import type { Player, HoleScore, LeaderboardEntry } from "@shared/schema";
 import { calculatePlayerTotal, getLeaderboard } from "@/lib/game-utils";
 import { useTournament } from "@/contexts/TournamentContext";
 import { cn } from "@/lib/utils";
@@ -14,11 +15,13 @@ interface SummaryScreenProps {
   onNewGame: () => void;
   onSubmitToSheets?: () => void;
   isGameOver?: boolean;
+  viewOnly?: boolean;
 }
 
-export function SummaryScreen({ players, scores, onNewGame, onSubmitToSheets, isGameOver = false }: SummaryScreenProps) {
+export function SummaryScreen({ players, scores, onNewGame, onSubmitToSheets, isGameOver = false, viewOnly = false }: SummaryScreenProps) {
   const [isLandscape, setIsLandscape] = useState(false);
-  const [activeTab, setActiveTab] = useState<"local" | "tournament">("local");
+  const [activeTab, setActiveTab] = useState<"local" | "tournament">(viewOnly ? "tournament" : "local");
+  const [selectedPlayer, setSelectedPlayer] = useState<LeaderboardEntry | null>(null);
   const tournament = useTournament();
   
   useEffect(() => {
@@ -31,14 +34,23 @@ export function SummaryScreen({ players, scores, onNewGame, onSubmitToSheets, is
   }, []);
 
   useEffect(() => {
-    if (tournament.isConnected && activeTab === "tournament") {
+    if (tournament.isConnected && (activeTab === "tournament" || viewOnly)) {
       tournament.refreshLeaderboard();
       const interval = setInterval(() => {
         tournament.refreshLeaderboard();
       }, 5000);
       return () => clearInterval(interval);
     }
-  }, [tournament.isConnected, activeTab]);
+  }, [tournament.isConnected, activeTab, viewOnly]);
+
+  useEffect(() => {
+    if (selectedPlayer) {
+      const updated = tournament.leaderboard.find(e => e.playerId === selectedPlayer.playerId);
+      if (updated) {
+        setSelectedPlayer(updated);
+      }
+    }
+  }, [tournament.leaderboard]);
   
   const leaderboard = getLeaderboard(players, scores);
   const leader = leaderboard[0];
@@ -62,7 +74,7 @@ export function SummaryScreen({ players, scores, onNewGame, onSubmitToSheets, is
       )}
 
       {/* Tab Switcher for Tournament Mode */}
-      {tournament.isConnected && (
+      {tournament.isConnected && !viewOnly && (
         <div className="flex gap-2 mb-4">
           <Button
             variant={activeTab === "local" ? "default" : "outline"}
@@ -119,10 +131,11 @@ export function SummaryScreen({ players, scores, onNewGame, onSubmitToSheets, is
                   <div
                     key={entry.playerId}
                     className={cn(
-                      "flex items-center gap-3 p-3 rounded-lg border",
+                      "flex items-center gap-3 p-3 rounded-lg border cursor-pointer hover-elevate",
                       index === 0 && "border-primary border-2 bg-primary/5",
                       isMyPlayer && "bg-muted/50"
                     )}
+                    onClick={() => setSelectedPlayer(entry)}
                     data-testid={`tournament-leaderboard-${entry.playerId}`}
                   >
                     <span className={cn(
@@ -381,6 +394,90 @@ export function SummaryScreen({ players, scores, onNewGame, onSubmitToSheets, is
           </div>
         </>
       )}
+
+      <Dialog open={!!selectedPlayer} onOpenChange={() => setSelectedPlayer(null)}>
+        <DialogContent className="sm:max-w-sm">
+          {selectedPlayer && (() => {
+            const rank = tournament.leaderboard.findIndex(e => e.playerId === selectedPlayer.playerId) + 1;
+            const avgStrokesPerHole = selectedPlayer.holesCompleted > 0 
+              ? (selectedPlayer.totalStrokes / selectedPlayer.holesCompleted).toFixed(1) 
+              : "\u2014";
+            const avgParPerHole = selectedPlayer.holesCompleted > 0
+              ? (selectedPlayer.totalPar / selectedPlayer.holesCompleted).toFixed(1)
+              : "\u2014";
+            return (
+              <>
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <span className={cn(
+                      "w-7 h-7 rounded-full flex items-center justify-center font-bold text-xs",
+                      rank === 1 && "bg-primary text-primary-foreground",
+                      rank > 1 && "bg-muted"
+                    )}>
+                      {rank}
+                    </span>
+                    {selectedPlayer.playerName}
+                  </DialogTitle>
+                  <DialogDescription>
+                    {selectedPlayer.groupName || "No group"} • Current tournament stats
+                  </DialogDescription>
+                </DialogHeader>
+
+                <div className="space-y-3 mt-2">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-muted/50 rounded-lg p-3 text-center">
+                      <Target className="w-5 h-5 mx-auto mb-1 text-blue-500" />
+                      <p className={cn(
+                        "text-2xl font-bold font-mono",
+                        selectedPlayer.relativeToPar < 0 && "text-green-500",
+                        selectedPlayer.relativeToPar > 0 && "text-red-500"
+                      )}>
+                        {selectedPlayer.relativeToPar > 0 ? "+" : ""}{selectedPlayer.relativeToPar}
+                      </p>
+                      <p className="text-xs text-muted-foreground">vs Par</p>
+                    </div>
+                    <div className="bg-muted/50 rounded-lg p-3 text-center">
+                      <Trophy className="w-5 h-5 mx-auto mb-1 text-amber-500" />
+                      <p className="text-2xl font-bold font-mono">{selectedPlayer.totalStrokes}</p>
+                      <p className="text-xs text-muted-foreground">Total Strokes</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="bg-muted/50 rounded-lg p-3 text-center">
+                      <p className="text-xl font-bold">{selectedPlayer.holesCompleted}</p>
+                      <p className="text-xs text-muted-foreground">Holes</p>
+                    </div>
+                    <div className="bg-muted/50 rounded-lg p-3 text-center">
+                      <p className="text-xl font-bold">{avgStrokesPerHole}</p>
+                      <p className="text-xs text-muted-foreground">Avg/Hole</p>
+                    </div>
+                    <div className="bg-muted/50 rounded-lg p-3 text-center">
+                      <p className="text-xl font-bold">{selectedPlayer.totalPar}</p>
+                      <p className="text-xs text-muted-foreground">Total Par</p>
+                    </div>
+                  </div>
+
+                  {(selectedPlayer.totalPenalties > 0 || selectedPlayer.totalScratches > 0) && (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="bg-muted/50 rounded-lg p-3 text-center">
+                        <OctagonAlert className="w-4 h-4 mx-auto mb-1 text-red-500" />
+                        <p className="text-xl font-bold">{selectedPlayer.totalPenalties}</p>
+                        <p className="text-xs text-muted-foreground">Penalties</p>
+                      </div>
+                      <div className="bg-muted/50 rounded-lg p-3 text-center">
+                        <CircleSlash className="w-4 h-4 mx-auto mb-1 text-orange-500" />
+                        <p className="text-xl font-bold">{selectedPlayer.totalScratches}</p>
+                        <p className="text-xs text-muted-foreground">Scratches</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

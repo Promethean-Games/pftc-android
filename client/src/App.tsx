@@ -197,6 +197,7 @@ function GameApp() {
           scores={game.scores}
           onNewGame={handleNewGame}
           isGameOver={game.isComplete}
+          viewOnly={viewOnly}
         />
       )}
 
