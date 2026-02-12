@@ -52,11 +52,13 @@ interface LiveTournamentStat {
 interface PlayerWithHistory extends UniversalPlayer {
   recentHistory?: PlayerTournamentHistory[];
   liveTournaments?: LiveTournamentStat[];
+  ppt?: number | null;
+  ppc?: number | null;
 }
 
 export function PlayerDirectoryTab({ directorPin }: PlayerDirectoryTabProps) {
   const { toast } = useToast();
-  const [players, setPlayers] = useState<UniversalPlayer[]>([]);
+  const [players, setPlayers] = useState<PlayerWithHistory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [showAddDialog, setShowAddDialog] = useState(false);
@@ -483,6 +485,14 @@ export function PlayerDirectoryTab({ directorPin }: PlayerDirectoryTabProps) {
                     <span className="flex items-center gap-1">
                       <Target className="w-3 h-3" />
                       Handicap: {getHandicapDisplay(player)}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <BarChart3 className="w-3 h-3" />
+                      PPT: {player.ppt !== null && player.ppt !== undefined ? player.ppt.toFixed(1) : "\u2014"}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <BarChart3 className="w-3 h-3" />
+                      PPC: {player.ppc !== null && player.ppc !== undefined ? player.ppc.toFixed(2) : "\u2014"}
                     </span>
                   </div>
                 </div>

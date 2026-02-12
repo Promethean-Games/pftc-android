@@ -928,7 +928,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const players = await storage.getAllUniversalPlayers();
-      res.json(players);
+      const playersWithStats = await Promise.all(players.map(async (player) => {
+        const history = await storage.getPlayerTournamentHistory(player.id);
+        let totalPenalties = 0;
+        let totalScratches = 0;
+        let totalHoles = 0;
+        for (const entry of history) {
+          totalPenalties += entry.totalPenalties ?? 0;
+          totalScratches += entry.totalScratches ?? 0;
+          totalHoles += entry.holesPlayed;
+        }
+        const infractions = totalPenalties + totalScratches;
+        const tournamentCount = history.length;
+        const ppt = tournamentCount > 0 ? infractions / tournamentCount : null;
+        const ppc = totalHoles > 0 ? infractions / totalHoles : null;
+        return { ...player, ppt, ppc };
+      }));
+      res.json(playersWithStats);
     } catch (error) {
       console.error("Error getting universal players:", error);
       res.status(500).json({ error: "Failed to get universal players" });
