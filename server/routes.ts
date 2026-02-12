@@ -12,11 +12,19 @@ const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || "";
 const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || "";
 const VAPID_SUBJECT = process.env.VAPID_SUBJECT || "mailto:admin@parforthecourse.app";
 
+let pushEnabled = false;
 if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
-  webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
+  try {
+    webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
+    pushEnabled = true;
+    console.log("Web push notifications enabled");
+  } catch (err) {
+    console.warn("Failed to initialize web push - notifications disabled:", (err as Error).message);
+  }
 }
 
 async function sendPushToTournament(roomCode: string, title: string, body: string, tag?: string) {
+  if (!pushEnabled) return;
   try {
     const subs = await storage.getSubscriptionsForTournament(roomCode);
     const payload = JSON.stringify({ title, body, tag: tag || roomCode, url: `/?room=${roomCode}` });
