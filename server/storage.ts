@@ -437,13 +437,16 @@ export class DatabaseStorage implements IStorage {
     return created;
   }
 
-  async getPlayerTournamentHistory(universalPlayerId: number, limit: number = 5): Promise<PlayerTournamentHistory[]> {
-    return db
+  async getPlayerTournamentHistory(universalPlayerId: number, limit?: number): Promise<PlayerTournamentHistory[]> {
+    const query = db
       .select()
       .from(playerTournamentHistory)
       .where(eq(playerTournamentHistory.universalPlayerId, universalPlayerId))
-      .orderBy(desc(playerTournamentHistory.completedAt))
-      .limit(limit);
+      .orderBy(desc(playerTournamentHistory.completedAt));
+    if (limit) {
+      return query.limit(limit);
+    }
+    return query;
   }
 
   async deleteTournamentHistory(historyId: number): Promise<void> {

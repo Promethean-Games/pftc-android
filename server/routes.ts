@@ -827,7 +827,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Player not found" });
       }
       
-      const history = await storage.getPlayerTournamentHistory(playerId, 5);
+      const history = await storage.getPlayerTournamentHistory(playerId);
       
       res.json({ ...player, recentHistory: history });
     } catch (error) {
