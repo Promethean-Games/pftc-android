@@ -4,6 +4,7 @@ import {
   tournamentScores,
   universalPlayers,
   playerTournamentHistory,
+  pushSubscriptions,
   type Tournament,
   type InsertTournament,
   type TournamentPlayer,
@@ -15,6 +16,8 @@ import {
   type InsertUniversalPlayer,
   type PlayerTournamentHistory,
   type InsertPlayerTournamentHistory,
+  type PushSubscription,
+  type InsertPushSubscription,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, sql, desc, ilike, or } from "drizzle-orm";
@@ -75,6 +78,12 @@ export interface IStorage {
   recalculateHandicap(universalPlayerId: number): Promise<UniversalPlayer>;
   getTournamentPlayers(tournamentId: number): Promise<TournamentPlayer[]>;
   getLiveTournamentStats(universalPlayerId: number): Promise<LiveTournamentStat[]>;
+
+  // Push subscription operations
+  upsertPushSubscription(sub: InsertPushSubscription): Promise<PushSubscription>;
+  removePushSubscription(endpoint: string): Promise<void>;
+  getSubscriptionsForTournament(roomCode: string): Promise<PushSubscription[]>;
+  getAllPushSubscriptions(): Promise<PushSubscription[]>;
 }
 
 export interface LiveTournamentStat {
@@ -573,6 +582,36 @@ export class DatabaseStorage implements IStorage {
       });
     }
     return stats;
+  }
+
+  async upsertPushSubscription(sub: InsertPushSubscription): Promise<PushSubscription> {
+    const [result] = await db
+      .insert(pushSubscriptions)
+      .values(sub)
+      .onConflictDoUpdate({
+        target: pushSubscriptions.endpoint,
+        set: {
+          p256dh: sub.p256dh,
+          auth: sub.auth,
+          deviceId: sub.deviceId,
+          tournamentRoomCode: sub.tournamentRoomCode,
+          universalPlayerId: sub.universalPlayerId,
+        },
+      })
+      .returning();
+    return result;
+  }
+
+  async removePushSubscription(endpoint: string): Promise<void> {
+    await db.delete(pushSubscriptions).where(eq(pushSubscriptions.endpoint, endpoint));
+  }
+
+  async getSubscriptionsForTournament(roomCode: string): Promise<PushSubscription[]> {
+    return db.select().from(pushSubscriptions).where(eq(pushSubscriptions.tournamentRoomCode, roomCode));
+  }
+
+  async getAllPushSubscriptions(): Promise<PushSubscription[]> {
+    return db.select().from(pushSubscriptions);
   }
 }
 

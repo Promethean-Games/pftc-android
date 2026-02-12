@@ -1,11 +1,43 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import bcrypt from "bcrypt";
+import webpush from "web-push";
 import { storage } from "./storage";
 import { insertTournamentSchema, insertTournamentPlayerSchema, insertTournamentScoreSchema, batchUpdateGroupsSchema, insertUniversalPlayerSchema, type TournamentScore } from "@shared/schema";
 import { z } from "zod";
 
 const SALT_ROUNDS = 10;
+
+const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || "";
+const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || "";
+const VAPID_SUBJECT = process.env.VAPID_SUBJECT || "mailto:admin@parforthecourse.app";
+
+if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
+  webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
+}
+
+async function sendPushToTournament(roomCode: string, title: string, body: string, tag?: string) {
+  try {
+    const subs = await storage.getSubscriptionsForTournament(roomCode);
+    const payload = JSON.stringify({ title, body, tag: tag || roomCode, url: `/?room=${roomCode}` });
+    await Promise.allSettled(
+      subs.map(async (sub) => {
+        try {
+          await webpush.sendNotification(
+            { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+            payload
+          );
+        } catch (err: any) {
+          if (err.statusCode === 404 || err.statusCode === 410) {
+            await storage.removePushSubscription(sub.endpoint);
+          }
+        }
+      })
+    );
+  } catch (err) {
+    console.error("Error sending push notifications:", err);
+  }
+}
 
 const createUniversalPlayerSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -1435,6 +1467,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error checking player PIN:", error);
       res.status(500).json({ error: "Failed to check PIN status" });
+    }
+  });
+
+  // === Push Notification Routes ===
+
+  app.get("/api/push/vapid-key", (_req, res) => {
+    res.json({ publicKey: VAPID_PUBLIC_KEY });
+  });
+
+  app.post("/api/push/subscribe", async (req, res) => {
+    try {
+      const { subscription, deviceId, tournamentRoomCode, universalPlayerId } = req.body;
+      if (!subscription?.endpoint || !subscription?.keys?.p256dh || !subscription?.keys?.auth) {
+        return res.status(400).json({ error: "Invalid subscription object" });
+      }
+      await storage.upsertPushSubscription({
+        endpoint: subscription.endpoint,
+        p256dh: subscription.keys.p256dh,
+        auth: subscription.keys.auth,
+        deviceId: deviceId || null,
+        tournamentRoomCode: tournamentRoomCode || null,
+        universalPlayerId: universalPlayerId || null,
+      });
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error saving push subscription:", error);
+      res.status(500).json({ error: "Failed to save subscription" });
+    }
+  });
+
+  app.post("/api/push/unsubscribe", async (req, res) => {
+    try {
+      const { endpoint } = req.body;
+      if (!endpoint) {
+        return res.status(400).json({ error: "Endpoint required" });
+      }
+      await storage.removePushSubscription(endpoint);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error removing push subscription:", error);
+      res.status(500).json({ error: "Failed to remove subscription" });
     }
   });
 

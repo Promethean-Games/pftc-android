@@ -113,12 +113,25 @@ export const tournamentScoresRelations = relations(tournamentScores, ({ one }) =
   }),
 }));
 
+// Push notification subscriptions
+export const pushSubscriptions = pgTable("push_subscriptions", {
+  id: serial("id").primaryKey(),
+  endpoint: text("endpoint").notNull().unique(),
+  p256dh: text("p256dh").notNull(),
+  auth: text("auth").notNull(),
+  deviceId: text("device_id"),
+  tournamentRoomCode: text("tournament_room_code"),
+  universalPlayerId: integer("universal_player_id").references(() => universalPlayers.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
 // Insert schemas for database operations
 export const insertUniversalPlayerSchema = createInsertSchema(universalPlayers).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertPlayerTournamentHistorySchema = createInsertSchema(playerTournamentHistory).omit({ id: true, completedAt: true });
 export const insertTournamentSchema = createInsertSchema(tournaments).omit({ id: true, createdAt: true });
 export const insertTournamentPlayerSchema = createInsertSchema(tournamentPlayers).omit({ id: true, createdAt: true });
 export const insertTournamentScoreSchema = createInsertSchema(tournamentScores).omit({ id: true });
+export const insertPushSubscriptionSchema = createInsertSchema(pushSubscriptions).omit({ id: true, createdAt: true });
 
 // Types from database
 export type UniversalPlayer = typeof universalPlayers.$inferSelect;
@@ -131,6 +144,8 @@ export type TournamentPlayer = typeof tournamentPlayers.$inferSelect;
 export type InsertTournamentPlayer = z.infer<typeof insertTournamentPlayerSchema>;
 export type TournamentScore = typeof tournamentScores.$inferSelect;
 export type InsertTournamentScore = z.infer<typeof insertTournamentScoreSchema>;
+export type PushSubscription = typeof pushSubscriptions.$inferSelect;
+export type InsertPushSubscription = z.infer<typeof insertPushSubscriptionSchema>;
 
 // Zod schemas for local game state (not stored in DB - kept in localStorage)
 export const playerSchema = z.object({
