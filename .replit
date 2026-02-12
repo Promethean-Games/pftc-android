@@ -44,5 +44,5 @@ integrations = ["javascript_database:1.0.0"]
 [userenv]
 
 [userenv.shared]
-VAPID_PUBLIC_KEY = "BLHwUhmS6u-okwVtngY_XhL1f6HrUsdH4oby3DxvwR_PDEsxQ__IKTzVgZE1KA63K3zeCBpkqxtaTQmuX4_OChc"
+VAPID_PUBLIC_KEY = "BGDSJ3QIrJeaHeD3nxhL2fbvFXlx1AxTbSQHWRghXmdbKRQVxAqG520O-23mf4xiDp1G6yc1lkbGeRM2jsG1EY0"
 VAPID_SUBJECT = "mailto:admin@parforthecourse.app"
