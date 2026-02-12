@@ -69,13 +69,12 @@ The server handles tournament creation, player registration, score synchronizati
 - Enter 4-digit master PIN (3141) - verified server-side via POST /api/director/verify
 - TDDashboard provides a unified tabbed interface with two tabs:
   - **Tournaments Tab**: Create, view, delete, backup, and manage tournaments
-  - **Players Tab (Player Directory)**: Full player management including:
-    - Add/edit/delete universal players
-    - Search players by name, code, or email
-    - Manually add tournament history entries for players
-    - Delete tournament history entries
-    - Set/override handicaps
-    - Merge duplicate player records
+  - **Players Tab (Player Directory)**: Consolidated player management with unified dialog:
+    - Search players by name, code, or email; click player card to open management dialog
+    - Profile tab: Edit name, email, phone, t-shirt size; override handicap; merge/delete actions
+    - Stats tab: Tournament count, handicap, penalties/scratches totals, PPT (Penalties Per Tournament), PPC (Penalties Per Course Hole), scoring averages
+    - History tab: View/add/delete tournament history entries (with penalties and scratches tracking)
+    - Merge duplicate player records via dialog
 - DirectorPortal provides per-tournament dashboard with player management, groups, and start functionality
 - All director endpoints require master PIN or tournament-specific PIN for authorization
 - Manual History API Endpoints:

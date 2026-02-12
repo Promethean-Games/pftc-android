@@ -4,17 +4,26 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   Plus, 
   Users, 
   Trash2, 
   Merge,
-  Edit3,
   Search,
   Trophy,
   Target,
   AlertTriangle,
-  History
+  History,
+  User,
+  Mail,
+  Phone,
+  Shirt,
+  ChevronRight,
+  BarChart3,
+  CircleSlash,
+  OctagonAlert
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -34,19 +43,21 @@ export function PlayerDirectoryTab({ directorPin }: PlayerDirectoryTabProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [showAddDialog, setShowAddDialog] = useState(false);
-  const [showEditDialog, setShowEditDialog] = useState<UniversalPlayer | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState<UniversalPlayer | null>(null);
   const [showMergeDialog, setShowMergeDialog] = useState<UniversalPlayer | null>(null);
-  const [showHandicapDialog, setShowHandicapDialog] = useState<UniversalPlayer | null>(null);
-  const [showHistoryDialog, setShowHistoryDialog] = useState<PlayerWithHistory | null>(null);
-  const [showAddHistoryDialog, setShowAddHistoryDialog] = useState<UniversalPlayer | null>(null);
+  const [showPlayerDialog, setShowPlayerDialog] = useState<PlayerWithHistory | null>(null);
+  const [showAddHistoryDialog, setShowAddHistoryDialog] = useState(false);
   
   const [newPlayerName, setNewPlayerName] = useState("");
   const [newPlayerEmail, setNewPlayerEmail] = useState("");
+  
   const [editName, setEditName] = useState("");
   const [editEmail, setEditEmail] = useState("");
-  const [mergeTargetId, setMergeTargetId] = useState<number | null>(null);
+  const [editPhone, setEditPhone] = useState("");
+  const [editShirtSize, setEditShirtSize] = useState("");
   const [handicapValue, setHandicapValue] = useState("");
+  
+  const [mergeTargetId, setMergeTargetId] = useState<number | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   
   const [historyTournamentName, setHistoryTournamentName] = useState("");
@@ -54,6 +65,8 @@ export function PlayerDirectoryTab({ directorPin }: PlayerDirectoryTabProps) {
   const [historyTotalStrokes, setHistoryTotalStrokes] = useState("");
   const [historyTotalPar, setHistoryTotalPar] = useState("");
   const [historyHolesPlayed, setHistoryHolesPlayed] = useState("18");
+  const [historyPenalties, setHistoryPenalties] = useState("0");
+  const [historyScratches, setHistoryScratches] = useState("0");
   
   const nameInputRef = useRef<HTMLInputElement>(null);
 
@@ -77,7 +90,7 @@ export function PlayerDirectoryTab({ directorPin }: PlayerDirectoryTabProps) {
 
   const filteredPlayers = players.filter(p => 
     p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    p.uniqueCode.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (p.uniqueCode && p.uniqueCode.toLowerCase().includes(searchQuery.toLowerCase())) ||
     (p.email && p.email.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
@@ -104,22 +117,77 @@ export function PlayerDirectoryTab({ directorPin }: PlayerDirectoryTabProps) {
     }
   };
 
-  const handleEditPlayer = async () => {
-    if (!showEditDialog || !editName.trim()) return;
+  const openPlayerDialog = async (player: UniversalPlayer) => {
+    try {
+      const response = await fetch(`/api/universal-players/${player.id}?directorPin=${encodeURIComponent(directorPin)}`);
+      if (response.ok) {
+        const data: PlayerWithHistory = await response.json();
+        setEditName(data.name);
+        setEditEmail(data.email || "");
+        setEditPhone(data.phoneNumber || "");
+        setEditShirtSize(data.tShirtSize || "");
+        setHandicapValue(data.handicap?.toString() || "");
+        setShowPlayerDialog(data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch player:", err);
+      toast({ title: "Failed to load player", variant: "destructive" });
+    }
+  };
+
+  const refreshPlayerDialog = async (playerId: number) => {
+    try {
+      const response = await fetch(`/api/universal-players/${playerId}?directorPin=${encodeURIComponent(directorPin)}`);
+      if (response.ok) {
+        const data: PlayerWithHistory = await response.json();
+        setShowPlayerDialog(data);
+      }
+    } catch (err) {
+      console.error("Failed to refresh player:", err);
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    if (!showPlayerDialog || !editName.trim()) return;
     setIsSaving(true);
     
     try {
-      await apiRequest("PATCH", `/api/universal-players/${showEditDialog.id}`, {
+      await apiRequest("PATCH", `/api/universal-players/${showPlayerDialog.id}`, {
         directorPin,
         name: editName.trim(),
         email: editEmail.trim() || null,
+        phoneNumber: editPhone.trim() || null,
+        tShirtSize: editShirtSize || null,
       });
-      setShowEditDialog(null);
-      toast({ title: "Player updated!" });
+      toast({ title: "Profile saved!" });
       await fetchPlayers();
+      await refreshPlayerDialog(showPlayerDialog.id);
     } catch (err) {
-      console.error("Failed to update player:", err);
-      toast({ title: "Failed to update player", variant: "destructive" });
+      console.error("Failed to save profile:", err);
+      toast({ title: "Failed to save profile", variant: "destructive" });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleSetHandicap = async () => {
+    if (!showPlayerDialog) return;
+    setIsSaving(true);
+    
+    const handicap = handicapValue.trim() ? parseFloat(handicapValue) : null;
+    
+    try {
+      await apiRequest("PATCH", `/api/universal-players/${showPlayerDialog.id}`, {
+        directorPin,
+        handicap,
+        isProvisional: false,
+      });
+      toast({ title: "Handicap updated!", description: handicap !== null ? `Set to ${handicap}` : "Handicap cleared" });
+      await fetchPlayers();
+      await refreshPlayerDialog(showPlayerDialog.id);
+    } catch (err) {
+      console.error("Failed to set handicap:", err);
+      toast({ title: "Failed to set handicap", variant: "destructive" });
     } finally {
       setIsSaving(false);
     }
@@ -135,6 +203,7 @@ export function PlayerDirectoryTab({ directorPin }: PlayerDirectoryTabProps) {
       });
       if (!res.ok) throw new Error("Delete failed");
       setShowDeleteDialog(null);
+      setShowPlayerDialog(null);
       toast({ title: "Player deleted" });
       await fetchPlayers();
     } catch (err) {
@@ -157,6 +226,7 @@ export function PlayerDirectoryTab({ directorPin }: PlayerDirectoryTabProps) {
       });
       setShowMergeDialog(null);
       setMergeTargetId(null);
+      setShowPlayerDialog(null);
       toast({ title: "Players merged!" });
       await fetchPlayers();
     } catch (err) {
@@ -167,45 +237,8 @@ export function PlayerDirectoryTab({ directorPin }: PlayerDirectoryTabProps) {
     }
   };
 
-  const handleSetHandicap = async () => {
-    if (!showHandicapDialog) return;
-    setIsSaving(true);
-    
-    const handicap = handicapValue.trim() ? parseFloat(handicapValue) : null;
-    
-    try {
-      await apiRequest("PATCH", `/api/universal-players/${showHandicapDialog.id}`, {
-        directorPin,
-        handicap,
-        isProvisional: false,
-      });
-      setShowHandicapDialog(null);
-      setHandicapValue("");
-      toast({ title: "Handicap updated!", description: handicap !== null ? `Set to ${handicap}` : "Handicap cleared" });
-      await fetchPlayers();
-    } catch (err) {
-      console.error("Failed to set handicap:", err);
-      toast({ title: "Failed to set handicap", variant: "destructive" });
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const openHistoryDialog = async (player: UniversalPlayer) => {
-    try {
-      const response = await fetch(`/api/universal-players/${player.id}?directorPin=${encodeURIComponent(directorPin)}`);
-      if (response.ok) {
-        const data: PlayerWithHistory = await response.json();
-        setShowHistoryDialog(data);
-      }
-    } catch (err) {
-      console.error("Failed to fetch player history:", err);
-      toast({ title: "Failed to load history", variant: "destructive" });
-    }
-  };
-
   const handleAddHistory = async () => {
-    if (!showAddHistoryDialog) return;
+    if (!showPlayerDialog) return;
     if (!historyTournamentName.trim() || !historyTotalStrokes || !historyTotalPar || !historyHolesPlayed) {
       toast({ title: "Please fill in all required fields", variant: "destructive" });
       return;
@@ -213,21 +246,21 @@ export function PlayerDirectoryTab({ directorPin }: PlayerDirectoryTabProps) {
     setIsSaving(true);
     
     try {
-      await apiRequest("POST", `/api/universal-players/${showAddHistoryDialog.id}/history`, {
+      await apiRequest("POST", `/api/universal-players/${showPlayerDialog.id}/history`, {
         directorPin,
         tournamentName: historyTournamentName.trim(),
         courseName: historyCourseName.trim() || null,
         totalStrokes: parseInt(historyTotalStrokes),
         totalPar: parseInt(historyTotalPar),
         holesPlayed: parseInt(historyHolesPlayed),
+        totalPenalties: parseInt(historyPenalties) || 0,
+        totalScratches: parseInt(historyScratches) || 0,
       });
-      setShowAddHistoryDialog(null);
+      setShowAddHistoryDialog(false);
       resetHistoryForm();
       toast({ title: "Tournament history added!" });
       await fetchPlayers();
-      if (showHistoryDialog && showHistoryDialog.id === showAddHistoryDialog.id) {
-        openHistoryDialog(showAddHistoryDialog);
-      }
+      await refreshPlayerDialog(showPlayerDialog.id);
     } catch (err) {
       console.error("Failed to add history:", err);
       toast({ title: "Failed to add history", variant: "destructive" });
@@ -237,16 +270,16 @@ export function PlayerDirectoryTab({ directorPin }: PlayerDirectoryTabProps) {
   };
 
   const handleDeleteHistory = async (historyId: number) => {
-    if (!showHistoryDialog) return;
+    if (!showPlayerDialog) return;
     setIsSaving(true);
     
     try {
-      await apiRequest("DELETE", `/api/universal-players/${showHistoryDialog.id}/history/${historyId}`, {
+      await apiRequest("DELETE", `/api/universal-players/${showPlayerDialog.id}/history/${historyId}`, {
         directorPin,
       });
       toast({ title: "History entry deleted" });
       await fetchPlayers();
-      openHistoryDialog(showHistoryDialog);
+      await refreshPlayerDialog(showPlayerDialog.id);
     } catch (err) {
       console.error("Failed to delete history:", err);
       toast({ title: "Failed to delete history", variant: "destructive" });
@@ -261,22 +294,13 @@ export function PlayerDirectoryTab({ directorPin }: PlayerDirectoryTabProps) {
     setHistoryTotalStrokes("");
     setHistoryTotalPar("");
     setHistoryHolesPlayed("18");
-  };
-
-  const openEditDialog = (player: UniversalPlayer) => {
-    setEditName(player.name);
-    setEditEmail(player.email || "");
-    setShowEditDialog(player);
-  };
-
-  const openHandicapDialog = (player: UniversalPlayer) => {
-    setHandicapValue(player.handicap?.toString() || "");
-    setShowHandicapDialog(player);
+    setHistoryPenalties("0");
+    setHistoryScratches("0");
   };
 
   const getHandicapDisplay = (player: UniversalPlayer) => {
     if (player.handicap === null || player.handicap === undefined) {
-      return "—";
+      return "\u2014";
     }
     const sign = player.handicap >= 0 ? "+" : "";
     return `${sign}${player.handicap.toFixed(1)}${player.isProvisional ? "*" : ""}`;
@@ -295,6 +319,25 @@ export function PlayerDirectoryTab({ directorPin }: PlayerDirectoryTabProps) {
         Provisional ({player.completedTournaments}/5)
       </span>
     );
+  };
+
+  const computeStats = (history?: PlayerTournamentHistory[]) => {
+    if (!history || history.length === 0) {
+      return { ppt: null, ppc: null, totalPenalties: 0, totalScratches: 0, totalHoles: 0 };
+    }
+    let totalPenalties = 0;
+    let totalScratches = 0;
+    let totalHoles = 0;
+    for (const entry of history) {
+      totalPenalties += entry.totalPenalties ?? 0;
+      totalScratches += entry.totalScratches ?? 0;
+      totalHoles += entry.holesPlayed;
+    }
+    const infractions = totalPenalties + totalScratches;
+    const tournaments = history.length;
+    const ppt = tournaments > 0 ? infractions / tournaments : null;
+    const ppc = totalHoles > 0 ? infractions / totalHoles : null;
+    return { ppt, ppc, totalPenalties, totalScratches, totalHoles };
   };
 
   return (
@@ -336,7 +379,8 @@ export function PlayerDirectoryTab({ directorPin }: PlayerDirectoryTabProps) {
           {filteredPlayers.map(player => (
             <Card 
               key={player.id} 
-              className="p-4"
+              className="p-4 cursor-pointer hover-elevate"
+              onClick={() => openPlayerDialog(player)}
               data-testid={`card-player-${player.id}`}
             >
               <div className="flex items-center justify-between gap-2">
@@ -359,54 +403,7 @@ export function PlayerDirectoryTab({ directorPin }: PlayerDirectoryTabProps) {
                     </span>
                   </div>
                 </div>
-                <div className="flex items-center gap-1">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => openHistoryDialog(player)}
-                    title="View/Add History"
-                    data-testid={`button-history-${player.id}`}
-                  >
-                    <History className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => openHandicapDialog(player)}
-                    title="Set Handicap"
-                    data-testid={`button-handicap-${player.id}`}
-                  >
-                    <Target className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => openEditDialog(player)}
-                    title="Edit Player"
-                    data-testid={`button-edit-${player.id}`}
-                  >
-                    <Edit3 className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setShowMergeDialog(player)}
-                    title="Merge with Another Player"
-                    data-testid={`button-merge-${player.id}`}
-                  >
-                    <Merge className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="text-destructive hover:text-destructive"
-                    onClick={() => setShowDeleteDialog(player)}
-                    title="Delete Player"
-                    data-testid={`button-delete-${player.id}`}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
+                <ChevronRight className="w-5 h-5 text-muted-foreground flex-shrink-0" />
               </div>
             </Card>
           ))}
@@ -474,55 +471,441 @@ export function PlayerDirectoryTab({ directorPin }: PlayerDirectoryTabProps) {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!showEditDialog} onOpenChange={() => setShowEditDialog(null)}>
+      <Dialog open={!!showPlayerDialog} onOpenChange={() => setShowPlayerDialog(null)}>
+        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <User className="w-5 h-5" />
+              {showPlayerDialog?.name}
+            </DialogTitle>
+            <DialogDescription>
+              <span className="font-mono">{showPlayerDialog?.uniqueCode}</span>
+              {" \u2022 "}
+              {getStatusBadge(showPlayerDialog!)}
+            </DialogDescription>
+          </DialogHeader>
+          
+          {showPlayerDialog && (
+            <Tabs defaultValue="profile" className="mt-2">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="profile" data-testid="tab-profile">Profile</TabsTrigger>
+                <TabsTrigger value="stats" data-testid="tab-stats">Stats</TabsTrigger>
+                <TabsTrigger value="history" data-testid="tab-history">History</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="profile" className="space-y-4 mt-4">
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="edit-name" className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <User className="w-3 h-3" /> Name
+                    </Label>
+                    <Input
+                      id="edit-name"
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                      data-testid="input-edit-name"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="edit-email" className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <Mail className="w-3 h-3" /> Email
+                    </Label>
+                    <Input
+                      id="edit-email"
+                      value={editEmail}
+                      onChange={(e) => setEditEmail(e.target.value)}
+                      type="email"
+                      placeholder="Optional"
+                      data-testid="input-edit-email"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="edit-phone" className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <Phone className="w-3 h-3" /> Phone
+                    </Label>
+                    <Input
+                      id="edit-phone"
+                      value={editPhone}
+                      onChange={(e) => setEditPhone(e.target.value)}
+                      type="tel"
+                      placeholder="Optional"
+                      data-testid="input-edit-phone"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="edit-shirt" className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <Shirt className="w-3 h-3" /> T-Shirt Size
+                    </Label>
+                    <Select value={editShirtSize} onValueChange={setEditShirtSize}>
+                      <SelectTrigger data-testid="select-shirt-size">
+                        <SelectValue placeholder="Select size" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="XS">XS</SelectItem>
+                        <SelectItem value="S">S</SelectItem>
+                        <SelectItem value="M">M</SelectItem>
+                        <SelectItem value="L">L</SelectItem>
+                        <SelectItem value="XL">XL</SelectItem>
+                        <SelectItem value="2XL">2XL</SelectItem>
+                        <SelectItem value="3XL">3XL</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="border-t pt-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="handicap-value" className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <Target className="w-3 h-3" /> Handicap Override
+                    </Label>
+                    <div className="flex gap-2">
+                      <Input
+                        id="handicap-value"
+                        value={handicapValue}
+                        onChange={(e) => setHandicapValue(e.target.value)}
+                        placeholder="e.g., 2.5"
+                        type="number"
+                        step="0.1"
+                        className="flex-1"
+                        data-testid="input-handicap"
+                      />
+                      <Button
+                        variant="outline"
+                        onClick={handleSetHandicap}
+                        disabled={isSaving}
+                        data-testid="button-set-handicap"
+                      >
+                        {isSaving ? "..." : "Set"}
+                      </Button>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Current: {getHandicapDisplay(showPlayerDialog)} | Leave blank to clear
+                    </p>
+                  </div>
+                </div>
+
+                <Button
+                  onClick={handleSaveProfile}
+                  disabled={isSaving || !editName.trim()}
+                  className="w-full"
+                  data-testid="button-save-profile"
+                >
+                  {isSaving ? "Saving..." : "Save Profile"}
+                </Button>
+
+                <div className="border-t pt-3 flex gap-2">
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => {
+                      setShowMergeDialog(showPlayerDialog);
+                    }}
+                    data-testid="button-merge"
+                  >
+                    <Merge className="w-4 h-4 mr-1.5" />
+                    Merge
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="flex-1 text-destructive"
+                    onClick={() => setShowDeleteDialog(showPlayerDialog)}
+                    data-testid="button-delete"
+                  >
+                    <Trash2 className="w-4 h-4 mr-1.5" />
+                    Delete
+                  </Button>
+                </div>
+              </TabsContent>
+              
+              <TabsContent value="stats" className="space-y-4 mt-4">
+                {(() => {
+                  const stats = computeStats(showPlayerDialog.recentHistory);
+                  return (
+                    <>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="bg-muted/50 rounded-lg p-3 text-center">
+                          <Trophy className="w-5 h-5 mx-auto mb-1 text-amber-500" />
+                          <p className="text-2xl font-bold">{showPlayerDialog.completedTournaments}</p>
+                          <p className="text-xs text-muted-foreground">Tournaments</p>
+                        </div>
+                        <div className="bg-muted/50 rounded-lg p-3 text-center">
+                          <Target className="w-5 h-5 mx-auto mb-1 text-blue-500" />
+                          <p className="text-2xl font-bold">{getHandicapDisplay(showPlayerDialog)}</p>
+                          <p className="text-xs text-muted-foreground">Handicap</p>
+                        </div>
+                      </div>
+
+                      <div className="border-t pt-3">
+                        <h4 className="text-sm font-medium mb-3 flex items-center gap-1.5">
+                          <BarChart3 className="w-4 h-4" />
+                          Infractions
+                        </h4>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="bg-muted/50 rounded-lg p-3 text-center">
+                            <OctagonAlert className="w-5 h-5 mx-auto mb-1 text-red-500" />
+                            <p className="text-2xl font-bold">{stats.totalPenalties}</p>
+                            <p className="text-xs text-muted-foreground">Total Penalties</p>
+                          </div>
+                          <div className="bg-muted/50 rounded-lg p-3 text-center">
+                            <CircleSlash className="w-5 h-5 mx-auto mb-1 text-orange-500" />
+                            <p className="text-2xl font-bold">{stats.totalScratches}</p>
+                            <p className="text-xs text-muted-foreground">Total Scratches</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="border-t pt-3">
+                        <h4 className="text-sm font-medium mb-3 flex items-center gap-1.5">
+                          <BarChart3 className="w-4 h-4" />
+                          Averages
+                        </h4>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="bg-muted/50 rounded-lg p-3 text-center" data-testid="stat-ppt">
+                            <p className="text-2xl font-bold">
+                              {stats.ppt !== null ? stats.ppt.toFixed(1) : "\u2014"}
+                            </p>
+                            <p className="text-xs text-muted-foreground">PPT</p>
+                            <p className="text-[10px] text-muted-foreground">(Penalties Per Tournament)</p>
+                          </div>
+                          <div className="bg-muted/50 rounded-lg p-3 text-center" data-testid="stat-ppc">
+                            <p className="text-2xl font-bold">
+                              {stats.ppc !== null ? stats.ppc.toFixed(2) : "\u2014"}
+                            </p>
+                            <p className="text-xs text-muted-foreground">PPC</p>
+                            <p className="text-[10px] text-muted-foreground">(Penalties Per Course Hole)</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {showPlayerDialog.recentHistory && showPlayerDialog.recentHistory.length > 0 && (
+                        <div className="border-t pt-3">
+                          <h4 className="text-sm font-medium mb-2">Scoring Average</h4>
+                          {(() => {
+                            const hist = showPlayerDialog.recentHistory!;
+                            const avgRelative = hist.reduce((s, e) => s + e.relativeToPar, 0) / hist.length;
+                            const avgStrokes = hist.reduce((s, e) => s + e.totalStrokes, 0) / hist.length;
+                            return (
+                              <div className="grid grid-cols-2 gap-3">
+                                <div className="bg-muted/50 rounded-lg p-3 text-center">
+                                  <p className={`text-2xl font-bold ${avgRelative > 0 ? "text-red-500" : avgRelative < 0 ? "text-green-500" : ""}`}>
+                                    {avgRelative >= 0 ? "+" : ""}{avgRelative.toFixed(1)}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">Avg vs Par</p>
+                                </div>
+                                <div className="bg-muted/50 rounded-lg p-3 text-center">
+                                  <p className="text-2xl font-bold">{avgStrokes.toFixed(1)}</p>
+                                  <p className="text-xs text-muted-foreground">Avg Strokes</p>
+                                </div>
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
+              </TabsContent>
+              
+              <TabsContent value="history" className="space-y-4 mt-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">
+                    {showPlayerDialog.recentHistory?.length || 0} tournaments
+                  </span>
+                  <Button 
+                    size="sm"
+                    onClick={() => {
+                      resetHistoryForm();
+                      setShowAddHistoryDialog(true);
+                    }}
+                    data-testid="button-add-history"
+                  >
+                    <Plus className="w-4 h-4 mr-1" />
+                    Add Entry
+                  </Button>
+                </div>
+                
+                {showPlayerDialog.recentHistory && showPlayerDialog.recentHistory.length > 0 ? (
+                  <div className="space-y-2 max-h-64 overflow-y-auto">
+                    {showPlayerDialog.recentHistory.map((entry) => (
+                      <div 
+                        key={entry.id} 
+                        className="flex items-center justify-between gap-2 p-3 border rounded-lg"
+                        data-testid={`history-entry-${entry.id}`}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-medium truncate">{entry.tournamentName}</span>
+                            {entry.isManualEntry && (
+                              <span className="text-xs px-1.5 py-0.5 bg-amber-500/20 text-amber-600 rounded">
+                                Manual
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            {entry.courseName && <span>{entry.courseName} {"\u2022"} </span>}
+                            {entry.holesPlayed} holes {"\u2022"} {entry.totalStrokes} strokes (par {entry.totalPar})
+                            <span className={entry.relativeToPar > 0 ? "text-red-500" : entry.relativeToPar < 0 ? "text-green-500" : ""}>
+                              {" "}({entry.relativeToPar >= 0 ? "+" : ""}{entry.relativeToPar})
+                            </span>
+                          </div>
+                          {((entry.totalPenalties ?? 0) > 0 || (entry.totalScratches ?? 0) > 0) && (
+                            <div className="text-xs text-muted-foreground mt-0.5">
+                              {(entry.totalPenalties ?? 0) > 0 && (
+                                <span className="text-red-500 mr-2">
+                                  {entry.totalPenalties} {entry.totalPenalties === 1 ? "penalty" : "penalties"}
+                                </span>
+                              )}
+                              {(entry.totalScratches ?? 0) > 0 && (
+                                <span className="text-orange-500">
+                                  {entry.totalScratches} {entry.totalScratches === 1 ? "scratch" : "scratches"}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                          <div className="text-xs text-muted-foreground mt-1">
+                            {new Date(entry.completedAt).toLocaleDateString()}
+                          </div>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-destructive"
+                          onClick={() => handleDeleteHistory(entry.id)}
+                          disabled={isSaving}
+                          data-testid={`button-delete-history-${entry.id}`}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    No tournament history yet
+                  </div>
+                )}
+              </TabsContent>
+            </Tabs>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showAddHistoryDialog && !!showPlayerDialog} onOpenChange={setShowAddHistoryDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Edit3 className="w-5 h-5 text-blue-600" />
-              Edit Player
+              <Plus className="w-5 h-5 text-green-600" />
+              Add Tournament History
             </DialogTitle>
+            <DialogDescription>
+              Manually add a past tournament result for <span className="font-semibold">{showPlayerDialog?.name}</span>.
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <div className="bg-muted/50 rounded-lg p-3 text-center">
-              <span className="font-mono text-lg">{showEditDialog?.uniqueCode}</span>
-              <p className="text-xs text-muted-foreground mt-1">This ID cannot be changed</p>
-            </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-name">Player Name</Label>
+              <Label htmlFor="history-tournament-name">Tournament Name *</Label>
               <Input
-                id="edit-name"
-                value={editName}
-                onChange={(e) => setEditName(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleEditPlayer()}
-                data-testid="input-edit-name"
+                id="history-tournament-name"
+                value={historyTournamentName}
+                onChange={(e) => setHistoryTournamentName(e.target.value)}
+                placeholder="e.g., Spring Classic 2024"
+                data-testid="input-history-tournament-name"
                 autoFocus
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-email">Email (optional)</Label>
+              <Label htmlFor="history-course-name">Course Name (optional)</Label>
               <Input
-                id="edit-email"
-                value={editEmail}
-                onChange={(e) => setEditEmail(e.target.value)}
-                type="email"
-                data-testid="input-edit-email"
+                id="history-course-name"
+                value={historyCourseName}
+                onChange={(e) => setHistoryCourseName(e.target.value)}
+                placeholder="e.g., Riverside Mini Golf"
+                data-testid="input-history-course-name"
               />
             </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="history-strokes">Strokes *</Label>
+                <Input
+                  id="history-strokes"
+                  value={historyTotalStrokes}
+                  onChange={(e) => setHistoryTotalStrokes(e.target.value)}
+                  placeholder="54"
+                  type="number"
+                  data-testid="input-history-strokes"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="history-par">Par *</Label>
+                <Input
+                  id="history-par"
+                  value={historyTotalPar}
+                  onChange={(e) => setHistoryTotalPar(e.target.value)}
+                  placeholder="54"
+                  type="number"
+                  data-testid="input-history-par"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="history-holes">Holes *</Label>
+                <Input
+                  id="history-holes"
+                  value={historyHolesPlayed}
+                  onChange={(e) => setHistoryHolesPlayed(e.target.value)}
+                  placeholder="18"
+                  type="number"
+                  data-testid="input-history-holes"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="history-penalties" className="flex items-center gap-1">
+                  <OctagonAlert className="w-3 h-3 text-red-500" /> Penalties
+                </Label>
+                <Input
+                  id="history-penalties"
+                  value={historyPenalties}
+                  onChange={(e) => setHistoryPenalties(e.target.value)}
+                  placeholder="0"
+                  type="number"
+                  min="0"
+                  data-testid="input-history-penalties"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="history-scratches" className="flex items-center gap-1">
+                  <CircleSlash className="w-3 h-3 text-orange-500" /> Scratches
+                </Label>
+                <Input
+                  id="history-scratches"
+                  value={historyScratches}
+                  onChange={(e) => setHistoryScratches(e.target.value)}
+                  placeholder="0"
+                  type="number"
+                  min="0"
+                  data-testid="input-history-scratches"
+                />
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              This will be marked as a manual entry and will affect handicap calculation.
+            </p>
             <div className="flex gap-2">
               <Button 
                 variant="outline" 
-                onClick={() => setShowEditDialog(null)}
+                onClick={() => setShowAddHistoryDialog(false)}
                 className="flex-1"
               >
                 Cancel
               </Button>
               <Button 
-                onClick={handleEditPlayer}
-                disabled={isSaving || !editName.trim()}
+                onClick={handleAddHistory}
+                disabled={isSaving || !historyTournamentName.trim() || !historyTotalStrokes || !historyTotalPar || !historyHolesPlayed}
                 className="flex-1"
-                data-testid="button-confirm-edit"
+                data-testid="button-confirm-add-history"
               >
-                {isSaving ? "Saving..." : "Save Changes"}
+                {isSaving ? "Adding..." : "Add Entry"}
               </Button>
             </div>
           </div>
@@ -628,239 +1011,6 @@ export function PlayerDirectoryTab({ directorPin }: PlayerDirectoryTabProps) {
                 data-testid="button-confirm-merge"
               >
                 {isSaving ? "Merging..." : "Merge"}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={!!showHandicapDialog} onOpenChange={() => { setShowHandicapDialog(null); setHandicapValue(""); }}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Target className="w-5 h-5 text-amber-600" />
-              Set Handicap
-            </DialogTitle>
-            <DialogDescription>
-              Override handicap for <span className="font-semibold">{showHandicapDialog?.name}</span>.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="bg-muted/50 rounded-lg p-3 flex justify-between items-center">
-              <div>
-                <p className="text-sm text-muted-foreground">Current:</p>
-                <p className="text-lg font-semibold">
-                  {showHandicapDialog && getHandicapDisplay(showHandicapDialog)}
-                </p>
-              </div>
-              <div className="text-right">
-                <p className="text-sm text-muted-foreground">Tournaments:</p>
-                <p className="text-lg font-semibold">{showHandicapDialog?.completedTournaments || 0}</p>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="handicap-value">New Handicap</Label>
-              <Input
-                id="handicap-value"
-                value={handicapValue}
-                onChange={(e) => setHandicapValue(e.target.value)}
-                placeholder="e.g., 2.5 or -1.5"
-                type="number"
-                step="0.1"
-                data-testid="input-handicap"
-                autoFocus
-              />
-              <p className="text-xs text-muted-foreground">
-                Leave blank to clear. Positive = over par avg, Negative = under par avg.
-              </p>
-            </div>
-            <div className="flex gap-2">
-              <Button 
-                variant="outline" 
-                onClick={() => { setShowHandicapDialog(null); setHandicapValue(""); }}
-                className="flex-1"
-              >
-                Cancel
-              </Button>
-              <Button 
-                onClick={handleSetHandicap}
-                disabled={isSaving}
-                className="flex-1"
-                data-testid="button-confirm-handicap"
-              >
-                {isSaving ? "Saving..." : "Set Handicap"}
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={!!showHistoryDialog} onOpenChange={() => setShowHistoryDialog(null)}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <History className="w-5 h-5 text-blue-600" />
-              Tournament History
-            </DialogTitle>
-            <DialogDescription>
-              <span className="font-semibold">{showHistoryDialog?.name}</span> - {showHistoryDialog?.uniqueCode}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-muted-foreground">
-                {showHistoryDialog?.recentHistory?.length || 0} recent tournaments
-              </span>
-              <Button 
-                size="sm"
-                onClick={() => {
-                  if (showHistoryDialog) {
-                    setShowAddHistoryDialog(showHistoryDialog);
-                  }
-                }}
-                data-testid="button-add-history"
-              >
-                <Plus className="w-4 h-4 mr-1" />
-                Add Entry
-              </Button>
-            </div>
-            
-            {showHistoryDialog?.recentHistory && showHistoryDialog.recentHistory.length > 0 ? (
-              <div className="space-y-2 max-h-64 overflow-y-auto">
-                {showHistoryDialog.recentHistory.map((entry) => (
-                  <div 
-                    key={entry.id} 
-                    className="flex items-center justify-between p-3 border rounded-lg"
-                    data-testid={`history-entry-${entry.id}`}
-                  >
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium truncate">{entry.tournamentName}</span>
-                        {entry.isManualEntry && (
-                          <span className="text-xs px-1.5 py-0.5 bg-amber-500/20 text-amber-600 rounded">
-                            Manual
-                          </span>
-                        )}
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        {entry.courseName && <span>{entry.courseName} • </span>}
-                        {entry.holesPlayed} holes • {entry.totalStrokes} strokes (par {entry.totalPar})
-                        <span className={entry.relativeToPar > 0 ? "text-red-500" : entry.relativeToPar < 0 ? "text-green-500" : ""}>
-                          {" "}({entry.relativeToPar >= 0 ? "+" : ""}{entry.relativeToPar})
-                        </span>
-                      </div>
-                      <div className="text-xs text-muted-foreground mt-1">
-                        {new Date(entry.completedAt).toLocaleDateString()}
-                      </div>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-destructive hover:text-destructive"
-                      onClick={() => handleDeleteHistory(entry.id)}
-                      disabled={isSaving}
-                      data-testid={`button-delete-history-${entry.id}`}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                No tournament history yet
-              </div>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={!!showAddHistoryDialog} onOpenChange={() => { setShowAddHistoryDialog(null); resetHistoryForm(); }}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Plus className="w-5 h-5 text-green-600" />
-              Add Tournament History
-            </DialogTitle>
-            <DialogDescription>
-              Manually add a past tournament result for <span className="font-semibold">{showAddHistoryDialog?.name}</span>.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="history-tournament-name">Tournament Name *</Label>
-              <Input
-                id="history-tournament-name"
-                value={historyTournamentName}
-                onChange={(e) => setHistoryTournamentName(e.target.value)}
-                placeholder="e.g., Spring Classic 2024"
-                data-testid="input-history-tournament-name"
-                autoFocus
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="history-course-name">Course Name (optional)</Label>
-              <Input
-                id="history-course-name"
-                value={historyCourseName}
-                onChange={(e) => setHistoryCourseName(e.target.value)}
-                placeholder="e.g., Riverside Mini Golf"
-                data-testid="input-history-course-name"
-              />
-            </div>
-            <div className="grid grid-cols-3 gap-3">
-              <div className="space-y-2">
-                <Label htmlFor="history-strokes">Strokes *</Label>
-                <Input
-                  id="history-strokes"
-                  value={historyTotalStrokes}
-                  onChange={(e) => setHistoryTotalStrokes(e.target.value)}
-                  placeholder="54"
-                  type="number"
-                  data-testid="input-history-strokes"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="history-par">Par *</Label>
-                <Input
-                  id="history-par"
-                  value={historyTotalPar}
-                  onChange={(e) => setHistoryTotalPar(e.target.value)}
-                  placeholder="54"
-                  type="number"
-                  data-testid="input-history-par"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="history-holes">Holes *</Label>
-                <Input
-                  id="history-holes"
-                  value={historyHolesPlayed}
-                  onChange={(e) => setHistoryHolesPlayed(e.target.value)}
-                  placeholder="18"
-                  type="number"
-                  data-testid="input-history-holes"
-                />
-              </div>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              This will be marked as a manual entry and will affect handicap calculation.
-            </p>
-            <div className="flex gap-2">
-              <Button 
-                variant="outline" 
-                onClick={() => { setShowAddHistoryDialog(null); resetHistoryForm(); }}
-                className="flex-1"
-              >
-                Cancel
-              </Button>
-              <Button 
-                onClick={handleAddHistory}
-                disabled={isSaving || !historyTournamentName.trim() || !historyTotalStrokes || !historyTotalPar || !historyHolesPlayed}
-                className="flex-1"
-                data-testid="button-confirm-add-history"
-              >
-                {isSaving ? "Adding..." : "Add Entry"}
               </Button>
             </div>
           </div>

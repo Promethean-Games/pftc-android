@@ -26,6 +26,8 @@ const updateUniversalPlayerSchema = z.object({
   name: z.string().min(1).optional(),
   email: z.string().email().nullable().optional(),
   contactInfo: z.string().nullable().optional(),
+  phoneNumber: z.string().nullable().optional(),
+  tShirtSize: z.string().nullable().optional(),
   handicap: z.number().nullable().optional(),
   isProvisional: z.boolean().optional(),
 });
@@ -744,11 +746,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Invalid player ID" });
       }
       
-      const { name, email, contactInfo, handicap, isProvisional } = parsed.data;
+      const { name, email, contactInfo, phoneNumber, tShirtSize, handicap, isProvisional } = parsed.data;
       const updateData: Record<string, any> = {};
       if (name !== undefined) updateData.name = name;
       if (email !== undefined) updateData.email = email;
       if (contactInfo !== undefined) updateData.contactInfo = contactInfo;
+      if (phoneNumber !== undefined) updateData.phoneNumber = phoneNumber;
+      if (tShirtSize !== undefined) updateData.tShirtSize = tShirtSize;
       if (handicap !== undefined) updateData.handicap = handicap;
       if (isProvisional !== undefined) updateData.isProvisional = isProvisional;
       
@@ -850,7 +854,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Player not found" });
       }
 
-      const { tournamentName, courseName, totalStrokes, totalPar, holesPlayed, completedAt } = req.body;
+      const { tournamentName, courseName, totalStrokes, totalPar, holesPlayed, completedAt, totalScratches, totalPenalties } = req.body;
       
       if (!tournamentName || totalStrokes == null || totalPar == null || holesPlayed == null) {
         return res.status(400).json({ error: "Missing required fields: tournamentName, totalStrokes, totalPar, holesPlayed" });
@@ -860,13 +864,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const history = await storage.addTournamentHistory({
         universalPlayerId: playerId,
-        tournamentId: null as any, // Manual entry has no tournament ID
+        tournamentId: null as any,
         tournamentName,
         courseName: courseName || null,
         totalStrokes,
         totalPar,
         holesPlayed,
         relativeToPar,
+        totalScratches: totalScratches ?? 0,
+        totalPenalties: totalPenalties ?? 0,
         isManualEntry: true,
       });
 
