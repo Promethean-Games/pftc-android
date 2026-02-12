@@ -1,14 +1,15 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { UserPlus, Trophy, LogOut, Users, Shield } from "lucide-react";
+import { UserPlus, Trophy, LogOut, Users, Shield, Bell } from "lucide-react";
 import { useTournament } from "@/contexts/TournamentContext";
 import { PlayerSelectionDialog } from "./PlayerSelectionDialog";
 import { DirectorPortal } from "./DirectorPortal";
+import { isPushSupported, isCurrentlySubscribed, subscribeToPush, unsubscribeFromPush } from "@/lib/pushNotifications";
 import type { Settings, Player } from "@shared/schema";
 
 interface SettingsPanelProps {
@@ -29,8 +30,45 @@ export function SettingsPanel({ settings, players, onUpdateSettings, onAddPlayer
   const [showDirectorPortal, setShowDirectorPortal] = useState(false);
   const [directorPinInput, setDirectorPinInput] = useState("");
   const [showPinPrompt, setShowPinPrompt] = useState(false);
+  const [pushSupported, setPushSupported] = useState(false);
+  const [pushSubscribed, setPushSubscribed] = useState(false);
+  const [pushLoading, setPushLoading] = useState(false);
 
   const tournament = useTournament();
+
+  useEffect(() => {
+    isPushSupported().then(setPushSupported);
+    isCurrentlySubscribed().then(setPushSubscribed);
+  }, []);
+
+  useEffect(() => {
+    if (tournament.isConnected && tournament.roomCode && pushSubscribed) {
+      const deviceId = localStorage.getItem("deviceId") || undefined;
+      subscribeToPush({
+        deviceId,
+        tournamentRoomCode: tournament.roomCode,
+      });
+    }
+  }, [tournament.isConnected, tournament.roomCode, pushSubscribed]);
+
+  const handleTogglePush = async (enable: boolean) => {
+    setPushLoading(true);
+    try {
+      if (enable) {
+        const deviceId = localStorage.getItem("deviceId") || undefined;
+        const success = await subscribeToPush({
+          deviceId,
+          tournamentRoomCode: tournament.roomCode || undefined,
+        });
+        setPushSubscribed(success);
+      } else {
+        const success = await unsubscribeFromPush();
+        if (success) setPushSubscribed(false);
+      }
+    } finally {
+      setPushLoading(false);
+    }
+  };
 
   const handleAddPlayer = () => {
     const name = newPlayerName.trim() || `Player ${players.length + 1}`;
@@ -304,6 +342,31 @@ export function SettingsPanel({ settings, players, onUpdateSettings, onAddPlayer
               />
             </div>
           </Card>
+
+          {pushSupported && (
+            <Card className="p-4">
+              <h3 className="font-semibold mb-4 flex items-center gap-2">
+                <Bell className="w-4 h-4" />
+                Notifications
+              </h3>
+              
+              <div className="flex items-center justify-between py-3">
+                <Label htmlFor="push-toggle" className="flex-1">
+                  <div className="font-medium">Push Notifications</div>
+                  <div className="text-sm text-muted-foreground">
+                    Get notified when tournaments start or finish
+                  </div>
+                </Label>
+                <Switch
+                  id="push-toggle"
+                  checked={pushSubscribed}
+                  onCheckedChange={handleTogglePush}
+                  disabled={pushLoading}
+                  data-testid="switch-push-notifications"
+                />
+              </div>
+            </Card>
+          )}
 
           <Card className="p-4">
             <h3 className="font-semibold mb-3">About</h3>

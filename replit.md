@@ -57,6 +57,18 @@ The server handles tournament creation, player registration, score synchronizati
   - `GET /api/player/:code/profile` - Get player profile (public info)
   - `GET /api/player/:code/has-pin` - Check if player has PIN set
 
+### Web Push Notifications
+- **Service Worker**: `client/public/sw.js` handles push events and notification clicks
+- **Client Helper**: `client/src/lib/pushNotifications.ts` manages subscription lifecycle
+- **VAPID Keys**: Public key in `VAPID_PUBLIC_KEY` env var, private key in `VAPID_PRIVATE_KEY` secret (with `VAPID_PRIVATE_KEY_BACKUP` fallback)
+- **Subscription Storage**: `push_subscriptions` table links endpoints to deviceId, tournamentRoomCode, and universalPlayerId
+- **Notification Triggers**: Tournament start and tournament completion send push notifications to all subscribers of that tournament
+- **UI Toggle**: Settings panel shows push notification toggle when browser supports it
+- **API Endpoints**:
+  - `GET /api/push/vapid-key` - Get VAPID public key
+  - `POST /api/push/subscribe` - Save push subscription
+  - `POST /api/push/unsubscribe` - Remove push subscription
+
 ### Key Design Decisions
 1. **Offline-First Local Games**: Single-device gameplay stores all data locally, no server required
 2. **Tournament Mode**: Optional server sync for multi-device tournaments with live leaderboards

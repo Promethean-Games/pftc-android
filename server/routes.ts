@@ -312,6 +312,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       await storage.startTournament(tournament.id);
+      sendPushToTournament(req.params.roomCode, "Tournament Started!", `${tournament.name} is now live. Good luck!`, `start-${req.params.roomCode}`);
       res.json({ success: true });
     } catch (error) {
       console.error("Error starting tournament:", error);
@@ -1309,6 +1310,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Mark tournament as inactive
       await storage.closeTournament(tournament.id);
       
+      sendPushToTournament(req.params.roomCode, "Tournament Complete!", `${tournament.name} has finished. Check the final leaderboard!`, `complete-${req.params.roomCode}`);
       res.json({ success: true, message: "Tournament completed and handicaps updated" });
     } catch (error) {
       console.error("Error completing tournament:", error);
