@@ -828,8 +828,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const history = await storage.getPlayerTournamentHistory(playerId);
+      const liveTournaments = await storage.getLiveTournamentStats(playerId);
       
-      res.json({ ...player, recentHistory: history });
+      res.json({ ...player, recentHistory: history, liveTournaments });
     } catch (error) {
       console.error("Error getting universal player:", error);
       res.status(500).json({ error: "Failed to get universal player" });

@@ -24,7 +24,9 @@ import {
   BarChart3,
   CircleSlash,
   OctagonAlert,
-  ArrowUpDown
+  ArrowUpDown,
+  Activity,
+  Radio
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -34,8 +36,22 @@ interface PlayerDirectoryTabProps {
   directorPin: string;
 }
 
+interface LiveTournamentStat {
+  tournamentId: number;
+  tournamentName: string;
+  roomCode: string;
+  playerName: string;
+  holesPlayed: number;
+  totalStrokes: number;
+  totalPar: number;
+  relativeToPar: number;
+  totalPenalties: number;
+  totalScratches: number;
+}
+
 interface PlayerWithHistory extends UniversalPlayer {
   recentHistory?: PlayerTournamentHistory[];
+  liveTournaments?: LiveTournamentStat[];
 }
 
 export function PlayerDirectoryTab({ directorPin }: PlayerDirectoryTabProps) {
@@ -90,6 +106,20 @@ export function PlayerDirectoryTab({ directorPin }: PlayerDirectoryTabProps) {
   useEffect(() => {
     fetchPlayers();
   }, []);
+
+  const playerDialogIdRef = useRef<number | null>(null);
+  playerDialogIdRef.current = showPlayerDialog?.id ?? null;
+
+  useEffect(() => {
+    if (!showPlayerDialog) return;
+    const interval = setInterval(() => {
+      const id = playerDialogIdRef.current;
+      if (id !== null) {
+        refreshPlayerDialog(id);
+      }
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [showPlayerDialog?.id]);
 
   const filteredPlayers = players
     .filter(p => 
@@ -345,21 +375,34 @@ export function PlayerDirectoryTab({ directorPin }: PlayerDirectoryTabProps) {
     );
   };
 
-  const computeStats = (history?: PlayerTournamentHistory[]) => {
-    if (!history || history.length === 0) {
+  const computeStats = (history?: PlayerTournamentHistory[], live?: LiveTournamentStat[]) => {
+    const hasHistory = history && history.length > 0;
+    const hasLive = live && live.length > 0;
+    if (!hasHistory && !hasLive) {
       return { ppt: null, ppc: null, totalPenalties: 0, totalScratches: 0, totalHoles: 0 };
     }
     let totalPenalties = 0;
     let totalScratches = 0;
     let totalHoles = 0;
-    for (const entry of history) {
-      totalPenalties += entry.totalPenalties ?? 0;
-      totalScratches += entry.totalScratches ?? 0;
-      totalHoles += entry.holesPlayed;
+    let tournamentCount = 0;
+    if (hasHistory) {
+      for (const entry of history) {
+        totalPenalties += entry.totalPenalties ?? 0;
+        totalScratches += entry.totalScratches ?? 0;
+        totalHoles += entry.holesPlayed;
+      }
+      tournamentCount += history.length;
+    }
+    if (hasLive) {
+      for (const entry of live) {
+        totalPenalties += entry.totalPenalties;
+        totalScratches += entry.totalScratches;
+        totalHoles += entry.holesPlayed;
+      }
+      tournamentCount += live.length;
     }
     const infractions = totalPenalties + totalScratches;
-    const tournaments = history.length;
-    const ppt = tournaments > 0 ? infractions / tournaments : null;
+    const ppt = tournamentCount > 0 ? infractions / tournamentCount : null;
     const ppc = totalHoles > 0 ? infractions / totalHoles : null;
     return { ppt, ppc, totalPenalties, totalScratches, totalHoles };
   };
@@ -660,13 +703,51 @@ export function PlayerDirectoryTab({ directorPin }: PlayerDirectoryTabProps) {
               
               <TabsContent value="stats" className="space-y-4 mt-4">
                 {(() => {
-                  const stats = computeStats(showPlayerDialog.recentHistory);
+                  const stats = computeStats(showPlayerDialog.recentHistory, showPlayerDialog.liveTournaments);
+                  const liveTournaments = showPlayerDialog.liveTournaments || [];
                   return (
                     <>
+                      {liveTournaments.length > 0 && (
+                        <div className="rounded-lg border border-green-500/30 bg-green-500/5 p-3 space-y-2">
+                          <h4 className="text-sm font-medium flex items-center gap-1.5">
+                            <Radio className="w-4 h-4 text-green-500 animate-pulse" />
+                            Live Tournaments
+                          </h4>
+                          {liveTournaments.map(lt => {
+                            const relSign = lt.relativeToPar >= 0 ? "+" : "";
+                            return (
+                              <div key={lt.tournamentId} className="flex items-center justify-between gap-2 text-sm bg-background/50 rounded-md p-2" data-testid={`live-tournament-${lt.tournamentId}`}>
+                                <div className="min-w-0">
+                                  <p className="font-medium truncate">{lt.tournamentName}</p>
+                                  <p className="text-xs text-muted-foreground">{lt.holesPlayed} holes played</p>
+                                </div>
+                                <div className="text-right shrink-0">
+                                  <p className={`font-bold ${lt.relativeToPar > 0 ? "text-red-500" : lt.relativeToPar < 0 ? "text-green-500" : ""}`}>
+                                    {relSign}{lt.relativeToPar}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">{lt.totalStrokes} strokes</p>
+                                  {(lt.totalPenalties > 0 || lt.totalScratches > 0) && (
+                                    <p className="text-[10px] text-muted-foreground">
+                                      {lt.totalPenalties}P / {lt.totalScratches}S
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                          <p className="text-[10px] text-muted-foreground text-center">Updates every 10 seconds</p>
+                        </div>
+                      )}
+
                       <div className="grid grid-cols-2 gap-3">
                         <div className="bg-muted/50 rounded-lg p-3 text-center">
                           <Trophy className="w-5 h-5 mx-auto mb-1 text-amber-500" />
-                          <p className="text-2xl font-bold">{showPlayerDialog.completedTournaments}</p>
+                          <p className="text-2xl font-bold">
+                            {showPlayerDialog.completedTournaments}
+                            {liveTournaments.length > 0 && (
+                              <span className="text-sm text-green-500 ml-1">+{liveTournaments.length}</span>
+                            )}
+                          </p>
                           <p className="text-xs text-muted-foreground">Tournaments</p>
                         </div>
                         <div className="bg-muted/50 rounded-lg p-3 text-center">
@@ -680,6 +761,9 @@ export function PlayerDirectoryTab({ directorPin }: PlayerDirectoryTabProps) {
                         <h4 className="text-sm font-medium mb-3 flex items-center gap-1.5">
                           <BarChart3 className="w-4 h-4" />
                           Infractions
+                          {liveTournaments.length > 0 && (
+                            <span className="text-[10px] text-green-500 font-normal">(incl. live)</span>
+                          )}
                         </h4>
                         <div className="grid grid-cols-2 gap-3">
                           <div className="bg-muted/50 rounded-lg p-3 text-center">
@@ -699,6 +783,9 @@ export function PlayerDirectoryTab({ directorPin }: PlayerDirectoryTabProps) {
                         <h4 className="text-sm font-medium mb-3 flex items-center gap-1.5">
                           <BarChart3 className="w-4 h-4" />
                           Averages
+                          {liveTournaments.length > 0 && (
+                            <span className="text-[10px] text-green-500 font-normal">(incl. live)</span>
+                          )}
                         </h4>
                         <div className="grid grid-cols-2 gap-3">
                           <div className="bg-muted/50 rounded-lg p-3 text-center" data-testid="stat-ppt">
@@ -718,13 +805,23 @@ export function PlayerDirectoryTab({ directorPin }: PlayerDirectoryTabProps) {
                         </div>
                       </div>
 
-                      {showPlayerDialog.recentHistory && showPlayerDialog.recentHistory.length > 0 && (
+                      {(showPlayerDialog.recentHistory?.length || 0) + liveTournaments.length > 0 && (
                         <div className="border-t pt-3">
-                          <h4 className="text-sm font-medium mb-2">Scoring Average</h4>
+                          <h4 className="text-sm font-medium mb-2 flex items-center gap-1.5">
+                            Scoring Average
+                            {liveTournaments.length > 0 && (
+                              <span className="text-[10px] text-green-500 font-normal">(incl. live)</span>
+                            )}
+                          </h4>
                           {(() => {
-                            const hist = showPlayerDialog.recentHistory!;
-                            const avgRelative = hist.reduce((s, e) => s + e.relativeToPar, 0) / hist.length;
-                            const avgStrokes = hist.reduce((s, e) => s + e.totalStrokes, 0) / hist.length;
+                            const hist = showPlayerDialog.recentHistory || [];
+                            const allEntries = [
+                              ...hist.map(e => ({ relativeToPar: e.relativeToPar, totalStrokes: e.totalStrokes })),
+                              ...liveTournaments.map(e => ({ relativeToPar: e.relativeToPar, totalStrokes: e.totalStrokes })),
+                            ];
+                            if (allEntries.length === 0) return null;
+                            const avgRelative = allEntries.reduce((s, e) => s + e.relativeToPar, 0) / allEntries.length;
+                            const avgStrokes = allEntries.reduce((s, e) => s + e.totalStrokes, 0) / allEntries.length;
                             return (
                               <div className="grid grid-cols-2 gap-3">
                                 <div className="bg-muted/50 rounded-lg p-3 text-center">

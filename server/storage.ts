@@ -73,6 +73,20 @@ export interface IStorage {
   deleteTournamentHistory(historyId: number): Promise<void>;
   recalculateHandicap(universalPlayerId: number): Promise<UniversalPlayer>;
   getTournamentPlayers(tournamentId: number): Promise<TournamentPlayer[]>;
+  getLiveTournamentStats(universalPlayerId: number): Promise<LiveTournamentStat[]>;
+}
+
+export interface LiveTournamentStat {
+  tournamentId: number;
+  tournamentName: string;
+  roomCode: string;
+  playerName: string;
+  holesPlayed: number;
+  totalStrokes: number;
+  totalPar: number;
+  relativeToPar: number;
+  totalPenalties: number;
+  totalScratches: number;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -500,6 +514,60 @@ export class DatabaseStorage implements IStorage {
       .returning();
     
     return updated;
+  }
+
+  async getLiveTournamentStats(universalPlayerId: number): Promise<LiveTournamentStat[]> {
+    const results = await db
+      .select({
+        tournamentId: tournaments.id,
+        tournamentName: tournaments.name,
+        roomCode: tournaments.roomCode,
+        playerName: tournamentPlayers.playerName,
+        tournamentPlayerId: tournamentPlayers.id,
+      })
+      .from(tournamentPlayers)
+      .innerJoin(tournaments, eq(tournamentPlayers.tournamentId, tournaments.id))
+      .where(
+        and(
+          eq(tournamentPlayers.universalPlayerId, universalPlayerId),
+          eq(tournaments.isActive, true)
+        )
+      );
+
+    const stats: LiveTournamentStat[] = [];
+    for (const row of results) {
+      const scores = await db
+        .select()
+        .from(tournamentScores)
+        .where(eq(tournamentScores.tournamentPlayerId, row.tournamentPlayerId));
+
+      if (scores.length === 0) continue;
+
+      let totalStrokes = 0;
+      let totalPar = 0;
+      let totalPenalties = 0;
+      let totalScratches = 0;
+      for (const s of scores) {
+        totalStrokes += s.strokes;
+        totalPar += s.par;
+        totalPenalties += s.penalties;
+        totalScratches += s.scratches;
+      }
+
+      stats.push({
+        tournamentId: row.tournamentId,
+        tournamentName: row.tournamentName,
+        roomCode: row.roomCode,
+        playerName: row.playerName,
+        holesPlayed: scores.length,
+        totalStrokes,
+        totalPar,
+        relativeToPar: totalStrokes - totalPar,
+        totalPenalties,
+        totalScratches,
+      });
+    }
+    return stats;
   }
 }
 
