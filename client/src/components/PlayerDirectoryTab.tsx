@@ -473,19 +473,20 @@ export function PlayerDirectoryTab({ directorPin }: PlayerDirectoryTabProps) {
 
       <Dialog open={!!showPlayerDialog} onOpenChange={() => setShowPlayerDialog(null)}>
         <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+          {showPlayerDialog && (
+            <>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <User className="w-5 h-5" />
-              {showPlayerDialog?.name}
+              {showPlayerDialog.name}
             </DialogTitle>
             <DialogDescription>
-              <span className="font-mono">{showPlayerDialog?.uniqueCode}</span>
+              <span className="font-mono">{showPlayerDialog.uniqueCode}</span>
               {" \u2022 "}
-              {getStatusBadge(showPlayerDialog!)}
+              {getStatusBadge(showPlayerDialog)}
             </DialogDescription>
           </DialogHeader>
           
-          {showPlayerDialog && (
             <Tabs defaultValue="profile" className="mt-2">
               <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="profile" data-testid="tab-profile">Profile</TabsTrigger>
@@ -786,6 +787,7 @@ export function PlayerDirectoryTab({ directorPin }: PlayerDirectoryTabProps) {
                 )}
               </TabsContent>
             </Tabs>
+          </>
           )}
         </DialogContent>
       </Dialog>
