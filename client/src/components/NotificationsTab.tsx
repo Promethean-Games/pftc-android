@@ -97,6 +97,14 @@ const PRESET_TEMPLATES: PresetTemplate[] = [
     needsLeaderboard: false,
   },
   {
+    id: "merchandise",
+    label: "Merchandise",
+    title: "Merch Alert!",
+    bodyTemplate: "Hats, T-Shirts, and Towels are available now! Limited run \u2014 when they're gone, they're gone. Grab yours before they sell out!",
+    requiresTournament: false,
+    needsLeaderboard: false,
+  },
+  {
     id: "custom",
     label: "Custom Message",
     title: "",
