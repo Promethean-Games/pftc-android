@@ -612,7 +612,25 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getSubscriptionsForPlayer(universalPlayerId: number): Promise<PushSubscription[]> {
-    return db.select().from(pushSubscriptions).where(eq(pushSubscriptions.universalPlayerId, universalPlayerId));
+    const directSubs = await db.select().from(pushSubscriptions).where(eq(pushSubscriptions.universalPlayerId, universalPlayerId));
+    if (directSubs.length > 0) return directSubs;
+
+    const linkedDevices = await db
+      .selectDistinct({ deviceId: tournamentPlayers.deviceId })
+      .from(tournamentPlayers)
+      .where(and(
+        eq(tournamentPlayers.universalPlayerId, universalPlayerId),
+        sql`${tournamentPlayers.deviceId} IS NOT NULL`
+      ));
+
+    if (linkedDevices.length === 0) return [];
+
+    const deviceIds = linkedDevices.map(d => d.deviceId).filter(Boolean) as string[];
+    if (deviceIds.length === 0) return [];
+
+    return db.select().from(pushSubscriptions).where(
+      or(...deviceIds.map(id => eq(pushSubscriptions.deviceId, id)))!
+    );
   }
 
   async getAllPushSubscriptions(): Promise<PushSubscription[]> {

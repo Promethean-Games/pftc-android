@@ -93,15 +93,16 @@ export function PlayerLoginDialog({ isOpen, onClose, onLoginSuccess }: PlayerLog
     }
   };
 
-  const handleLogin = async () => {
-    if (!pin.trim()) return;
+  const handleLogin = async (pinOverride?: string) => {
+    const pinToUse = pinOverride || pin;
+    if (!pinToUse.trim()) return;
     setIsLoading(true);
     setError(null);
 
     try {
       const response = await apiRequest("POST", "/api/player/login", {
         playerCode: playerCode.toUpperCase(),
-        pin
+        pin: pinToUse
       });
       const data = await response.json();
 
@@ -110,7 +111,7 @@ export function PlayerLoginDialog({ isOpen, onClose, onLoginSuccess }: PlayerLog
         return;
       }
 
-      onLoginSuccess(data.player, data.recentHistory, pin);
+      onLoginSuccess(data.player, data.recentHistory, pinToUse);
       handleClose();
     } catch (err) {
       setError("Failed to login");
@@ -148,7 +149,7 @@ export function PlayerLoginDialog({ isOpen, onClose, onLoginSuccess }: PlayerLog
       }
 
       setPin(newPin);
-      await handleLogin();
+      await handleLogin(newPin);
     } catch (err) {
       setError("Failed to set PIN");
     } finally {
@@ -247,7 +248,7 @@ export function PlayerLoginDialog({ isOpen, onClose, onLoginSuccess }: PlayerLog
                 </Button>
                 <Button
                   className="flex-1"
-                  onClick={handleLogin}
+                  onClick={() => handleLogin()}
                   disabled={isLoading || pin.length !== 4}
                   data-testid="button-login"
                 >
