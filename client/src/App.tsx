@@ -14,6 +14,7 @@ import { SettingsPanel } from "@/components/SettingsPanel";
 import { SaveLoadDialog } from "@/components/SaveLoadDialog";
 import { BottomNav } from "@/components/BottomNav";
 import { isLeader } from "@/lib/game-utils";
+import { PushPrompt } from "@/components/PushPrompt";
 
 type Screen = "splash" | "setup" | "game" | "summary";
 type ActiveTab = "game" | "summary" | "settings" | "save";
@@ -241,6 +242,7 @@ export default function App() {
             </GameProvider>
           </TournamentProvider>
         </ThemeProvider>
+        <PushPrompt />
         <Toaster />
       </TooltipProvider>
     </QueryClientProvider>
