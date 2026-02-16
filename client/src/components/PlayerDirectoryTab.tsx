@@ -38,6 +38,7 @@ import type { UniversalPlayer, PlayerTournamentHistory } from "@shared/schema";
 
 interface PlayerDirectoryTabProps {
   directorPin: string;
+  onNotifyPlayer?: (playerId: number, playerName: string) => void;
 }
 
 interface LiveTournamentStat {
@@ -60,7 +61,7 @@ interface PlayerWithHistory extends UniversalPlayer {
   ppc?: number | null;
 }
 
-export function PlayerDirectoryTab({ directorPin }: PlayerDirectoryTabProps) {
+export function PlayerDirectoryTab({ directorPin, onNotifyPlayer }: PlayerDirectoryTabProps) {
   const { toast } = useToast();
   const [players, setPlayers] = useState<PlayerWithHistory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -753,43 +754,62 @@ export function PlayerDirectoryTab({ directorPin }: PlayerDirectoryTabProps) {
                 <div className="border-t pt-3 space-y-2">
                   <div className="space-y-2">
                     <div className="flex items-center gap-2 text-sm font-medium">
-                      {playerPushEnabled ? (
+                      {playerPushLoading ? (
+                        <Bell className="w-4 h-4 text-muted-foreground animate-pulse" />
+                      ) : playerPushEnabled ? (
                         <Bell className="w-4 h-4 text-green-500" />
                       ) : (
                         <BellOff className="w-4 h-4 text-muted-foreground" />
                       )}
                       Push Notifications
-                      {playerPushLoading && (
-                        <span className="text-xs text-muted-foreground">(checking...)</span>
-                      )}
                       {!playerPushLoading && !playerPushEnabled && (
                         <span className="text-xs text-muted-foreground">(not enabled)</span>
                       )}
                     </div>
-                    <Input
-                      placeholder="Notification title"
-                      value={playerNotifTitle}
-                      onChange={(e) => setPlayerNotifTitle(e.target.value)}
-                      disabled={!playerPushEnabled || sendingPlayerNotif}
-                      data-testid="input-player-notif-title"
-                    />
-                    <Input
-                      placeholder="Notification message"
-                      value={playerNotifBody}
-                      onChange={(e) => setPlayerNotifBody(e.target.value)}
-                      disabled={!playerPushEnabled || sendingPlayerNotif}
-                      data-testid="input-player-notif-body"
-                    />
-                    <Button
-                      variant="outline"
-                      className="w-full"
-                      onClick={handleSendPlayerNotification}
-                      disabled={!playerPushEnabled || !playerNotifTitle.trim() || !playerNotifBody.trim() || sendingPlayerNotif}
-                      data-testid="button-send-player-notif"
-                    >
-                      <Send className="w-4 h-4 mr-1.5" />
-                      {sendingPlayerNotif ? "Sending..." : "Send Notification"}
-                    </Button>
+                    {onNotifyPlayer ? (
+                      <Button
+                        variant="outline"
+                        className="w-full"
+                        onClick={() => {
+                          if (showPlayerDialog) {
+                            setShowPlayerDialog(null);
+                            onNotifyPlayer(showPlayerDialog.id, showPlayerDialog.name);
+                          }
+                        }}
+                        disabled={!playerPushEnabled || playerPushLoading}
+                        data-testid="button-notify-player-shortcut"
+                      >
+                        <Send className="w-4 h-4 mr-1.5" />
+                        Send Notification
+                      </Button>
+                    ) : (
+                      <>
+                        <Input
+                          placeholder="Notification title"
+                          value={playerNotifTitle}
+                          onChange={(e) => setPlayerNotifTitle(e.target.value)}
+                          disabled={!playerPushEnabled || sendingPlayerNotif}
+                          data-testid="input-player-notif-title"
+                        />
+                        <Input
+                          placeholder="Notification message"
+                          value={playerNotifBody}
+                          onChange={(e) => setPlayerNotifBody(e.target.value)}
+                          disabled={!playerPushEnabled || sendingPlayerNotif}
+                          data-testid="input-player-notif-body"
+                        />
+                        <Button
+                          variant="outline"
+                          className="w-full"
+                          onClick={handleSendPlayerNotification}
+                          disabled={!playerPushEnabled || !playerNotifTitle.trim() || !playerNotifBody.trim() || sendingPlayerNotif}
+                          data-testid="button-send-player-notif"
+                        >
+                          <Send className="w-4 h-4 mr-1.5" />
+                          {sendingPlayerNotif ? "Sending..." : "Send Notification"}
+                        </Button>
+                      </>
+                    )}
                   </div>
                 </div>
 

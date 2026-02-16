@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ArrowLeft, Trophy, Users, Bell } from "lucide-react";
@@ -13,6 +13,22 @@ interface TDDashboardProps {
 
 export function TDDashboard({ onClose, directorPin }: TDDashboardProps) {
   const [activeTab, setActiveTab] = useState<"tournaments" | "players" | "notifications">("tournaments");
+  const [notifyPlayerId, setNotifyPlayerId] = useState<number | null>(null);
+  const [notifyPlayerName, setNotifyPlayerName] = useState<string | null>(null);
+
+  const handleNotifyPlayer = useCallback((playerId: number, playerName: string) => {
+    setNotifyPlayerId(playerId);
+    setNotifyPlayerName(playerName);
+    setActiveTab("notifications");
+  }, []);
+
+  const handleTabChange = useCallback((tab: string) => {
+    if (tab !== "notifications") {
+      setNotifyPlayerId(null);
+      setNotifyPlayerName(null);
+    }
+    setActiveTab(tab as "tournaments" | "players" | "notifications");
+  }, []);
 
   return (
     <div className="min-h-screen bg-background flex flex-col" data-testid="td-dashboard">
@@ -31,7 +47,7 @@ export function TDDashboard({ onClose, directorPin }: TDDashboardProps) {
 
       <Tabs 
         value={activeTab} 
-        onValueChange={(v) => setActiveTab(v as "tournaments" | "players" | "notifications")}
+        onValueChange={handleTabChange}
         className="flex-1 flex flex-col"
       >
         <TabsList className="w-full h-auto rounded-none border-b bg-background p-0">
@@ -57,7 +73,7 @@ export function TDDashboard({ onClose, directorPin }: TDDashboardProps) {
             data-testid="tab-notifications"
           >
             <Bell className="h-5 w-5" />
-            Notifications
+            Notify
           </TabsTrigger>
         </TabsList>
 
@@ -66,11 +82,11 @@ export function TDDashboard({ onClose, directorPin }: TDDashboardProps) {
         </TabsContent>
 
         <TabsContent value="players" className="flex-1 m-0 p-0 overflow-auto">
-          <PlayerDirectoryTab directorPin={directorPin} />
+          <PlayerDirectoryTab directorPin={directorPin} onNotifyPlayer={handleNotifyPlayer} />
         </TabsContent>
 
         <TabsContent value="notifications" className="flex-1 m-0 p-0 overflow-auto">
-          <NotificationsTab directorPin={directorPin} />
+          <NotificationsTab directorPin={directorPin} initialPlayerId={notifyPlayerId} initialPlayerName={notifyPlayerName} />
         </TabsContent>
       </Tabs>
     </div>
