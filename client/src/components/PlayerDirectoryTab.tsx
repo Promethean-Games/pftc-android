@@ -30,7 +30,9 @@ import {
   KeyRound,
   Bell,
   Send,
-  BellOff
+  BellOff,
+  Download,
+  Upload
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -76,6 +78,8 @@ export function PlayerDirectoryTab({ directorPin, onNotifyPlayer }: PlayerDirect
   
   const [newPlayerName, setNewPlayerName] = useState("");
   const [newPlayerEmail, setNewPlayerEmail] = useState("");
+  const [newPlayerCode, setNewPlayerCode] = useState("");
+  const importFileRef = useRef<HTMLInputElement>(null);
   
   const [editName, setEditName] = useState("");
   const [editEmail, setEditEmail] = useState("");
@@ -176,21 +180,89 @@ export function PlayerDirectoryTab({ directorPin, onNotifyPlayer }: PlayerDirect
     setIsSaving(true);
     
     try {
-      await apiRequest("POST", "/api/universal-players", {
+      const body: any = {
         directorPin,
         name: newPlayerName.trim(),
         email: newPlayerEmail.trim() || null,
-      });
+      };
+      if (newPlayerCode.trim()) {
+        const code = newPlayerCode.trim().toUpperCase();
+        if (!/^PC\d+$/.test(code)) {
+          toast({ title: "Invalid code format. Use PC followed by numbers (e.g., PC7000)", variant: "destructive" });
+          setIsSaving(false);
+          return;
+        }
+        body.uniqueCode = code;
+      }
+      await apiRequest("POST", "/api/universal-players", body);
       setShowAddDialog(false);
       setNewPlayerName("");
       setNewPlayerEmail("");
+      setNewPlayerCode("");
       toast({ title: "Player added!" });
       await fetchPlayers();
-    } catch (err) {
+    } catch (err: any) {
       console.error("Failed to add player:", err);
-      toast({ title: "Failed to add player", variant: "destructive" });
+      const msg = err?.message || "Failed to add player";
+      toast({ title: msg, variant: "destructive" });
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleExportPlayers = async () => {
+    setIsExporting(true);
+    try {
+      const response = await fetch(`/api/export/players?directorPin=${encodeURIComponent(directorPin)}`);
+      if (!response.ok) throw new Error("Export failed");
+      const data = await response.json();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `players-export-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast({ title: `Exported ${data.universalPlayers.length} players` });
+    } catch (err) {
+      console.error("Export failed:", err);
+      toast({ title: "Failed to export players", variant: "destructive" });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const [isExporting, setIsExporting] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+
+  const handleImportPlayers = async (file: File) => {
+    setIsImporting(true);
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      if (!data.universalPlayers || !Array.isArray(data.universalPlayers)) {
+        toast({ title: "Invalid file format - expected player export JSON", variant: "destructive" });
+        return;
+      }
+      const response = await fetch("/api/import/players", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ directorPin, data }),
+      });
+      if (!response.ok) {
+        const err = await response.json().catch(() => ({}));
+        throw new Error(err.error || "Import failed");
+      }
+      const result = await response.json();
+      toast({ title: `Imported ${result.playersImported} players (${result.playersSkipped} skipped, ${result.historyImported} history entries)` });
+      await fetchPlayers();
+    } catch (err: any) {
+      console.error("Import failed:", err);
+      toast({ title: err?.message || "Failed to import player data", variant: "destructive" });
+    } finally {
+      setIsImporting(false);
     }
   };
 
@@ -473,6 +545,18 @@ export function PlayerDirectoryTab({ directorPin, onNotifyPlayer }: PlayerDirect
 
   return (
     <div className="flex flex-col p-4 space-y-4">
+      <input
+        type="file"
+        ref={importFileRef}
+        accept=".json"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) handleImportPlayers(file);
+          e.target.value = "";
+        }}
+        data-testid="input-import-file"
+      />
       <div className="flex gap-2">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -489,7 +573,27 @@ export function PlayerDirectoryTab({ directorPin, onNotifyPlayer }: PlayerDirect
           data-testid="button-add-player"
         >
           <Plus className="w-4 h-4 mr-2" />
-          Add Player
+          Add
+        </Button>
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={handleExportPlayers}
+          disabled={isExporting}
+          title="Export players"
+          data-testid="button-export-players"
+        >
+          <Download className="w-4 h-4" />
+        </Button>
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => importFileRef.current?.click()}
+          disabled={isImporting}
+          title="Import players"
+          data-testid="button-import-players"
+        >
+          <Upload className="w-4 h-4" />
         </Button>
       </div>
 
@@ -579,7 +683,7 @@ export function PlayerDirectoryTab({ directorPin, onNotifyPlayer }: PlayerDirect
               Add New Player
             </DialogTitle>
             <DialogDescription>
-              A unique ID will be generated automatically.
+              A unique ID will be generated automatically, or enter a custom code.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -594,6 +698,16 @@ export function PlayerDirectoryTab({ directorPin, onNotifyPlayer }: PlayerDirect
                 onKeyDown={(e) => e.key === "Enter" && handleAddPlayer()}
                 data-testid="input-new-player-name"
                 autoFocus
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="player-code">Player Code (optional)</Label>
+              <Input
+                id="player-code"
+                value={newPlayerCode}
+                onChange={(e) => setNewPlayerCode(e.target.value)}
+                placeholder="e.g., PC7000 (auto-generated if blank)"
+                data-testid="input-new-player-code"
               />
             </div>
             <div className="space-y-2">

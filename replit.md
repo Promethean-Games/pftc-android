@@ -87,6 +87,8 @@ The server handles tournament creation, player registration, score synchronizati
     - Stats tab: Tournament count, handicap, penalties/scratches totals, PPT (Penalties Per Tournament), PPC (Penalties Per Course Hole), scoring averages
     - History tab: View/add/delete tournament history entries (with penalties and scratches tracking)
     - Merge duplicate player records via dialog
+    - Export/Import: Download all players as JSON, import from previously exported file (skips duplicates by code)
+    - Custom player codes: When adding a player, optionally specify a custom code (e.g., PC7000)
 - DirectorPortal provides per-tournament dashboard with player management, groups, and start functionality
 - All director endpoints require master PIN or tournament-specific PIN for authorization
 - Manual History API Endpoints:
@@ -97,6 +99,8 @@ The server handles tournament creation, player registration, score synchronizati
   - `POST /api/tournaments/import` - Import a tournament from backup JSON (master PIN)
   - `GET /api/export/full` - Export all tournaments + universal players as JSON (master PIN)
   - `POST /api/import/full` - Import full data backup (players + history + tournaments, skips duplicates by code)
+  - `GET /api/export/players` - Export all universal players + history as JSON (master PIN)
+  - `POST /api/import/players` - Import player data (skips duplicates by code, master PIN)
 
 ## External Dependencies
 

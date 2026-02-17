@@ -61,6 +61,7 @@ const createUniversalPlayerSchema = z.object({
   name: z.string().min(1, "Name is required"),
   email: z.string().email().nullable().optional(),
   contactInfo: z.string().nullable().optional(),
+  uniqueCode: z.string().regex(/^PC\d+$/, "Code must be in format PC followed by numbers").optional(),
 });
 
 const searchUniversalPlayerSchema = z.object({
@@ -477,6 +478,107 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error exporting full data:", error);
       res.status(500).json({ error: "Failed to export data" });
+    }
+  });
+
+  // Player-only export (all universal players + history)
+  app.get("/api/export/players", async (req, res) => {
+    try {
+      const directorPin = req.query.directorPin as string;
+      if (directorPin !== MASTER_DIRECTOR_PIN) {
+        return res.status(403).json({ error: "Invalid director credentials" });
+      }
+
+      const allPlayers = await storage.getAllUniversalPlayers();
+      const playerData = [];
+      for (const p of allPlayers) {
+        const history = await storage.getPlayerTournamentHistory(p.id);
+        const { pin: _, ...safePlayer } = p;
+        playerData.push({
+          player: safePlayer,
+          history,
+        });
+      }
+
+      res.json({
+        exportedAt: new Date().toISOString(),
+        version: 1,
+        type: "players",
+        universalPlayers: playerData,
+      });
+    } catch (error) {
+      console.error("Error exporting player data:", error);
+      res.status(500).json({ error: "Failed to export player data" });
+    }
+  });
+
+  // Player-only import (universal players + history)
+  app.post("/api/import/players", async (req, res) => {
+    try {
+      const { directorPin, data } = req.body;
+      if (directorPin !== MASTER_DIRECTOR_PIN) {
+        return res.status(403).json({ error: "Invalid director credentials" });
+      }
+
+      if (!data || !data.universalPlayers) {
+        return res.status(400).json({ error: "Invalid import format - expected universalPlayers array" });
+      }
+
+      let playersImported = 0;
+      let playersSkipped = 0;
+      let historyImported = 0;
+
+      for (const entry of data.universalPlayers) {
+        const p = entry.player;
+        const existing = p.uniqueCode ? await storage.getUniversalPlayerByCode(p.uniqueCode) : null;
+        
+        if (existing) {
+          playersSkipped++;
+          continue;
+        }
+
+        const uniqueCode = p.uniqueCode || await storage.getNextUniqueCode();
+        const newPlayer = await storage.createUniversalPlayer({
+          name: p.name,
+          email: p.email || null,
+          phoneNumber: p.phoneNumber || null,
+          tShirtSize: p.tShirtSize || null,
+          contactInfo: p.contactInfo || null,
+          uniqueCode,
+          handicap: p.handicap,
+          isProvisional: p.isProvisional ?? true,
+          completedTournaments: p.completedTournaments ?? 0,
+        });
+
+        if (entry.history && Array.isArray(entry.history)) {
+          for (const h of entry.history) {
+            await storage.addTournamentHistory({
+              universalPlayerId: newPlayer.id,
+              tournamentName: h.tournamentName,
+              courseName: h.courseName || null,
+              totalStrokes: h.totalStrokes,
+              totalPar: h.totalPar,
+              holesPlayed: h.holesPlayed,
+              relativeToPar: h.relativeToPar,
+              totalScratches: h.totalScratches ?? 0,
+              totalPenalties: h.totalPenalties ?? 0,
+              isManualEntry: h.isManualEntry ?? true,
+            });
+            historyImported++;
+          }
+        }
+        playersImported++;
+      }
+
+      res.json({ 
+        success: true, 
+        playersImported, 
+        playersSkipped, 
+        historyImported 
+      });
+    } catch (error) {
+      console.error("Error importing player data:", error);
+      res.status(500).json({ error: "Failed to import player data" });
     }
   });
 
@@ -1036,7 +1138,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: parsed.error.errors[0]?.message || "Invalid request" });
       }
       
-      const uniqueCode = await storage.getNextUniqueCode();
+      let uniqueCode: string;
+      if (parsed.data.uniqueCode) {
+        const existing = await storage.getUniversalPlayerByCode(parsed.data.uniqueCode);
+        if (existing) {
+          return res.status(409).json({ error: `Player code ${parsed.data.uniqueCode} is already in use` });
+        }
+        uniqueCode = parsed.data.uniqueCode.toUpperCase();
+      } else {
+        uniqueCode = await storage.getNextUniqueCode();
+      }
       
       const player = await storage.createUniversalPlayer({
         uniqueCode,
