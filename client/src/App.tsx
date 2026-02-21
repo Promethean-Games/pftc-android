@@ -252,6 +252,12 @@ function GameApp() {
           onUpdateSettings={game.updateSettings}
           onAddPlayer={game.addPlayer}
           onEndGame={handleEndGame}
+          onLogout={() => {
+            game.endGame();
+            setViewOnly(false);
+            setActiveTab("game");
+            setScreen("splash");
+          }}
         />
       )}
 

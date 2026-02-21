@@ -18,9 +18,10 @@ interface SettingsPanelProps {
   onUpdateSettings: (settings: Partial<Settings>) => void;
   onAddPlayer: (name: string, position?: number) => void;
   onEndGame: () => void;
+  onLogout?: () => void;
 }
 
-export function SettingsPanel({ settings, players, onUpdateSettings, onAddPlayer, onEndGame }: SettingsPanelProps) {
+export function SettingsPanel({ settings, players, onUpdateSettings, onAddPlayer, onEndGame, onLogout }: SettingsPanelProps) {
   const [newPlayerName, setNewPlayerName] = useState("");
   const [insertPosition, setInsertPosition] = useState<string>("end");
   const [roomCodeInput, setRoomCodeInput] = useState("");
@@ -383,7 +384,7 @@ export function SettingsPanel({ settings, players, onUpdateSettings, onAddPlayer
                 className="w-full h-12"
                 onClick={() => {
                   tournament.leaveRoom();
-                  onEndGame();
+                  onLogout?.() ?? onEndGame();
                 }}
                 data-testid="button-logout-tournament"
               >
