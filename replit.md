@@ -71,6 +71,7 @@ The server handles tournament creation, player registration, score synchronizati
 
 ### Key Design Decisions
 1. **Offline-First Local Games**: Single-device gameplay stores all data locally, no server required
+   - **Page Persistence**: App screen (splash/setup/game/summary), active tab, and view-only mode are persisted to localStorage so page refresh returns users to the last screen they were visiting
 2. **Tournament Mode**: Optional server sync for multi-device tournaments with live leaderboards
 3. **Device-Based Identity**: Devices get unique IDs stored in localStorage for player assignment
 4. **Master Director PIN System**: Tournament directors authenticate with master PIN (3141) verified server-side, granting access to create/manage all tournaments

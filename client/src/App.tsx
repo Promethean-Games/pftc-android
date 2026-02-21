@@ -24,10 +24,39 @@ function GameApp() {
   const tournament = useTournament();
   const { theme, setTheme } = useTheme();
   
-  const [screen, setScreen] = useState<Screen>("splash");
-  const [activeTab, setActiveTab] = useState<ActiveTab>("game");
+  const [screen, setScreen] = useState<Screen>(() => {
+    const saved = localStorage.getItem("appScreen");
+    if (saved && ["splash", "setup", "game", "summary"].includes(saved)) {
+      if (saved === "game" || saved === "summary") {
+        const hasGame = localStorage.getItem("currentGame");
+        if (hasGame) return saved as Screen;
+        return "splash";
+      }
+      if (saved === "setup") return "setup" as Screen;
+    }
+    return "splash";
+  });
+  const [activeTab, setActiveTab] = useState<ActiveTab>(() => {
+    const saved = localStorage.getItem("appActiveTab");
+    if (saved && ["game", "summary", "settings", "save"].includes(saved)) return saved as ActiveTab;
+    return "game";
+  });
   const [showSaveLoad, setShowSaveLoad] = useState<"load" | null>(null);
-  const [viewOnly, setViewOnly] = useState(false);
+  const [viewOnly, setViewOnly] = useState(() => {
+    return localStorage.getItem("appViewOnly") === "true";
+  });
+
+  useEffect(() => {
+    localStorage.setItem("appScreen", screen);
+  }, [screen]);
+
+  useEffect(() => {
+    localStorage.setItem("appActiveTab", activeTab);
+  }, [activeTab]);
+
+  useEffect(() => {
+    localStorage.setItem("appViewOnly", viewOnly ? "true" : "false");
+  }, [viewOnly]);
 
   // Sync theme with game settings
   useEffect(() => {

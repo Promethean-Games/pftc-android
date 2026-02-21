@@ -50,7 +50,7 @@ export function DrawDialog({ onSelectPar, onClose, isFirstDraw = false }: DrawDi
           <div className="space-y-2">
             <h1 className="text-8xl font-extrabold" data-testid="text-draw">DRAW!</h1>
             <p className="text-muted-foreground text-lg" data-testid="text-lowest-score-tip">
-              The player with the lowest score draws a card at random.
+              Select par for the next course. (The player with the lowest score plays first)
             </p>
           </div>
         )}
