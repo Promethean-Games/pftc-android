@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ChevronLeft, ChevronRight, Undo2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Undo2, Home } from "lucide-react";
 import type { Player, HoleScore, SetupTime } from "@shared/schema";
 import { PAR_OPTIONS, LEADER_ICON_URL } from "@/lib/constants";
 import { getScoreCallout } from "@/lib/game-utils";
@@ -25,6 +25,7 @@ interface GameScreenProps {
   canUndo: boolean;
   onSetParForAll: (par: number) => void;
   onRecordSetupTime: (setupTime: SetupTime) => void;
+  onHome?: () => void;
 }
 
 export function GameScreen({
@@ -42,6 +43,7 @@ export function GameScreen({
   canUndo,
   onSetParForAll,
   onRecordSetupTime,
+  onHome,
 }: GameScreenProps) {
   const [showDrawDialog, setShowDrawDialog] = useState(false);
   const [showTableSetupDialog, setShowTableSetupDialog] = useState(false);
@@ -397,6 +399,21 @@ export function GameScreen({
           Next Card
         </Button>
       </div>
+
+      {onHome && (
+        <div className="flex justify-center pt-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground"
+            onClick={onHome}
+            data-testid="button-home"
+          >
+            <Home className="w-4 h-4 mr-1" />
+            Home
+          </Button>
+        </div>
+      )}
 
       {showDrawDialog && (
         <DrawDialog

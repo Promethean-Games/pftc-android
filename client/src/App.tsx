@@ -218,6 +218,7 @@ function GameApp() {
           canUndo={true}
           onSetParForAll={(par) => game.setParForAllPlayers(game.currentHole, par)}
           onRecordSetupTime={game.recordSetupTime}
+          onHome={() => setScreen("splash")}
         />
       )}
 
