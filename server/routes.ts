@@ -983,14 +983,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: parsed.error.errors[0]?.message || "Invalid request" });
       }
 
+      const scratches = parsed.data.scratches || 0;
+      const strokes = parsed.data.strokes;
+      const par = parsed.data.par;
+      const hole = parsed.data.hole;
+
       const score = await storage.upsertScore({
         tournamentPlayerId: parsed.data.tournamentPlayerId,
-        hole: parsed.data.hole,
-        par: parsed.data.par,
-        strokes: parsed.data.strokes,
-        scratches: parsed.data.scratches || 0,
+        hole,
+        par,
+        strokes,
+        scratches,
         penalties: parsed.data.penalties || 0,
       });
+
+      if (scratches > 0 && par > 0 && (strokes + scratches) === par) {
+        try {
+          const players = await storage.getPlayersInTournament(tournament.id);
+          const player = players.find(p => p.id === parsed.data.tournamentPlayerId);
+          const playerName = player?.playerName || "Unknown player";
+          sendPushToTournament(
+            req.params.roomCode,
+            "Cheat Detection Alert",
+            `${playerName} scored par (${par}) on hole ${hole} with ${scratches} scratch${scratches > 1 ? "es" : ""}. Please verify.`,
+            `cheat-${req.params.roomCode}-${parsed.data.tournamentPlayerId}-${hole}`
+          );
+        } catch (err) {
+          console.error("Error sending cheat detection notification:", err);
+        }
+      }
 
       res.json(score);
     } catch (error) {
@@ -1075,16 +1096,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const results = [];
+      const cheatAlerts: { playerName: string; par: number; hole: number; scratches: number }[] = [];
+      let tournamentPlayersCache: any[] | null = null;
+
       for (const score of parsed.data.scores) {
+        const sc = score.scratches || 0;
         const saved = await storage.upsertScore({
           tournamentPlayerId: score.tournamentPlayerId,
           hole: score.hole,
           par: score.par,
           strokes: score.strokes,
-          scratches: score.scratches || 0,
+          scratches: sc,
           penalties: score.penalties || 0,
         });
         results.push(saved);
+
+        if (sc > 0 && score.par > 0 && (score.strokes + sc) === score.par) {
+          if (!tournamentPlayersCache) {
+            tournamentPlayersCache = await storage.getPlayersInTournament(tournament.id);
+          }
+          const player = tournamentPlayersCache.find(p => p.id === score.tournamentPlayerId);
+          cheatAlerts.push({
+            playerName: player?.playerName || "Unknown player",
+            par: score.par,
+            hole: score.hole,
+            scratches: sc,
+          });
+        }
+      }
+
+      for (const alert of cheatAlerts) {
+        sendPushToTournament(
+          req.params.roomCode,
+          "Cheat Detection Alert",
+          `${alert.playerName} scored par (${alert.par}) on hole ${alert.hole} with ${alert.scratches} scratch${alert.scratches > 1 ? "es" : ""}. Please verify.`,
+          `cheat-${req.params.roomCode}-${alert.hole}`
+        );
       }
 
       res.json(results);
