@@ -234,7 +234,7 @@ export function GameScreen({
 
   return (
     <div 
-      className={cn("flex flex-col min-h-screen p-4 pb-6", leftHandedMode && "left-handed")}
+      className={cn("flex flex-col p-4 pb-4", leftHandedMode && "left-handed")}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
