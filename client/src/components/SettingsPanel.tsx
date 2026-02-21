@@ -254,47 +254,49 @@ export function SettingsPanel({ settings, players, onUpdateSettings, onAddPlayer
             </Card>
           )}
 
-          {/* Add Player Section */}
-          <Card className="p-4">
-            <h3 className="font-semibold mb-3 flex items-center gap-2">
-              <UserPlus className="w-4 h-4" />
-              Add Player
-            </h3>
-            <div className="flex gap-2">
-              <Input
-                value={newPlayerName}
-                onChange={(e) => setNewPlayerName(e.target.value)}
-                placeholder="Player name"
-                className="flex-1"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleAddPlayer();
-                }}
-                data-testid="input-settings-new-player"
-              />
-              <Select value={insertPosition} onValueChange={setInsertPosition}>
-                <SelectTrigger className="w-28" data-testid="select-settings-position">
-                  <SelectValue placeholder="Position" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="end">At End</SelectItem>
-                  {players.map((player, index) => (
-                    <SelectItem key={player.id} value={index.toString()}>
-                      Before {index + 1}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button
-                onClick={handleAddPlayer}
-                data-testid="button-settings-add-player"
-              >
-                Add
-              </Button>
-            </div>
-            <p className="text-xs text-muted-foreground mt-2">
-              Current players: {players.length}
-            </p>
-          </Card>
+          {/* Add Player Section - hidden for tournament players */}
+          {!tournament.roomCode && (
+            <Card className="p-4">
+              <h3 className="font-semibold mb-3 flex items-center gap-2">
+                <UserPlus className="w-4 h-4" />
+                Add Player
+              </h3>
+              <div className="flex gap-2">
+                <Input
+                  value={newPlayerName}
+                  onChange={(e) => setNewPlayerName(e.target.value)}
+                  placeholder="Player name"
+                  className="flex-1"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleAddPlayer();
+                  }}
+                  data-testid="input-settings-new-player"
+                />
+                <Select value={insertPosition} onValueChange={setInsertPosition}>
+                  <SelectTrigger className="w-28" data-testid="select-settings-position">
+                    <SelectValue placeholder="Position" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="end">At End</SelectItem>
+                    {players.map((player, index) => (
+                      <SelectItem key={player.id} value={index.toString()}>
+                        Before {index + 1}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  onClick={handleAddPlayer}
+                  data-testid="button-settings-add-player"
+                >
+                  Add
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                Current players: {players.length}
+              </p>
+            </Card>
+          )}
 
           <Card className="p-4">
             <h3 className="font-semibold mb-4">Display</h3>

@@ -255,7 +255,7 @@ function GameApp() {
         />
       )}
 
-      <BottomNav activeTab={activeTab} onTabChange={handleTabChange} viewOnly={viewOnly} />
+      <BottomNav activeTab={activeTab} onTabChange={handleTabChange} viewOnly={viewOnly} isTournament={!!tournament.roomCode} />
     </div>
   );
 }
