@@ -18,7 +18,6 @@ import {
   Edit2,
   Mail,
   Hash,
-  Palette,
   Shuffle,
   Grid3X3,
   Wand2,
@@ -53,7 +52,7 @@ interface DirectorPortalProps {
   onClose: () => void;
 }
 
-type NavTab = "dashboard" | "leaderboard" | "players" | "notify" | "theme";
+type NavTab = "dashboard" | "leaderboard" | "notify";
 
 interface EditPlayerData {
   id: number;
@@ -89,15 +88,22 @@ export function DirectorPortal({ onClose }: DirectorPortalProps) {
   const [showConfirmClose, setShowConfirmClose] = useState(false);
   const [editingPlayer, setEditingPlayer] = useState<EditPlayerData | null>(null);
   
-  // Theme settings
+  // Theme settings - synced from localStorage (TDDashboard owns persistence)
   type DirectorTheme = "default" | "dark-green" | "dark-blue" | "light";
-  const [directorTheme, setDirectorTheme] = useState<DirectorTheme>(() => {
-    const saved = localStorage.getItem("directorTheme");
-    if (saved === "dark-green" || saved === "dark-blue" || saved === "light") {
-      return saved;
-    }
+  const parseTheme = (val: string | null): DirectorTheme => {
+    if (val === "dark-green" || val === "dark-blue" || val === "light") return val;
     return "default";
-  });
+  };
+  const [directorTheme, setDirectorTheme] = useState<DirectorTheme>(() =>
+    parseTheme(localStorage.getItem("directorTheme"))
+  );
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === "directorTheme") setDirectorTheme(parseTheme(e.newValue));
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
 
   // Group management settings
   const [groupSize, setGroupSize] = useState(4);
@@ -175,15 +181,6 @@ export function DirectorPortal({ onClose }: DirectorPortalProps) {
     return () => clearInterval(interval);
   }, [tournament]);
 
-  useEffect(() => {
-    localStorage.setItem("directorTheme", directorTheme);
-    // Apply theme to portal
-    const portal = document.getElementById("director-portal");
-    if (portal) {
-      portal.classList.remove("theme-default", "theme-dark-green", "theme-dark-blue", "theme-light");
-      portal.classList.add(`theme-${directorTheme}`);
-    }
-  }, [directorTheme]);
 
   const handleAddPlayer = async () => {
     if (!newPlayerName.trim()) return;
@@ -536,18 +533,6 @@ export function DirectorPortal({ onClose }: DirectorPortalProps) {
           </button>
           <button
             className={`flex-1 py-3 px-2 flex flex-col items-center gap-1 text-xs font-medium transition-colors ${
-              activeTab === "players" 
-                ? "border-b-2 border-green-500 text-green-600" 
-                : "opacity-60 hover:opacity-100"
-            }`}
-            onClick={() => setActiveTab("players")}
-            data-testid="tab-players"
-          >
-            <Users className="w-5 h-5" />
-            Players
-          </button>
-          <button
-            className={`flex-1 py-3 px-2 flex flex-col items-center gap-1 text-xs font-medium transition-colors ${
               activeTab === "notify" 
                 ? "border-b-2 border-green-500 text-green-600" 
                 : "opacity-60 hover:opacity-100"
@@ -557,18 +542,6 @@ export function DirectorPortal({ onClose }: DirectorPortalProps) {
           >
             <Bell className="w-5 h-5" />
             Notify
-          </button>
-          <button
-            className={`flex-1 py-3 px-2 flex flex-col items-center gap-1 text-xs font-medium transition-colors ${
-              activeTab === "theme" 
-                ? "border-b-2 border-green-500 text-green-600" 
-                : "opacity-60 hover:opacity-100"
-            }`}
-            onClick={() => setActiveTab("theme")}
-            data-testid="tab-theme"
-          >
-            <Palette className="w-5 h-5" />
-            Theme
           </button>
         </div>
       </div>
@@ -774,61 +747,8 @@ export function DirectorPortal({ onClose }: DirectorPortalProps) {
                 )}
               </div>
             </Card>
-          </div>
-        )}
 
-        {/* Leaderboard Tab */}
-        {activeTab === "leaderboard" && (
-          <div className="space-y-4">
-            <Card className="p-4">
-              <h3 className="font-semibold mb-3 flex items-center gap-2">
-                <Trophy className="w-4 h-4" />
-                Full Leaderboard
-              </h3>
-              <div className="space-y-1">
-                {tournament.leaderboard.map((entry, index) => (
-                  <div
-                    key={entry.playerId}
-                    className="flex items-center gap-3 p-3 rounded-lg hover:bg-black/5 dark:hover:bg-white/5"
-                    data-testid={`leaderboard-row-${entry.playerId}`}
-                  >
-                    <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                      index === 0 ? "bg-yellow-500 text-yellow-950" :
-                      index === 1 ? "bg-gray-300 text-gray-700" :
-                      index === 2 ? "bg-amber-600 text-amber-50" :
-                      "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
-                    }`}>
-                      {index + 1}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate">{entry.playerName}</p>
-                      <p className="text-xs opacity-60">
-                        {entry.groupName || "No group"} • {entry.holesCompleted} holes
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className={`font-mono text-lg font-bold ${
-                        entry.relativeToPar < 0 ? "text-green-600" :
-                        entry.relativeToPar > 0 ? "text-red-500" : ""
-                      }`}>
-                        {entry.relativeToPar > 0 ? "+" : ""}{entry.relativeToPar}
-                      </p>
-                      <p className="text-xs opacity-60">{entry.totalStrokes} strokes</p>
-                    </div>
-                  </div>
-                ))}
-                {tournament.leaderboard.length === 0 && (
-                  <p className="text-center opacity-50 py-8">No scores recorded yet</p>
-                )}
-              </div>
-            </Card>
-          </div>
-        )}
-
-        {/* Players Tab */}
-        {activeTab === "players" && (
-          <div className="space-y-4">
-            {/* Group Management Tools */}
+            {/* Player Management */}
             <Card className="p-4">
               <button
                 onClick={() => setShowGroupTools(!showGroupTools)}
@@ -848,7 +768,6 @@ export function DirectorPortal({ onClose }: DirectorPortalProps) {
               
               {showGroupTools && (
                 <div className="mt-4 space-y-4">
-                  {/* Group Size Config */}
                   <div className="flex items-center gap-3">
                     <Label htmlFor="group-size" className="text-sm whitespace-nowrap">
                       Players per group:
@@ -878,7 +797,6 @@ export function DirectorPortal({ onClose }: DirectorPortalProps) {
                     </div>
                   </div>
 
-                  {/* Quick Stats */}
                   <div className="grid grid-cols-3 gap-2 text-center">
                     <div className="p-2 rounded-lg bg-black/5 dark:bg-white/5">
                       <p className="text-2xl font-bold">{tournament.allPlayers.length}</p>
@@ -896,7 +814,6 @@ export function DirectorPortal({ onClose }: DirectorPortalProps) {
                     </div>
                   </div>
 
-                  {/* Action Buttons */}
                   <div className="grid grid-cols-2 gap-2">
                     <Button
                       variant="outline"
@@ -948,7 +865,6 @@ export function DirectorPortal({ onClose }: DirectorPortalProps) {
                 Add Player
               </h3>
               <div className="space-y-3">
-                {/* Universal Player Search Toggle */}
                 <div className="flex items-center gap-2">
                   <Button
                     variant={showUniversalSearch ? "default" : "outline"}
@@ -979,7 +895,6 @@ export function DirectorPortal({ onClose }: DirectorPortalProps) {
                   )}
                 </div>
 
-                {/* Universal Player Search Results */}
                 {showUniversalSearch && (
                   <div className="border rounded-lg p-3 space-y-2 bg-muted/30">
                     <div className="relative">
@@ -1189,71 +1104,57 @@ export function DirectorPortal({ onClose }: DirectorPortalProps) {
           </div>
         )}
 
-        {/* Notify Tab */}
-        {activeTab === "notify" && (
-          <NotificationsTab directorPin={localStorage.getItem("directorPin") || "3141"} />
-        )}
-
-        {/* Theme Tab */}
-        {activeTab === "theme" && (
+        {/* Leaderboard Tab */}
+        {activeTab === "leaderboard" && (
           <div className="space-y-4">
             <Card className="p-4">
-              <h3 className="font-semibold mb-4 flex items-center gap-2">
-                <Palette className="w-4 h-4" />
-                Director Portal Theme
+              <h3 className="font-semibold mb-3 flex items-center gap-2">
+                <Trophy className="w-4 h-4" />
+                Full Leaderboard
               </h3>
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  className={`p-4 rounded-lg border-2 transition-all ${
-                    directorTheme === "default" 
-                      ? "border-green-500 bg-green-500/10" 
-                      : "border-transparent hover:border-gray-300"
-                  }`}
-                  onClick={() => setDirectorTheme("default")}
-                  data-testid="theme-default"
-                >
-                  <div className="w-full h-8 rounded bg-gradient-to-r from-gray-800 to-gray-600 mb-2" />
-                  <p className="text-sm font-medium">PftC Default</p>
-                </button>
-                <button
-                  className={`p-4 rounded-lg border-2 transition-all ${
-                    directorTheme === "dark-green" 
-                      ? "border-green-500 bg-green-500/10" 
-                      : "border-transparent hover:border-gray-300"
-                  }`}
-                  onClick={() => setDirectorTheme("dark-green")}
-                  data-testid="theme-dark-green"
-                >
-                  <div className="w-full h-8 rounded bg-gradient-to-r from-emerald-900 to-emerald-700 mb-2" />
-                  <p className="text-sm font-medium">Dark Green</p>
-                </button>
-                <button
-                  className={`p-4 rounded-lg border-2 transition-all ${
-                    directorTheme === "dark-blue" 
-                      ? "border-green-500 bg-green-500/10" 
-                      : "border-transparent hover:border-gray-300"
-                  }`}
-                  onClick={() => setDirectorTheme("dark-blue")}
-                  data-testid="theme-dark-blue"
-                >
-                  <div className="w-full h-8 rounded bg-gradient-to-r from-slate-900 to-slate-700 mb-2" />
-                  <p className="text-sm font-medium">Dark Blue</p>
-                </button>
-                <button
-                  className={`p-4 rounded-lg border-2 transition-all ${
-                    directorTheme === "light" 
-                      ? "border-green-500 bg-green-500/10" 
-                      : "border-transparent hover:border-gray-300"
-                  }`}
-                  onClick={() => setDirectorTheme("light")}
-                  data-testid="theme-light"
-                >
-                  <div className="w-full h-8 rounded bg-gradient-to-r from-gray-100 to-gray-300 mb-2" />
-                  <p className="text-sm font-medium">Light</p>
-                </button>
+              <div className="space-y-1">
+                {tournament.leaderboard.map((entry, index) => (
+                  <div
+                    key={entry.playerId}
+                    className="flex items-center gap-3 p-3 rounded-lg hover:bg-black/5 dark:hover:bg-white/5"
+                    data-testid={`leaderboard-row-${entry.playerId}`}
+                  >
+                    <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                      index === 0 ? "bg-yellow-500 text-yellow-950" :
+                      index === 1 ? "bg-gray-300 text-gray-700" :
+                      index === 2 ? "bg-amber-600 text-amber-50" :
+                      "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
+                    }`}>
+                      {index + 1}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium truncate">{entry.playerName}</p>
+                      <p className="text-xs opacity-60">
+                        {entry.groupName || "No group"} • {entry.holesCompleted} holes
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className={`font-mono text-lg font-bold ${
+                        entry.relativeToPar < 0 ? "text-green-600" :
+                        entry.relativeToPar > 0 ? "text-red-500" : ""
+                      }`}>
+                        {entry.relativeToPar > 0 ? "+" : ""}{entry.relativeToPar}
+                      </p>
+                      <p className="text-xs opacity-60">{entry.totalStrokes} strokes</p>
+                    </div>
+                  </div>
+                ))}
+                {tournament.leaderboard.length === 0 && (
+                  <p className="text-center opacity-50 py-8">No scores recorded yet</p>
+                )}
               </div>
             </Card>
           </div>
+        )}
+
+        {/* Notify Tab */}
+        {activeTab === "notify" && (
+          <NotificationsTab directorPin={localStorage.getItem("directorPin") || "3141"} />
         )}
       </div>
 

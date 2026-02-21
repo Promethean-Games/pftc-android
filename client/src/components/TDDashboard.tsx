@@ -1,34 +1,29 @@
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { ArrowLeft, Trophy, Users, Bell } from "lucide-react";
+import { ArrowLeft, Trophy, Users, Palette } from "lucide-react";
 import { TournamentManagementTab } from "./TournamentManagementTab";
 import { PlayerDirectoryTab } from "./PlayerDirectoryTab";
-import { NotificationsTab } from "./NotificationsTab";
+import { Card } from "@/components/ui/card";
 
 interface TDDashboardProps {
   onClose: () => void;
   directorPin: string;
 }
 
+type DirectorTheme = "default" | "dark-green" | "dark-blue" | "light";
+
 export function TDDashboard({ onClose, directorPin }: TDDashboardProps) {
-  const [activeTab, setActiveTab] = useState<"tournaments" | "players" | "notifications">("tournaments");
-  const [notifyPlayerId, setNotifyPlayerId] = useState<number | null>(null);
-  const [notifyPlayerName, setNotifyPlayerName] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"tournaments" | "players" | "theme">("tournaments");
+  const [directorTheme, setDirectorTheme] = useState<DirectorTheme>(() => {
+    const saved = localStorage.getItem("directorTheme");
+    return (saved as DirectorTheme) || "default";
+  });
 
-  const handleNotifyPlayer = useCallback((playerId: number, playerName: string) => {
-    setNotifyPlayerId(playerId);
-    setNotifyPlayerName(playerName);
-    setActiveTab("notifications");
-  }, []);
-
-  const handleTabChange = useCallback((tab: string) => {
-    if (tab !== "notifications") {
-      setNotifyPlayerId(null);
-      setNotifyPlayerName(null);
-    }
-    setActiveTab(tab as "tournaments" | "players" | "notifications");
-  }, []);
+  const handleThemeChange = (theme: DirectorTheme) => {
+    setDirectorTheme(theme);
+    localStorage.setItem("directorTheme", theme);
+  };
 
   return (
     <div className="min-h-screen bg-background flex flex-col" data-testid="td-dashboard">
@@ -47,7 +42,7 @@ export function TDDashboard({ onClose, directorPin }: TDDashboardProps) {
 
       <Tabs 
         value={activeTab} 
-        onValueChange={handleTabChange}
+        onValueChange={(v) => setActiveTab(v as "tournaments" | "players" | "theme")}
         className="flex-1 flex flex-col"
       >
         <TabsList className="w-full h-auto rounded-none border-b bg-background p-0">
@@ -68,12 +63,12 @@ export function TDDashboard({ onClose, directorPin }: TDDashboardProps) {
             Players
           </TabsTrigger>
           <TabsTrigger 
-            value="notifications"
+            value="theme"
             className="flex-1 flex items-center gap-2 py-4 data-[state=active]:bg-muted rounded-none"
-            data-testid="tab-notifications"
+            data-testid="tab-theme"
           >
-            <Bell className="h-5 w-5" />
-            Notify
+            <Palette className="h-5 w-5" />
+            Theme
           </TabsTrigger>
         </TabsList>
 
@@ -82,11 +77,68 @@ export function TDDashboard({ onClose, directorPin }: TDDashboardProps) {
         </TabsContent>
 
         <TabsContent value="players" className="flex-1 m-0 p-0 overflow-auto">
-          <PlayerDirectoryTab directorPin={directorPin} onNotifyPlayer={handleNotifyPlayer} />
+          <PlayerDirectoryTab directorPin={directorPin} />
         </TabsContent>
 
-        <TabsContent value="notifications" className="flex-1 m-0 p-0 overflow-auto">
-          <NotificationsTab directorPin={directorPin} initialPlayerId={notifyPlayerId} initialPlayerName={notifyPlayerName} />
+        <TabsContent value="theme" className="flex-1 m-0 p-0 overflow-auto">
+          <div className="p-4 space-y-4">
+            <Card className="p-4">
+              <h3 className="font-semibold mb-4 flex items-center gap-2">
+                <Palette className="w-4 h-4" />
+                Director Portal Theme
+              </h3>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  className={`p-4 rounded-lg border-2 transition-all ${
+                    directorTheme === "default" 
+                      ? "border-green-500 bg-green-500/10" 
+                      : "border-transparent hover:border-gray-300"
+                  }`}
+                  onClick={() => handleThemeChange("default")}
+                  data-testid="theme-default"
+                >
+                  <div className="w-full h-8 rounded bg-gradient-to-r from-gray-800 to-gray-600 mb-2" />
+                  <p className="text-sm font-medium">PftC Default</p>
+                </button>
+                <button
+                  className={`p-4 rounded-lg border-2 transition-all ${
+                    directorTheme === "dark-green" 
+                      ? "border-green-500 bg-green-500/10" 
+                      : "border-transparent hover:border-gray-300"
+                  }`}
+                  onClick={() => handleThemeChange("dark-green")}
+                  data-testid="theme-dark-green"
+                >
+                  <div className="w-full h-8 rounded bg-gradient-to-r from-emerald-900 to-emerald-700 mb-2" />
+                  <p className="text-sm font-medium">Dark Green</p>
+                </button>
+                <button
+                  className={`p-4 rounded-lg border-2 transition-all ${
+                    directorTheme === "dark-blue" 
+                      ? "border-green-500 bg-green-500/10" 
+                      : "border-transparent hover:border-gray-300"
+                  }`}
+                  onClick={() => handleThemeChange("dark-blue")}
+                  data-testid="theme-dark-blue"
+                >
+                  <div className="w-full h-8 rounded bg-gradient-to-r from-slate-900 to-slate-700 mb-2" />
+                  <p className="text-sm font-medium">Dark Blue</p>
+                </button>
+                <button
+                  className={`p-4 rounded-lg border-2 transition-all ${
+                    directorTheme === "light" 
+                      ? "border-green-500 bg-green-500/10" 
+                      : "border-transparent hover:border-gray-300"
+                  }`}
+                  onClick={() => handleThemeChange("light")}
+                  data-testid="theme-light"
+                >
+                  <div className="w-full h-8 rounded bg-gradient-to-r from-gray-100 to-gray-300 mb-2" />
+                  <p className="text-sm font-medium">Light</p>
+                </button>
+              </div>
+            </Card>
+          </div>
         </TabsContent>
       </Tabs>
     </div>
