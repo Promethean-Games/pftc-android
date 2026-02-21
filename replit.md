@@ -62,7 +62,7 @@ The server handles tournament creation, player registration, score synchronizati
 - **Client Helper**: `client/src/lib/pushNotifications.ts` manages subscription lifecycle
 - **VAPID Keys**: Public key in `VAPID_PUBLIC_KEY` env var, private key in `VAPID_PRIVATE_KEY` secret (with `VAPID_PRIVATE_KEY_BACKUP` fallback)
 - **Subscription Storage**: `push_subscriptions` table links endpoints to deviceId, tournamentRoomCode, and universalPlayerId
-- **Notification Triggers**: Tournament start and tournament completion send push notifications to all subscribers of that tournament
+- **Notification Triggers**: Tournament start, tournament completion, player joins (first device assignment only), all groups assigned to devices (transition-based), and player leaves tournament (device unassignment) send push notifications to all subscribers
 - **UI Toggle**: Settings panel shows push notification toggle when browser supports it
 - **API Endpoints**:
   - `GET /api/push/vapid-key` - Get VAPID public key

@@ -893,7 +893,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!parsed.success) {
         return res.status(400).json({ error: parsed.error.errors[0]?.message || "Invalid request" });
       }
-      await storage.assignDeviceToPlayer(parseInt(req.params.playerId), parsed.data.deviceId);
+      const tournament = await storage.getTournamentByCode(req.params.roomCode);
+      if (!tournament) {
+        return res.status(404).json({ error: "Tournament not found" });
+      }
+      const playerId = parseInt(req.params.playerId);
+      const playersBefore = await storage.getPlayersInTournament(tournament.id);
+      const playerBefore = playersBefore.find(p => p.id === playerId);
+      const wasUnassigned = playerBefore && !playerBefore.deviceId;
+      const allAssignedBefore = playersBefore.length > 0 && playersBefore.every(p => p.deviceId);
+
+      await storage.assignDeviceToPlayer(playerId, parsed.data.deviceId);
+
+      if (wasUnassigned && playerBefore) {
+        sendPushToTournament(req.params.roomCode, tournament.name, `${playerBefore.playerName} has joined the tournament.`, `join-${req.params.roomCode}`);
+      }
+
+      if (!allAssignedBefore && wasUnassigned) {
+        const playersAfter = await storage.getPlayersInTournament(tournament.id);
+        const allAssignedNow = playersAfter.length > 0 && playersAfter.every(p => p.deviceId);
+        if (allAssignedNow) {
+          sendPushToTournament(req.params.roomCode, tournament.name, "All groups have been assigned to a device.", `allassigned-${req.params.roomCode}`);
+        }
+      }
+
       res.json({ success: true });
     } catch (error) {
       console.error("Error assigning device:", error);
@@ -1083,6 +1106,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error removing player:", error);
       res.status(500).json({ error: "Failed to remove player" });
+    }
+  });
+
+  // Player leaves tournament (unassign device and notify)
+  app.post("/api/tournaments/:roomCode/leave", async (req, res) => {
+    try {
+      const { deviceId } = req.body;
+      if (!deviceId) {
+        return res.status(400).json({ error: "deviceId is required" });
+      }
+      const tournament = await storage.getTournamentByCode(req.params.roomCode);
+      if (!tournament) {
+        return res.status(404).json({ error: "Tournament not found" });
+      }
+      const players = await storage.getPlayersInTournament(tournament.id);
+      const devicePlayers = players.filter(p => p.deviceId === deviceId);
+      for (const player of devicePlayers) {
+        await storage.unassignDeviceFromPlayer(player.id);
+        sendPushToTournament(req.params.roomCode, tournament.name, `${player.playerName} has left the tournament.`, `leave-${req.params.roomCode}`);
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error leaving tournament:", error);
+      res.status(500).json({ error: "Failed to leave tournament" });
     }
   });
 

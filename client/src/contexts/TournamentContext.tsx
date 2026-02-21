@@ -141,6 +141,9 @@ export function TournamentProvider({ children }: { children: ReactNode }) {
   };
 
   const leaveRoom = () => {
+    if (roomCode) {
+      apiRequest("POST", `/api/tournaments/${roomCode}/leave`, { deviceId }).catch(() => {});
+    }
     setRoomCode(null);
     setTournamentInfo(null);
     setMyPlayers([]);
