@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, jsonb, real } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, jsonb, real, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { relations, sql } from "drizzle-orm";
 import { z } from "zod";
@@ -104,7 +104,9 @@ export const tournamentScores = pgTable("tournament_scores", {
   strokes: integer("strokes").notNull(),
   scratches: integer("scratches").notNull().default(0),
   penalties: integer("penalties").notNull().default(0),
-});
+}, (table) => [
+  uniqueIndex("idx_tournament_scores_player_hole").on(table.tournamentPlayerId, table.hole),
+]);
 
 export const tournamentScoresRelations = relations(tournamentScores, ({ one }) => ({
   player: one(tournamentPlayers, {
