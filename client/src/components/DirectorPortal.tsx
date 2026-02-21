@@ -14,7 +14,7 @@ import {
   RefreshCw, 
   Power, 
   BarChart3, 
-  Settings as SettingsIcon,
+  Bell,
   Edit2,
   Mail,
   Hash,
@@ -37,6 +37,7 @@ import {
 } from "lucide-react";
 import { useTournament } from "@/contexts/TournamentContext";
 import { apiRequest } from "@/lib/queryClient";
+import { NotificationsTab } from "./NotificationsTab";
 
 interface UniversalPlayer {
   id: number;
@@ -52,7 +53,7 @@ interface DirectorPortalProps {
   onClose: () => void;
 }
 
-type NavTab = "dashboard" | "leaderboard" | "players" | "settings";
+type NavTab = "dashboard" | "leaderboard" | "players" | "notify" | "theme";
 
 interface EditPlayerData {
   id: number;
@@ -547,15 +548,27 @@ export function DirectorPortal({ onClose }: DirectorPortalProps) {
           </button>
           <button
             className={`flex-1 py-3 px-2 flex flex-col items-center gap-1 text-xs font-medium transition-colors ${
-              activeTab === "settings" 
+              activeTab === "notify" 
                 ? "border-b-2 border-green-500 text-green-600" 
                 : "opacity-60 hover:opacity-100"
             }`}
-            onClick={() => setActiveTab("settings")}
-            data-testid="tab-settings"
+            onClick={() => setActiveTab("notify")}
+            data-testid="tab-notify"
           >
-            <SettingsIcon className="w-5 h-5" />
-            Settings
+            <Bell className="w-5 h-5" />
+            Notify
+          </button>
+          <button
+            className={`flex-1 py-3 px-2 flex flex-col items-center gap-1 text-xs font-medium transition-colors ${
+              activeTab === "theme" 
+                ? "border-b-2 border-green-500 text-green-600" 
+                : "opacity-60 hover:opacity-100"
+            }`}
+            onClick={() => setActiveTab("theme")}
+            data-testid="tab-theme"
+          >
+            <Palette className="w-5 h-5" />
+            Theme
           </button>
         </div>
       </div>
@@ -666,6 +679,98 @@ export function DirectorPortal({ onClose }: DirectorPortalProps) {
                 ))}
                 {tournament.leaderboard.length === 0 && (
                   <p className="text-center opacity-50 py-2">No scores yet</p>
+                )}
+              </div>
+            </Card>
+
+            {/* Tournament Controls */}
+            <Card className="p-4">
+              <h3 className="font-semibold mb-3 flex items-center gap-2">
+                <Power className="w-4 h-4" />
+                Tournament Controls
+              </h3>
+              
+              <div className="space-y-4">
+                <div className="p-3 rounded-lg bg-black/5 dark:bg-white/5">
+                  <p className="text-sm opacity-70 mb-1">Room Code</p>
+                  <p className="text-2xl font-mono font-bold tracking-wider">
+                    {tournament.roomCode || "—"}
+                  </p>
+                </div>
+
+                {showConfirmComplete ? (
+                  <div className="space-y-2 p-3 border border-green-500/30 rounded-lg bg-green-500/5">
+                    <p className="text-sm font-medium text-green-600 dark:text-green-400">
+                      Complete Tournament?
+                    </p>
+                    <p className="text-sm opacity-70">
+                      This will save all player results and update their handicaps based on their performance.
+                    </p>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        className="flex-1"
+                        onClick={() => setShowConfirmComplete(false)}
+                        disabled={isCompleting}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        className="flex-1 bg-green-600 hover:bg-green-700"
+                        onClick={handleCompleteTournament}
+                        disabled={isCompleting}
+                        data-testid="button-confirm-complete-tournament"
+                      >
+                        {isCompleting ? "Saving..." : "Complete & Save"}
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <Button
+                    variant="outline"
+                    className="w-full gap-2 border-green-500/50 text-green-600 hover:bg-green-500/10"
+                    onClick={() => setShowConfirmComplete(true)}
+                    disabled={!tournament.tournamentInfo?.isStarted || !tournament.tournamentInfo?.isActive}
+                    data-testid="button-complete-tournament"
+                  >
+                    <Trophy className="w-4 h-4" />
+                    Complete Tournament & Save Handicaps
+                  </Button>
+                )}
+
+                {showConfirmClose ? (
+                  <div className="space-y-2">
+                    <p className="text-sm opacity-70">
+                      Are you sure you want to end this tournament? Players will no longer be able to submit scores.
+                    </p>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        className="flex-1"
+                        onClick={() => setShowConfirmClose(false)}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        className="flex-1"
+                        onClick={handleCloseTournament}
+                        data-testid="button-confirm-close-tournament"
+                      >
+                        End Tournament
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <Button
+                    variant="destructive"
+                    className="w-full"
+                    onClick={() => setShowConfirmClose(true)}
+                    disabled={!tournament.tournamentInfo?.isActive}
+                    data-testid="button-close-tournament"
+                  >
+                    {tournament.tournamentInfo?.isActive ? "End Tournament" : "Tournament Ended"}
+                  </Button>
                 )}
               </div>
             </Card>
@@ -1084,10 +1189,14 @@ export function DirectorPortal({ onClose }: DirectorPortalProps) {
           </div>
         )}
 
-        {/* Settings Tab */}
-        {activeTab === "settings" && (
+        {/* Notify Tab */}
+        {activeTab === "notify" && (
+          <NotificationsTab directorPin={localStorage.getItem("directorPin") || "3141"} />
+        )}
+
+        {/* Theme Tab */}
+        {activeTab === "theme" && (
           <div className="space-y-4">
-            {/* Theme Selection */}
             <Card className="p-4">
               <h3 className="font-semibold mb-4 flex items-center gap-2">
                 <Palette className="w-4 h-4" />
@@ -1142,99 +1251,6 @@ export function DirectorPortal({ onClose }: DirectorPortalProps) {
                   <div className="w-full h-8 rounded bg-gradient-to-r from-gray-100 to-gray-300 mb-2" />
                   <p className="text-sm font-medium">Light</p>
                 </button>
-              </div>
-            </Card>
-
-            {/* Tournament Controls */}
-            <Card className="p-4">
-              <h3 className="font-semibold mb-3 flex items-center gap-2">
-                <Power className="w-4 h-4" />
-                Tournament Controls
-              </h3>
-              
-              <div className="space-y-4">
-                <div className="p-3 rounded-lg bg-black/5 dark:bg-white/5">
-                  <p className="text-sm opacity-70 mb-1">Room Code</p>
-                  <p className="text-2xl font-mono font-bold tracking-wider">
-                    {tournament.roomCode || "—"}
-                  </p>
-                </div>
-
-                {/* Complete Tournament - Save Results & Update Handicaps */}
-                {showConfirmComplete ? (
-                  <div className="space-y-2 p-3 border border-green-500/30 rounded-lg bg-green-500/5">
-                    <p className="text-sm font-medium text-green-600 dark:text-green-400">
-                      Complete Tournament?
-                    </p>
-                    <p className="text-sm opacity-70">
-                      This will save all player results and update their handicaps based on their performance.
-                    </p>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        className="flex-1"
-                        onClick={() => setShowConfirmComplete(false)}
-                        disabled={isCompleting}
-                      >
-                        Cancel
-                      </Button>
-                      <Button
-                        className="flex-1 bg-green-600 hover:bg-green-700"
-                        onClick={handleCompleteTournament}
-                        disabled={isCompleting}
-                        data-testid="button-confirm-complete-tournament"
-                      >
-                        {isCompleting ? "Saving..." : "Complete & Save"}
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <Button
-                    variant="outline"
-                    className="w-full gap-2 border-green-500/50 text-green-600 hover:bg-green-500/10"
-                    onClick={() => setShowConfirmComplete(true)}
-                    disabled={!tournament.tournamentInfo?.isStarted || !tournament.tournamentInfo?.isActive}
-                    data-testid="button-complete-tournament"
-                  >
-                    <Trophy className="w-4 h-4" />
-                    Complete Tournament & Save Handicaps
-                  </Button>
-                )}
-
-                {showConfirmClose ? (
-                  <div className="space-y-2">
-                    <p className="text-sm opacity-70">
-                      Are you sure you want to end this tournament? Players will no longer be able to submit scores.
-                    </p>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        className="flex-1"
-                        onClick={() => setShowConfirmClose(false)}
-                      >
-                        Cancel
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        className="flex-1"
-                        onClick={handleCloseTournament}
-                        data-testid="button-confirm-close-tournament"
-                      >
-                        End Tournament
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <Button
-                    variant="destructive"
-                    className="w-full"
-                    onClick={() => setShowConfirmClose(true)}
-                    disabled={!tournament.tournamentInfo?.isActive}
-                    data-testid="button-close-tournament"
-                  >
-                    {tournament.tournamentInfo?.isActive ? "End Tournament" : "Tournament Ended"}
-                  </Button>
-                )}
               </div>
             </Card>
           </div>
