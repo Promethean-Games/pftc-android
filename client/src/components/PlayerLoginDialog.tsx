@@ -111,6 +111,9 @@ export function PlayerLoginDialog({ isOpen, onClose, onLoginSuccess }: PlayerLog
         return;
       }
 
+      if (data.sessionToken) {
+        localStorage.setItem("playerSessionToken", data.sessionToken);
+      }
       onLoginSuccess(data.player, data.recentHistory, pinToUse);
       handleClose();
     } catch (err) {

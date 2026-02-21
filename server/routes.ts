@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import crypto from "crypto";
 import bcrypt from "bcrypt";
 import webpush from "web-push";
 import { storage } from "./storage";
@@ -7,6 +8,29 @@ import { insertTournamentSchema, insertTournamentPlayerSchema, insertTournamentS
 import { z } from "zod";
 
 const SALT_ROUNDS = 10;
+
+const playerSessions = new Map<string, { playerCode: string; createdAt: number }>();
+
+function createPlayerSession(playerCode: string): string {
+  const token = crypto.randomBytes(32).toString("hex");
+  playerSessions.set(token, { playerCode, createdAt: Date.now() });
+  return token;
+}
+
+function getPlayerSession(token: string): string | null {
+  const session = playerSessions.get(token);
+  if (!session) return null;
+  const MAX_AGE = 30 * 24 * 60 * 60 * 1000;
+  if (Date.now() - session.createdAt > MAX_AGE) {
+    playerSessions.delete(token);
+    return null;
+  }
+  return session.playerCode;
+}
+
+function deletePlayerSession(token: string) {
+  playerSessions.delete(token);
+}
 
 const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || "";
 const VAPID_SUBJECT = process.env.VAPID_SUBJECT || "mailto:admin@parforthecourse.app";
@@ -1458,21 +1482,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Return player profile without the PIN hash
       const { pin: _, ...safePlayer } = player;
       const history = await storage.getPlayerTournamentHistory(player.id, 5);
+      const sessionToken = createPlayerSession(player.uniqueCode!);
       
-      res.json({ player: safePlayer, recentHistory: history });
+      res.json({ player: safePlayer, recentHistory: history, sessionToken });
     } catch (error) {
       console.error("Error during player login:", error);
       res.status(500).json({ error: "Failed to login" });
     }
   });
 
+  app.post("/api/player/session", async (req, res) => {
+    try {
+      const { sessionToken } = req.body;
+      if (!sessionToken) {
+        return res.status(400).json({ error: "Session token required" });
+      }
+      
+      const playerCode = getPlayerSession(sessionToken);
+      if (!playerCode) {
+        return res.status(401).json({ error: "Session expired" });
+      }
+      
+      const player = await storage.getUniversalPlayerByCode(playerCode);
+      if (!player) {
+        deletePlayerSession(sessionToken);
+        return res.status(404).json({ error: "Player not found" });
+      }
+      
+      const { pin: _, ...safePlayer } = player;
+      const history = await storage.getPlayerTournamentHistory(player.id, 5);
+      
+      res.json({ player: safePlayer, history });
+    } catch (error) {
+      console.error("Error restoring session:", error);
+      res.status(500).json({ error: "Failed to restore session" });
+    }
+  });
+
+  app.post("/api/player/logout", async (req, res) => {
+    const { sessionToken } = req.body;
+    if (sessionToken) {
+      deletePlayerSession(sessionToken);
+    }
+    res.json({ success: true });
+  });
+
   app.patch("/api/player/:code/profile", async (req, res) => {
     try {
-      const { pin, email, phoneNumber, tShirtSize, name } = req.body;
+      const { pin, sessionToken, email, phoneNumber, tShirtSize, name } = req.body;
       const code = req.params.code.toUpperCase();
       
-      if (!pin) {
-        return res.status(400).json({ error: "PIN is required for authentication" });
+      if (!pin && !sessionToken) {
+        return res.status(400).json({ error: "Authentication required" });
       }
       
       const player = await storage.getUniversalPlayerByCode(code);
@@ -1480,13 +1541,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Player not found" });
       }
       
-      if (!player.pin) {
-        return res.status(400).json({ error: "No PIN set" });
+      let authenticated = false;
+      
+      if (sessionToken) {
+        const sessionCode = getPlayerSession(sessionToken);
+        if (sessionCode && sessionCode.toUpperCase() === code) {
+          authenticated = true;
+        }
       }
       
-      const isPinValid = await bcrypt.compare(pin, player.pin);
-      if (!isPinValid) {
-        return res.status(401).json({ error: "Invalid PIN" });
+      if (!authenticated && pin) {
+        if (!player.pin) {
+          return res.status(400).json({ error: "No PIN set" });
+        }
+        const isPinValid = await bcrypt.compare(pin, player.pin);
+        if (isPinValid) {
+          authenticated = true;
+        }
+      }
+      
+      if (!authenticated) {
+        return res.status(401).json({ error: "Invalid credentials" });
       }
       
       const updateData: Record<string, string | null> = {};

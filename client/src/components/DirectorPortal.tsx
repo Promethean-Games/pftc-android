@@ -482,11 +482,17 @@ export function DirectorPortal({ onClose }: DirectorPortalProps) {
           <Button variant="ghost" size="icon" onClick={onClose} data-testid="button-close-portal">
             <ArrowLeft className="w-5 h-5" />
           </Button>
-          <div className="flex-1">
-            <h1 className="text-xl font-bold">Tournament Director</h1>
-            <p className="text-sm opacity-70">
-              {tournament.tournamentInfo?.name || "New Tournament"} 
-              {tournament.roomCode && ` • ${tournament.roomCode}`}
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-xl font-bold">Tournament Director</h1>
+              {tournament.roomCode && (
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded bg-primary/10 text-primary font-mono text-base font-bold tracking-wider" data-testid="text-room-code-header">
+                  {tournament.roomCode}
+                </span>
+              )}
+            </div>
+            <p className="text-sm opacity-70 truncate">
+              {tournament.tournamentInfo?.name || "New Tournament"}
             </p>
           </div>
           <Button

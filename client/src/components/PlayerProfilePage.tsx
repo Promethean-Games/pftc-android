@@ -63,8 +63,10 @@ export function PlayerProfilePage({ player, history, playerPin, onLogout, onBack
     setSaveError(null);
 
     try {
+      const sessionToken = localStorage.getItem("playerSessionToken");
       const response = await apiRequest("PATCH", `/api/player/${player.uniqueCode}/profile`, {
-        pin: playerPin,
+        pin: sessionToken ? undefined : playerPin,
+        sessionToken: sessionToken || undefined,
         name: editName.trim() || undefined,
         email: editEmail.trim() || undefined,
         phoneNumber: editPhone.trim() || undefined,

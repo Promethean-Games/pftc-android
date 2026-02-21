@@ -45,7 +45,7 @@ The server handles tournament creation, player registration, score synchronizati
 - **Director UI Integration**: DirectorPortal has "Find Existing Player" search to link tournament players to universal identities
 
 ### Player Login System
-- **Player Code + PIN Authentication**: Players can log in using their unique player code (e.g., PC7001) and a 4-digit PIN
+- **Player Code + PIN Authentication**: Players can log in using their unique player code (e.g., PC7001) and a 4-digit PIN; login persists across page refresh via localStorage
 - **First-Time PIN Setup**: New players can create a PIN, optionally with Tournament Director authorization
 - **Profile Access**: Logged-in players can view/edit their profile (name, email, phone, t-shirt size), handicap, and tournament history
 - **PIN Management**: Players can change their PIN from the profile page

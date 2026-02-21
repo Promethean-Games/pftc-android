@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
@@ -30,7 +30,34 @@ export function SplashScreen({ onNewGame, onLoadGame, onStartTournamentGame, onV
   const [loggedInPlayer, setLoggedInPlayer] = useState<PlayerProfile | null>(null);
   const [playerHistory, setPlayerHistory] = useState<TournamentHistoryEntry[]>([]);
   const [playerPin, setPlayerPin] = useState<string | null>(null);
+  const [isRestoringSession, setIsRestoringSession] = useState(true);
   const tournament = useTournament();
+
+  useEffect(() => {
+    const sessionToken = localStorage.getItem("playerSessionToken");
+    if (sessionToken) {
+      fetch("/api/player/session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionToken }),
+      })
+        .then((res) => {
+          if (!res.ok) throw new Error("Session expired");
+          return res.json();
+        })
+        .then((data) => {
+          setLoggedInPlayer(data.player);
+          setPlayerHistory(data.history || []);
+          setPlayerPin("session");
+        })
+        .catch(() => {
+          localStorage.removeItem("playerSessionToken");
+        })
+        .finally(() => setIsRestoringSession(false));
+    } else {
+      setIsRestoringSession(false);
+    }
+  }, []);
 
   const handleTDSignInSuccess = (pin: string) => {
     setVerifiedPin(pin);
@@ -44,10 +71,27 @@ export function SplashScreen({ onNewGame, onLoadGame, onStartTournamentGame, onV
   };
 
   const handlePlayerLogout = () => {
+    const sessionToken = localStorage.getItem("playerSessionToken");
+    if (sessionToken) {
+      fetch("/api/player/logout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionToken }),
+      }).catch(() => {});
+    }
     setLoggedInPlayer(null);
     setPlayerHistory([]);
     setPlayerPin(null);
+    localStorage.removeItem("playerSessionToken");
   };
+
+  if (isRestoringSession) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen p-6">
+        <img src={LOGO_URL} alt="Par for the Course" className="w-32 h-32 mb-4" />
+      </div>
+    );
+  }
 
   if (loggedInPlayer && playerPin) {
     return (
