@@ -221,36 +221,39 @@ export function SummaryScreen({ players, scores, onNewGame, onSubmitToSheets, is
                 {leaderboard.map((entry, index) => {
                   const stats = calculatePlayerTotal(scores[entry.player.id] || []);
                   const isLeader = index === 0;
+                  const showPenalties = !tournament.isConnected;
                   
                   return (
                     <div
                       key={entry.player.id}
                       className={cn(
-                        "grid grid-cols-[1.5fr_repeat(4,1fr)] gap-2 items-center p-3 rounded-lg border",
+                        "flex items-center gap-2 p-3 rounded-lg border",
                         isLeader && "border-primary border-2"
                       )}
                       data-testid={`leaderboard-${entry.player.id}`}
                     >
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 min-w-0 flex-1">
                         <div 
                           className="w-6 h-6 rounded-full flex-shrink-0" 
                           style={{ backgroundColor: entry.player.color }}
                         />
                         <span className="font-semibold truncate">{entry.player.name}</span>
                       </div>
-                      <div className="text-center text-sm">
+                      <div className="text-center text-sm flex-shrink-0">
                         <div className="font-bold">{entry.total}</div>
                         <div className="text-xs text-muted-foreground">Total</div>
                       </div>
-                      <div className="text-center text-sm">
+                      <div className="text-center text-sm flex-shrink-0">
                         <div>{stats.totalScratches}</div>
                         <div className="text-xs text-muted-foreground">Scratch</div>
                       </div>
-                      <div className="text-center text-sm">
-                        <div>{stats.totalPenalties}</div>
-                        <div className="text-xs text-muted-foreground">Penalty</div>
-                      </div>
-                      <div className="text-center text-sm font-bold">
+                      {showPenalties && (
+                        <div className="text-center text-sm flex-shrink-0">
+                          <div>{stats.totalPenalties}</div>
+                          <div className="text-xs text-muted-foreground">Penalty</div>
+                        </div>
+                      )}
+                      <div className="text-center text-sm font-bold flex-shrink-0">
                         #{index + 1}
                       </div>
                     </div>
@@ -261,7 +264,9 @@ export function SummaryScreen({ players, scores, onNewGame, onSubmitToSheets, is
           )}
 
           {/* Detailed Box Score & Stats (Landscape) */}
-          {isLandscape && (
+          {isLandscape && (() => {
+            const showPenaltyCols = !tournament.isConnected;
+            return (
             <Card className="p-4 mb-6">
               <h3 className="font-bold mb-3">Detailed Box Score & Statistics</h3>
               <div className="overflow-x-auto">
@@ -274,7 +279,9 @@ export function SummaryScreen({ players, scores, onNewGame, onSubmitToSheets, is
                       ))}
                       <TableHead className="text-center min-w-[60px]">Strokes</TableHead>
                       <TableHead className="text-center min-w-[60px]">Scratch</TableHead>
-                      <TableHead className="text-center min-w-[60px]">Penalty</TableHead>
+                      {showPenaltyCols && (
+                        <TableHead className="text-center min-w-[60px]">Penalty</TableHead>
+                      )}
                       <TableHead className="text-center min-w-[60px] font-bold">Total</TableHead>
                       <TableHead className="text-center min-w-[50px]">Rank</TableHead>
                     </TableRow>
@@ -317,7 +324,9 @@ export function SummaryScreen({ players, scores, onNewGame, onSubmitToSheets, is
                           })}
                           <TableCell className="text-center">{rawStrokes}</TableCell>
                           <TableCell className="text-center">{stats.totalScratches}</TableCell>
-                          <TableCell className="text-center">{stats.totalPenalties}</TableCell>
+                          {showPenaltyCols && (
+                            <TableCell className="text-center">{stats.totalPenalties}</TableCell>
+                          )}
                           <TableCell className="text-center font-bold">{entry.total}</TableCell>
                           <TableCell className="text-center font-bold">#{index + 1}</TableCell>
                         </TableRow>
@@ -327,7 +336,8 @@ export function SummaryScreen({ players, scores, onNewGame, onSubmitToSheets, is
                 </Table>
               </div>
             </Card>
-          )}
+            );
+          })()}
 
           {/* Box Score (Portrait) */}
           {!isLandscape && (
