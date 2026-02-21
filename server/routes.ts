@@ -173,27 +173,41 @@ if (VAPID_PUBLIC_KEY) {
   }
 }
 
+async function sendPushToSubs(subs: { endpoint: string; p256dh: string; auth: string }[], roomCode: string, title: string, body: string, tag?: string) {
+  const payload = JSON.stringify({ title, body, tag: tag || roomCode, url: `/?room=${roomCode}` });
+  await Promise.allSettled(
+    subs.map(async (sub) => {
+      try {
+        await webpush.sendNotification(
+          { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
+          payload
+        );
+      } catch (err: any) {
+        if (err.statusCode === 404 || err.statusCode === 410) {
+          await storage.removePushSubscription(sub.endpoint);
+        }
+      }
+    })
+  );
+}
+
 async function sendPushToTournament(roomCode: string, title: string, body: string, tag?: string) {
   if (!pushEnabled) return;
   try {
     const subs = await storage.getSubscriptionsForTournament(roomCode);
-    const payload = JSON.stringify({ title, body, tag: tag || roomCode, url: `/?room=${roomCode}` });
-    await Promise.allSettled(
-      subs.map(async (sub) => {
-        try {
-          await webpush.sendNotification(
-            { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
-            payload
-          );
-        } catch (err: any) {
-          if (err.statusCode === 404 || err.statusCode === 410) {
-            await storage.removePushSubscription(sub.endpoint);
-          }
-        }
-      })
-    );
+    await sendPushToSubs(subs, roomCode, title, body, tag);
   } catch (err) {
     console.error("Error sending push notifications:", err);
+  }
+}
+
+async function sendPushToDirectors(roomCode: string, title: string, body: string, tag?: string) {
+  if (!pushEnabled) return;
+  try {
+    const subs = await storage.getDirectorSubscriptionsForTournament(roomCode);
+    await sendPushToSubs(subs, roomCode, title, body, tag);
+  } catch (err) {
+    console.error("Error sending push to directors:", err);
   }
 }
 
@@ -913,7 +927,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const playersAfter = await storage.getPlayersInTournament(tournament.id);
         const allAssignedNow = playersAfter.length > 0 && playersAfter.every(p => p.deviceId);
         if (allAssignedNow) {
-          sendPushToTournament(req.params.roomCode, tournament.name, "All groups have been assigned to a device.", `allassigned-${req.params.roomCode}`);
+          sendPushToDirectors(req.params.roomCode, tournament.name, "All groups have been assigned to a device.", `allassigned-${req.params.roomCode}`);
         }
       }
 
@@ -1124,7 +1138,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const devicePlayers = players.filter(p => p.deviceId === deviceId);
       for (const player of devicePlayers) {
         await storage.unassignDeviceFromPlayer(player.id);
-        sendPushToTournament(req.params.roomCode, tournament.name, `${player.playerName} has left the tournament.`, `leave-${req.params.roomCode}`);
+        sendPushToDirectors(req.params.roomCode, tournament.name, `${player.playerName} has left the tournament.`, `leave-${req.params.roomCode}`);
       }
       res.json({ success: true });
     } catch (error) {
@@ -1895,9 +1909,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/push/subscribe", async (req, res) => {
     try {
-      const { subscription, deviceId, tournamentRoomCode, universalPlayerId } = req.body;
+      const { subscription, deviceId, tournamentRoomCode, universalPlayerId, directorPin } = req.body;
       if (!subscription?.endpoint || !subscription?.keys?.p256dh || !subscription?.keys?.auth) {
         return res.status(400).json({ error: "Invalid subscription object" });
+      }
+      let isDirector = false;
+      if (tournamentRoomCode && directorPin) {
+        if (directorPin === MASTER_DIRECTOR_PIN) {
+          isDirector = true;
+        } else {
+          isDirector = await storage.verifyDirectorPin(tournamentRoomCode, directorPin);
+        }
       }
       await storage.upsertPushSubscription({
         endpoint: subscription.endpoint,
@@ -1906,6 +1928,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         deviceId: deviceId || null,
         tournamentRoomCode: tournamentRoomCode || null,
         universalPlayerId: universalPlayerId || null,
+        isDirector,
       });
       res.json({ success: true });
     } catch (error) {

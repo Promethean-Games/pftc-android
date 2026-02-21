@@ -122,6 +122,7 @@ export const pushSubscriptions = pgTable("push_subscriptions", {
   deviceId: text("device_id"),
   tournamentRoomCode: text("tournament_room_code"),
   universalPlayerId: integer("universal_player_id").references(() => universalPlayers.id),
+  isDirector: boolean("is_director").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

@@ -36,6 +36,7 @@ export async function subscribeToPush(options?: {
   deviceId?: string;
   tournamentRoomCode?: string;
   universalPlayerId?: number;
+  directorPin?: string;
 }): Promise<boolean> {
   try {
     if (!(await isPushSupported())) return false;
@@ -60,6 +61,7 @@ export async function subscribeToPush(options?: {
         deviceId: options?.deviceId || null,
         tournamentRoomCode: options?.tournamentRoomCode || null,
         universalPlayerId: options?.universalPlayerId || null,
+        directorPin: options?.directorPin || null,
       }),
     });
 

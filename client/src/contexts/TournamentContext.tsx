@@ -21,6 +21,7 @@ interface TournamentContextValue {
   error: string | null;
   deviceId: string;
   isDirector: boolean;
+  directorPin: string | null;
 
   joinRoom: (code: string) => Promise<boolean>;
   leaveRoom: () => void;
@@ -318,6 +319,7 @@ export function TournamentProvider({ children }: { children: ReactNode }) {
         error,
         deviceId,
         isDirector,
+        directorPin,
         joinRoom,
         leaveRoom,
         setIsDirector,

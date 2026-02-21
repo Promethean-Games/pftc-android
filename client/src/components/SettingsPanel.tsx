@@ -105,9 +105,10 @@ export function SettingsPanel({ settings, players, onUpdateSettings, onAddPlayer
       subscribeToPush({
         deviceId,
         tournamentRoomCode: tournament.roomCode,
+        directorPin: tournament.directorPin || undefined,
       });
     }
-  }, [tournament.isConnected, tournament.roomCode, pushSubscribed]);
+  }, [tournament.isConnected, tournament.roomCode, pushSubscribed, tournament.directorPin]);
 
   const handleTogglePush = async (enable: boolean) => {
     setPushLoading(true);
@@ -117,6 +118,7 @@ export function SettingsPanel({ settings, players, onUpdateSettings, onAddPlayer
         const success = await subscribeToPush({
           deviceId,
           tournamentRoomCode: tournament.roomCode || undefined,
+          directorPin: tournament.directorPin || undefined,
         });
         setPushSubscribed(success);
       } else {

@@ -83,6 +83,7 @@ export interface IStorage {
   upsertPushSubscription(sub: InsertPushSubscription): Promise<PushSubscription>;
   removePushSubscription(endpoint: string): Promise<void>;
   getSubscriptionsForTournament(roomCode: string): Promise<PushSubscription[]>;
+  getDirectorSubscriptionsForTournament(roomCode: string): Promise<PushSubscription[]>;
   getSubscriptionsForPlayer(universalPlayerId: number): Promise<PushSubscription[]>;
   getAllPushSubscriptions(): Promise<PushSubscription[]>;
 }
@@ -597,6 +598,7 @@ export class DatabaseStorage implements IStorage {
           deviceId: sub.deviceId,
           tournamentRoomCode: sub.tournamentRoomCode,
           universalPlayerId: sub.universalPlayerId,
+          isDirector: sub.isDirector ?? false,
         },
       })
       .returning();
@@ -609,6 +611,15 @@ export class DatabaseStorage implements IStorage {
 
   async getSubscriptionsForTournament(roomCode: string): Promise<PushSubscription[]> {
     return db.select().from(pushSubscriptions).where(eq(pushSubscriptions.tournamentRoomCode, roomCode));
+  }
+
+  async getDirectorSubscriptionsForTournament(roomCode: string): Promise<PushSubscription[]> {
+    return db.select().from(pushSubscriptions).where(
+      and(
+        eq(pushSubscriptions.tournamentRoomCode, roomCode),
+        eq(pushSubscriptions.isDirector, true)
+      )
+    );
   }
 
   async getSubscriptionsForPlayer(universalPlayerId: number): Promise<PushSubscription[]> {
