@@ -459,10 +459,12 @@ export function DirectorPortal({ onClose }: DirectorPortalProps) {
 
   // Calculate stats
   const totalStrokes = tournament.leaderboard.reduce((sum, e) => sum + e.totalStrokes, 0);
-  const holesPlayed = tournament.leaderboard.reduce((sum, e) => sum + e.holesCompleted, 0);
-  const averageScore = tournament.leaderboard.length > 0 
-    ? (tournament.leaderboard.reduce((sum, e) => sum + e.relativeToPar, 0) / tournament.leaderboard.length).toFixed(1)
-    : "0";
+  const leadingHole = tournament.leaderboard.length > 0
+    ? Math.max(...tournament.leaderboard.map(e => e.holesCompleted))
+    : 0;
+  const laggingHole = tournament.leaderboard.length > 0
+    ? Math.min(...tournament.leaderboard.map(e => e.holesCompleted))
+    : 0;
 
   const themeClasses = {
     "default": "bg-background text-foreground",
@@ -607,12 +609,12 @@ export function DirectorPortal({ onClose }: DirectorPortalProps) {
                 <p className="text-xs opacity-70">Groups</p>
               </Card>
               <Card className="p-4 text-center">
-                <p className="text-3xl font-bold">{holesPlayed}</p>
-                <p className="text-xs opacity-70">Holes Played</p>
+                <p className="text-3xl font-bold">{laggingHole}</p>
+                <p className="text-xs opacity-70">Lagging Hole</p>
               </Card>
               <Card className="p-4 text-center">
-                <p className="text-3xl font-bold">{averageScore}</p>
-                <p className="text-xs opacity-70">Avg to Par</p>
+                <p className="text-3xl font-bold">{leadingHole}</p>
+                <p className="text-xs opacity-70">Leading Hole</p>
               </Card>
             </div>
 
