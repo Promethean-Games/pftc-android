@@ -141,10 +141,11 @@ export class DatabaseStorage implements IStorage {
         .where(eq(tournamentScores.tournamentPlayerId, player.id));
       
       if (scores.length > 0) {
+        const uniqueHoles = new Set(scores.map(s => s.hole));
         const totalStrokes = scores.reduce((sum, s) => sum + s.strokes, 0);
         const totalPar = scores.reduce((sum, s) => sum + s.par, 0);
         playerStats.push({
-          holesCompleted: scores.length,
+          holesCompleted: uniqueHoles.size,
           totalStrokes,
           totalPar,
         });
@@ -344,10 +345,15 @@ export class DatabaseStorage implements IStorage {
 
     for (const player of players) {
       const scores = await this.getPlayerScores(player.id);
-      const totalStrokes = scores.reduce((sum, s) => sum + s.strokes + s.scratches + s.penalties, 0);
-      const totalPar = scores.reduce((sum, s) => sum + s.par, 0);
-      const totalScratches = scores.reduce((sum, s) => sum + s.scratches, 0);
-      const totalPenalties = scores.reduce((sum, s) => sum + s.penalties, 0);
+      const uniqueHoles = new Set(scores.map(s => s.hole));
+      const dedupedScores = Array.from(uniqueHoles).map(hole => {
+        const holeScores = scores.filter(s => s.hole === hole);
+        return holeScores[holeScores.length - 1];
+      });
+      const totalStrokes = dedupedScores.reduce((sum, s) => sum + s.strokes + s.scratches + s.penalties, 0);
+      const totalPar = dedupedScores.reduce((sum, s) => sum + s.par, 0);
+      const totalScratches = dedupedScores.reduce((sum, s) => sum + s.scratches, 0);
+      const totalPenalties = dedupedScores.reduce((sum, s) => sum + s.penalties, 0);
 
       leaderboard.push({
         playerId: player.id,
@@ -355,7 +361,7 @@ export class DatabaseStorage implements IStorage {
         groupName: player.groupName,
         totalStrokes,
         totalPar,
-        holesCompleted: scores.length,
+        holesCompleted: uniqueHoles.size,
         relativeToPar: totalStrokes - totalPar,
         totalScratches,
         totalPenalties,
