@@ -220,7 +220,6 @@ export function SummaryScreen({ players, scores, onNewGame, onSubmitToSheets, is
               <div className="space-y-2">
                 {leaderboard.map((entry, index) => {
                   const stats = calculatePlayerTotal(scores[entry.player.id] || []);
-                  const isLeader = index === 0;
                   const showPenalties = !tournament.isConnected;
                   
                   return (
@@ -228,7 +227,9 @@ export function SummaryScreen({ players, scores, onNewGame, onSubmitToSheets, is
                       key={entry.player.id}
                       className={cn(
                         "flex items-center gap-2 p-3 rounded-lg border",
-                        isLeader && "border-primary border-2"
+                        index === 0 && "border-yellow-500 border-2 bg-yellow-500/5",
+                        index === 1 && "border-gray-400 border-2 bg-gray-400/5",
+                        index === 2 && "border-amber-700 border-2 bg-amber-700/5"
                       )}
                       data-testid={`leaderboard-${entry.player.id}`}
                     >
@@ -253,9 +254,6 @@ export function SummaryScreen({ players, scores, onNewGame, onSubmitToSheets, is
                           <div className="text-xs text-muted-foreground">Penalty</div>
                         </div>
                       )}
-                      <div className="text-center text-sm font-bold flex-shrink-0">
-                        #{index + 1}
-                      </div>
                     </div>
                   );
                 })}
@@ -283,18 +281,20 @@ export function SummaryScreen({ players, scores, onNewGame, onSubmitToSheets, is
                         <TableHead className="text-center min-w-[60px]">Penalty</TableHead>
                       )}
                       <TableHead className="text-center min-w-[60px] font-bold">Total</TableHead>
-                      <TableHead className="text-center min-w-[50px]">Rank</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {leaderboard.map((entry, index) => {
                       const playerScores = scores[entry.player.id] || [];
                       const stats = calculatePlayerTotal(playerScores);
-                      const isLeader = index === 0;
                       const rawStrokes = playerScores.reduce((sum, s) => sum + s.strokes, 0);
                       
                       return (
-                        <TableRow key={entry.player.id} className={cn(isLeader && "border-2 border-primary")}>
+                        <TableRow key={entry.player.id} className={cn(
+                          index === 0 && "border-2 border-yellow-500",
+                          index === 1 && "border-2 border-gray-400",
+                          index === 2 && "border-2 border-amber-700"
+                        )}>
                           <TableCell className="font-semibold sticky left-0 bg-card">
                             <div className="flex items-center gap-2">
                               <div 
@@ -328,7 +328,6 @@ export function SummaryScreen({ players, scores, onNewGame, onSubmitToSheets, is
                             <TableCell className="text-center">{stats.totalPenalties}</TableCell>
                           )}
                           <TableCell className="text-center font-bold">{entry.total}</TableCell>
-                          <TableCell className="text-center font-bold">#{index + 1}</TableCell>
                         </TableRow>
                       );
                     })}

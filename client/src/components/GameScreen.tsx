@@ -331,14 +331,16 @@ export function GameScreen({
         >
           Scratch (+1)
         </Button>
-        <Button
-          variant="destructive"
-          className="flex-1 h-12"
-          onClick={() => setPenalties(penalties + 1)}
-          data-testid="button-penalty"
-        >
-          Penalty (+1)
-        </Button>
+        {!tournament.isConnected && (
+          <Button
+            variant="destructive"
+            className="flex-1 h-12"
+            onClick={() => setPenalties(penalties + 1)}
+            data-testid="button-penalty"
+          >
+            Penalty (+1)
+          </Button>
+        )}
       </div>
 
       {/* Score Display & Controls */}
