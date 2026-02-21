@@ -6,9 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Send, CheckCircle, AlertCircle, Zap, Loader2, User, Users, Bell, BellOff, Clock, Search } from "lucide-react";
+import { Send, CheckCircle, AlertCircle, Zap, Loader2, User, Users, Bell, BellOff, Clock, Search, ShieldAlert, X, Inbox } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
+import { queryClient } from "@/lib/queryClient";
 import type { UniversalPlayer } from "@shared/schema";
+import { cn } from "@/lib/utils";
 
 interface NotificationsTabProps {
   directorPin: string;
@@ -47,6 +49,16 @@ interface SentNotification {
   title: string;
   target: string;
   timestamp: Date;
+}
+
+interface CheatAlert {
+  id: number;
+  roomCode: string;
+  playerName: string;
+  hole: number;
+  par: number;
+  scratches: number;
+  timestamp: string;
 }
 
 const PRESET_TEMPLATES: PresetTemplate[] = [
@@ -145,7 +157,101 @@ function applyLeaderboardData(template: string, leaderboard: LeaderboardEntry[])
   return result;
 }
 
-export function NotificationsTab({ directorPin, initialPlayerId, initialPlayerName }: NotificationsTabProps) {
+function ReceivedPane({ directorPin }: { directorPin: string }) {
+  const { data: alerts = [], isLoading } = useQuery<CheatAlert[]>({
+    queryKey: ["/api/alerts", directorPin],
+    queryFn: async () => {
+      const res = await fetch(`/api/alerts?directorPin=${encodeURIComponent(directorPin)}`);
+      if (!res.ok) return [];
+      return res.json();
+    },
+    refetchInterval: 10000,
+  });
+
+  const [dismissing, setDismissing] = useState<number | null>(null);
+
+  const handleDismiss = async (id: number) => {
+    setDismissing(id);
+    try {
+      await apiRequest("POST", `/api/alerts/${id}/dismiss`, { directorPin });
+      queryClient.invalidateQueries({ queryKey: ["/api/alerts", directorPin] });
+    } catch {
+    } finally {
+      setDismissing(null);
+    }
+  };
+
+  return (
+    <div className="p-4 space-y-4">
+      {isLoading && (
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+        </div>
+      )}
+
+      {!isLoading && alerts.length === 0 && (
+        <Card className="p-6">
+          <div className="flex flex-col items-center text-center gap-3">
+            <Inbox className="w-10 h-10 text-muted-foreground" />
+            <div>
+              <p className="font-medium">No alerts</p>
+              <p className="text-sm text-muted-foreground">
+                Cheat detection alerts will appear here when suspicious scores are submitted.
+              </p>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {alerts.map((alert) => (
+        <Card
+          key={alert.id}
+          className="p-4"
+          data-testid={`alert-${alert.id}`}
+        >
+          <div className="flex items-start gap-3">
+            <ShieldAlert className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-sm">Suspicious Score</p>
+              <p className="text-sm mt-1">
+                <span className="font-medium">{alert.playerName}</span> scored par ({alert.par}) on hole {alert.hole} with {alert.scratches} scratch{alert.scratches > 1 ? "es" : ""}.
+              </p>
+              <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
+                <span>Room: {alert.roomCode}</span>
+                <span>{new Date(alert.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+              </div>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => handleDismiss(alert.id)}
+              disabled={dismissing === alert.id}
+              data-testid={`button-dismiss-alert-${alert.id}`}
+            >
+              {dismissing === alert.id ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <X className="w-4 h-4" />
+              )}
+            </Button>
+          </div>
+        </Card>
+      ))}
+
+      <Card className="p-4">
+        <h3 className="font-semibold mb-2">About Alerts</h3>
+        <ul className="text-sm text-muted-foreground space-y-1">
+          <li>Alerts are triggered when a player's total score equals par but includes scratches.</li>
+          <li>This may indicate the score was not entered correctly.</li>
+          <li>Dismiss an alert after reviewing it.</li>
+          <li>Alerts refresh automatically every 10 seconds.</li>
+        </ul>
+      </Card>
+    </div>
+  );
+}
+
+function SendPane({ directorPin, initialPlayerId, initialPlayerName }: NotificationsTabProps) {
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [targetRoom, setTargetRoom] = useState<string>("all");
@@ -589,6 +695,59 @@ export function NotificationsTab({ directorPin, initialPlayerId, initialPlayerNa
           <li>You can always edit the pre-filled text before sending.</li>
         </ul>
       </Card>
+    </div>
+  );
+}
+
+export function NotificationsTab({ directorPin, initialPlayerId, initialPlayerName }: NotificationsTabProps) {
+  const [pane, setPane] = useState<"send" | "received">("received");
+
+  const { data: alerts = [] } = useQuery<CheatAlert[]>({
+    queryKey: ["/api/alerts", directorPin],
+    queryFn: async () => {
+      const res = await fetch(`/api/alerts?directorPin=${encodeURIComponent(directorPin)}`);
+      if (!res.ok) return [];
+      return res.json();
+    },
+    refetchInterval: 10000,
+  });
+
+  const alertCount = alerts.length;
+
+  return (
+    <div>
+      <div className="flex gap-2 px-4 pt-4">
+        <Button
+          variant={pane === "send" ? "default" : "outline"}
+          className="flex-1"
+          onClick={() => setPane("send")}
+          data-testid="button-pane-send"
+        >
+          <Send className="w-4 h-4 mr-1.5" />
+          Send
+        </Button>
+        <Button
+          variant={pane === "received" ? "default" : "outline"}
+          className={cn("flex-1 relative", alertCount > 0 && pane !== "received" && "border-amber-500")}
+          onClick={() => setPane("received")}
+          data-testid="button-pane-received"
+        >
+          <ShieldAlert className="w-4 h-4 mr-1.5" />
+          Alerts
+          {alertCount > 0 && (
+            <span className="ml-1.5 bg-amber-500 text-white text-xs font-bold rounded-full min-w-[1.25rem] h-5 flex items-center justify-center px-1" data-testid="text-alert-count">
+              {alertCount}
+            </span>
+          )}
+        </Button>
+      </div>
+
+      {pane === "send" && (
+        <SendPane directorPin={directorPin} initialPlayerId={initialPlayerId} initialPlayerName={initialPlayerName} />
+      )}
+      {pane === "received" && (
+        <ReceivedPane directorPin={directorPin} />
+      )}
     </div>
   );
 }

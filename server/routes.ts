@@ -32,6 +32,49 @@ function deletePlayerSession(token: string) {
   playerSessions.delete(token);
 }
 
+interface CheatAlert {
+  id: number;
+  roomCode: string;
+  playerName: string;
+  hole: number;
+  par: number;
+  scratches: number;
+  timestamp: Date;
+  dismissed: boolean;
+}
+
+let cheatAlertIdCounter = 0;
+const cheatAlerts: CheatAlert[] = [];
+
+function addCheatAlert(roomCode: string, playerName: string, hole: number, par: number, scratches: number) {
+  cheatAlerts.push({
+    id: ++cheatAlertIdCounter,
+    roomCode,
+    playerName,
+    hole,
+    par,
+    scratches,
+    timestamp: new Date(),
+    dismissed: false,
+  });
+  if (cheatAlerts.length > 500) {
+    cheatAlerts.splice(0, cheatAlerts.length - 500);
+  }
+}
+
+function getCheatAlertsForTournament(roomCode: string): CheatAlert[] {
+  return cheatAlerts.filter(a => a.roomCode === roomCode && !a.dismissed);
+}
+
+function getAllCheatAlerts(): CheatAlert[] {
+  return cheatAlerts.filter(a => !a.dismissed);
+}
+
+function dismissCheatAlert(id: number) {
+  const alert = cheatAlerts.find(a => a.id === id);
+  if (alert) alert.dismissed = true;
+}
+
 const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || "";
 const VAPID_SUBJECT = process.env.VAPID_SUBJECT || "mailto:admin@parforthecourse.app";
 
@@ -1002,14 +1045,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const players = await storage.getPlayersInTournament(tournament.id);
           const player = players.find(p => p.id === parsed.data.tournamentPlayerId);
           const playerName = player?.playerName || "Unknown player";
-          sendPushToTournament(
-            req.params.roomCode,
-            "Cheat Detection Alert",
-            `${playerName} scored par (${par}) on hole ${hole} with ${scratches} scratch${scratches > 1 ? "es" : ""}. Please verify.`,
-            `cheat-${req.params.roomCode}-${parsed.data.tournamentPlayerId}-${hole}`
-          );
+          addCheatAlert(req.params.roomCode, playerName, hole, par, scratches);
         } catch (err) {
-          console.error("Error sending cheat detection notification:", err);
+          console.error("Error creating cheat detection alert:", err);
         }
       }
 
@@ -1096,7 +1134,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const results = [];
-      const cheatAlerts: { playerName: string; par: number; hole: number; scratches: number }[] = [];
+      const pendingAlerts: { playerName: string; par: number; hole: number; scratches: number }[] = [];
       let tournamentPlayersCache: any[] | null = null;
 
       for (const score of parsed.data.scores) {
@@ -1116,7 +1154,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             tournamentPlayersCache = await storage.getPlayersInTournament(tournament.id);
           }
           const player = tournamentPlayersCache.find(p => p.id === score.tournamentPlayerId);
-          cheatAlerts.push({
+          pendingAlerts.push({
             playerName: player?.playerName || "Unknown player",
             par: score.par,
             hole: score.hole,
@@ -1125,19 +1163,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      for (const alert of cheatAlerts) {
-        sendPushToTournament(
-          req.params.roomCode,
-          "Cheat Detection Alert",
-          `${alert.playerName} scored par (${alert.par}) on hole ${alert.hole} with ${alert.scratches} scratch${alert.scratches > 1 ? "es" : ""}. Please verify.`,
-          `cheat-${req.params.roomCode}-${alert.hole}`
-        );
+      for (const alert of pendingAlerts) {
+        addCheatAlert(req.params.roomCode, alert.playerName, alert.hole, alert.par, alert.scratches);
       }
 
       res.json(results);
     } catch (error) {
       console.error("Error batch syncing scores:", error);
       res.status(500).json({ error: "Failed to batch sync scores" });
+    }
+  });
+
+  // ===== CHEAT DETECTION ALERTS API =====
+
+  app.get("/api/alerts", async (req, res) => {
+    try {
+      const directorPin = req.query.directorPin as string;
+      if (directorPin !== MASTER_DIRECTOR_PIN) {
+        return res.status(403).json({ error: "Invalid director PIN" });
+      }
+      const roomCode = req.query.roomCode as string | undefined;
+      const alerts = roomCode ? getCheatAlertsForTournament(roomCode) : getAllCheatAlerts();
+      res.json(alerts);
+    } catch (error) {
+      console.error("Error fetching alerts:", error);
+      res.status(500).json({ error: "Failed to fetch alerts" });
+    }
+  });
+
+  app.post("/api/alerts/:id/dismiss", async (req, res) => {
+    try {
+      const directorPin = req.body.directorPin as string;
+      if (directorPin !== MASTER_DIRECTOR_PIN) {
+        return res.status(403).json({ error: "Invalid director PIN" });
+      }
+      dismissCheatAlert(parseInt(req.params.id));
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error dismissing alert:", error);
+      res.status(500).json({ error: "Failed to dismiss alert" });
     }
   });
 
