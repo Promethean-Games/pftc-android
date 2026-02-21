@@ -32,7 +32,8 @@ import {
   Smartphone,
   Unlink,
   ClipboardList,
-  Save
+  Save,
+  ArrowUpDown,
 } from "lucide-react";
 import { useTournament } from "@/contexts/TournamentContext";
 import { apiRequest } from "@/lib/queryClient";
@@ -111,6 +112,7 @@ export function DirectorPortal({ onClose }: DirectorPortalProps) {
   const [isShuffling, setIsShuffling] = useState(false);
   const [showGroupTools, setShowGroupTools] = useState(false);
   const [isStarting, setIsStarting] = useState(false);
+  const [playerSortBy, setPlayerSortBy] = useState<"name" | "hole" | "score">("name");
   const [isCompleting, setIsCompleting] = useState(false);
   const [showConfirmComplete, setShowConfirmComplete] = useState(false);
 
@@ -448,12 +450,34 @@ export function DirectorPortal({ onClose }: DirectorPortalProps) {
     setIsStarting(false);
   };
 
+  const leaderboardMap = new Map(
+    tournament.leaderboard.map(e => [e.playerId, e])
+  );
+
+  const sortPlayers = (players: typeof tournament.allPlayers) => {
+    return [...players].sort((a, b) => {
+      const aEntry = leaderboardMap.get(a.id);
+      const bEntry = leaderboardMap.get(b.id);
+      if (playerSortBy === "name") {
+        return a.playerName.localeCompare(b.playerName);
+      } else if (playerSortBy === "hole") {
+        return (bEntry?.holesCompleted ?? 0) - (aEntry?.holesCompleted ?? 0);
+      } else {
+        return (aEntry?.relativeToPar ?? 0) - (bEntry?.relativeToPar ?? 0);
+      }
+    });
+  };
+
   const groupedPlayers = tournament.allPlayers.reduce((acc, player) => {
     const group = player.groupName || "Unassigned";
     if (!acc[group]) acc[group] = [];
     acc[group].push(player);
     return acc;
   }, {} as Record<string, typeof tournament.allPlayers>);
+
+  Object.keys(groupedPlayers).forEach(key => {
+    groupedPlayers[key] = sortPlayers(groupedPlayers[key]);
+  });
 
   // Calculate stats
   const totalStrokes = tournament.leaderboard.reduce((sum, e) => sum + e.totalStrokes, 0);
@@ -1000,10 +1024,26 @@ export function DirectorPortal({ onClose }: DirectorPortalProps) {
 
             {/* Player List */}
             <Card className="p-4">
-              <h3 className="font-semibold mb-3 flex items-center gap-2">
-                <Users className="w-4 h-4" />
-                All Players ({tournament.allPlayers.length})
-              </h3>
+              <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
+                <h3 className="font-semibold flex items-center gap-2">
+                  <Users className="w-4 h-4" />
+                  All Players ({tournament.allPlayers.length})
+                </h3>
+                <div className="flex items-center gap-1">
+                  <ArrowUpDown className="w-3 h-3 opacity-50" />
+                  {(["name", "hole", "score"] as const).map(opt => (
+                    <Button
+                      key={opt}
+                      variant={playerSortBy === opt ? "default" : "ghost"}
+                      size="sm"
+                      onClick={() => setPlayerSortBy(opt)}
+                      data-testid={`button-sort-${opt}`}
+                    >
+                      {opt.charAt(0).toUpperCase() + opt.slice(1)}
+                    </Button>
+                  ))}
+                </div>
+              </div>
               {Object.entries(groupedPlayers).map(([groupName, players]) => (
                 <div key={groupName} className="mb-4">
                   <h4 className="text-sm font-medium opacity-70 mb-2 flex items-center gap-2">
@@ -1011,7 +1051,9 @@ export function DirectorPortal({ onClose }: DirectorPortalProps) {
                     {groupName} ({players.length})
                   </h4>
                   <div className="space-y-1">
-                    {players.map(player => (
+                    {players.map(player => {
+                      const entry = leaderboardMap.get(player.id);
+                      return (
                       <div
                         key={player.id}
                         className="flex items-center gap-2 p-3 rounded-lg hover:bg-black/5 dark:hover:bg-white/5"
@@ -1029,14 +1071,24 @@ export function DirectorPortal({ onClose }: DirectorPortalProps) {
                               </span>
                             )}
                           </div>
-                          <p className="text-xs opacity-60 flex items-center gap-1">
+                          <p className="text-xs opacity-60 flex items-center gap-2 flex-wrap">
                             {player.deviceId ? (
-                              <>
+                              <span className="flex items-center gap-1">
                                 <Smartphone className="w-3 h-3" />
-                                Device assigned
+                                Device
+                              </span>
+                            ) : (
+                              <span>No device</span>
+                            )}
+                            {entry ? (
+                              <>
+                                <span>Hole {entry.holesCompleted}/18</span>
+                                <span className={entry.relativeToPar < 0 ? "text-green-600 dark:text-green-400 font-medium" : entry.relativeToPar > 0 ? "text-red-600 dark:text-red-400 font-medium" : "font-medium"}>
+                                  {entry.relativeToPar === 0 ? "E" : entry.relativeToPar > 0 ? `+${entry.relativeToPar}` : entry.relativeToPar}
+                                </span>
                               </>
                             ) : (
-                              "No device"
+                              <span>No scores</span>
                             )}
                           </p>
                         </div>
@@ -1093,7 +1145,8 @@ export function DirectorPortal({ onClose }: DirectorPortalProps) {
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>
-                    ))}
+                    );
+                    })}
                   </div>
                 </div>
               ))}
