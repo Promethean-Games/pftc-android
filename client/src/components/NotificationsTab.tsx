@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Send, CheckCircle, AlertCircle, Zap, Loader2, User, Users, Bell, BellOff, Clock, Search, ShieldAlert, X, Inbox, Timer, ArrowDownCircle } from "lucide-react";
+import { Send, CheckCircle, AlertCircle, Zap, Loader2, User, Users, Bell, BellOff, Clock, Search, ShieldAlert, X, Inbox, Timer, ArrowDownCircle, ArrowUpDown } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
 import type { UniversalPlayer } from "@shared/schema";
@@ -159,6 +159,8 @@ function applyLeaderboardData(template: string, leaderboard: LeaderboardEntry[])
   return result;
 }
 
+type AlertSortField = "time" | "player" | "type";
+
 function ReceivedPane({ directorPin }: { directorPin: string }) {
   const { data: alerts = [], isLoading } = useQuery<CheatAlert[]>({
     queryKey: ["/api/alerts", directorPin],
@@ -171,6 +173,19 @@ function ReceivedPane({ directorPin }: { directorPin: string }) {
   });
 
   const [dismissing, setDismissing] = useState<number | null>(null);
+  const [sortField, setSortField] = useState<AlertSortField>("time");
+
+  const sortedAlerts = [...alerts].sort((a, b) => {
+    if (sortField === "player") {
+      const cmp = a.playerName.localeCompare(b.playerName);
+      return cmp !== 0 ? cmp : new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+    }
+    if (sortField === "type") {
+      const cmp = a.alertType.localeCompare(b.alertType);
+      return cmp !== 0 ? cmp : new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+    }
+    return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+  });
 
   const handleDismiss = async (id: number) => {
     setDismissing(id);
@@ -185,6 +200,22 @@ function ReceivedPane({ directorPin }: { directorPin: string }) {
 
   return (
     <div className="p-4 space-y-4">
+      {!isLoading && alerts.length > 0 && (
+        <div className="flex items-center gap-2">
+          <ArrowUpDown className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+          <Select value={sortField} onValueChange={(v) => setSortField(v as AlertSortField)}>
+            <SelectTrigger className="w-40" data-testid="select-alert-sort">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="time">Newest First</SelectItem>
+              <SelectItem value="player">By Player</SelectItem>
+              <SelectItem value="type">By Alert Type</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
       {isLoading && (
         <div className="flex items-center justify-center py-8">
           <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
@@ -205,7 +236,7 @@ function ReceivedPane({ directorPin }: { directorPin: string }) {
         </Card>
       )}
 
-      {alerts.map((alert) => {
+      {sortedAlerts.map((alert) => {
         const alertConfig: Record<string, { icon: typeof ShieldAlert; color: string; label: string }> = {
           par_with_scratch: { icon: ShieldAlert, color: "text-amber-500", label: "Suspicious Score" },
           below_par_with_scratch: { icon: AlertCircle, color: "text-red-500", label: "Highly Suspicious" },
