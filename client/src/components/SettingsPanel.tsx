@@ -377,14 +377,29 @@ export function SettingsPanel({ settings, players, onUpdateSettings, onAddPlayer
           </Card>
 
           <div className="pt-4">
-            <Button
-              variant="destructive"
-              className="w-full h-12"
-              onClick={onEndGame}
-              data-testid="button-end-game"
-            >
-              End Game
-            </Button>
+            {tournament.roomCode ? (
+              <Button
+                variant="destructive"
+                className="w-full h-12"
+                onClick={() => {
+                  tournament.leaveRoom();
+                  onEndGame();
+                }}
+                data-testid="button-logout-tournament"
+              >
+                <LogOut className="w-4 h-4 mr-2" />
+                Log Out
+              </Button>
+            ) : (
+              <Button
+                variant="destructive"
+                className="w-full h-12"
+                onClick={onEndGame}
+                data-testid="button-end-game"
+              >
+                End Game
+              </Button>
+            )}
           </div>
         </div>
       </div>
