@@ -5,10 +5,12 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { UserPlus, Trophy, LogOut, Users, Shield, Bell } from "lucide-react";
+import { UserPlus, Trophy, LogOut, Users, Shield, Bell, User } from "lucide-react";
 import { useTournament } from "@/contexts/TournamentContext";
 import { PlayerSelectionDialog } from "./PlayerSelectionDialog";
 import { DirectorPortal } from "./DirectorPortal";
+import { PlayerLoginDialog, type PlayerProfile, type TournamentHistoryEntry } from "./PlayerLoginDialog";
+import { PlayerProfilePage } from "./PlayerProfilePage";
 import { isPushSupported, isCurrentlySubscribed, subscribeToPush, unsubscribeFromPush } from "@/lib/pushNotifications";
 import type { Settings, Player } from "@shared/schema";
 
@@ -34,8 +36,63 @@ export function SettingsPanel({ settings, players, onUpdateSettings, onAddPlayer
   const [pushSupported, setPushSupported] = useState(false);
   const [pushSubscribed, setPushSubscribed] = useState(false);
   const [pushLoading, setPushLoading] = useState(false);
+  const [showPlayerLogin, setShowPlayerLogin] = useState(false);
+  const [loggedInPlayer, setLoggedInPlayer] = useState<PlayerProfile | null>(() => {
+    const saved = localStorage.getItem("settingsLoggedInPlayer");
+    return saved ? JSON.parse(saved) : null;
+  });
+  const [playerHistory, setPlayerHistory] = useState<TournamentHistoryEntry[]>([]);
+  const [playerPin, setPlayerPin] = useState<string | null>(() => {
+    return localStorage.getItem("settingsPlayerPin");
+  });
+  const [showProfile, setShowProfile] = useState(false);
 
   const tournament = useTournament();
+
+  useEffect(() => {
+    if (loggedInPlayer && playerPin && !playerHistory.length) {
+      const sessionToken = localStorage.getItem("playerSessionToken");
+      if (sessionToken) {
+        fetch("/api/player/session", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ sessionToken }),
+        })
+          .then((res) => res.ok ? res.json() : null)
+          .then((data) => {
+            if (data) setPlayerHistory(data.history || []);
+          })
+          .catch(() => {});
+      }
+    }
+  }, [loggedInPlayer, playerPin]);
+
+  const handlePlayerLoginSuccess = (player: PlayerProfile, history: TournamentHistoryEntry[], pin: string) => {
+    setLoggedInPlayer(player);
+    setPlayerHistory(history);
+    setPlayerPin(pin);
+    localStorage.setItem("settingsLoggedInPlayer", JSON.stringify(player));
+    localStorage.setItem("settingsPlayerPin", pin);
+    setShowProfile(true);
+  };
+
+  const handlePlayerLogout = () => {
+    const sessionToken = localStorage.getItem("playerSessionToken");
+    if (sessionToken) {
+      fetch("/api/player/logout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionToken }),
+      }).catch(() => {});
+    }
+    setLoggedInPlayer(null);
+    setPlayerHistory([]);
+    setPlayerPin(null);
+    setShowProfile(false);
+    localStorage.removeItem("settingsLoggedInPlayer");
+    localStorage.removeItem("settingsPlayerPin");
+    localStorage.removeItem("playerSessionToken");
+  };
 
   useEffect(() => {
     isPushSupported().then(setPushSupported);
@@ -372,6 +429,52 @@ export function SettingsPanel({ settings, players, onUpdateSettings, onAddPlayer
           )}
 
           <Card className="p-4">
+            <h3 className="font-semibold mb-3 flex items-center gap-2">
+              <User className="w-4 h-4" />
+              My Profile
+            </h3>
+            {loggedInPlayer ? (
+              <div className="space-y-2">
+                <p className="text-sm">
+                  Signed in as <span className="font-semibold">{loggedInPlayer.name}</span>
+                  <span className="text-muted-foreground ml-1">({loggedInPlayer.uniqueCode})</span>
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    className="flex-1"
+                    onClick={() => setShowProfile(true)}
+                    data-testid="button-view-profile"
+                  >
+                    View Profile
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={handlePlayerLogout}
+                    data-testid="button-player-signout"
+                  >
+                    Sign Out
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">
+                  Sign in with your player code to view your stats and handicap.
+                </p>
+                <Button
+                  className="w-full"
+                  variant="outline"
+                  onClick={() => setShowPlayerLogin(true)}
+                  data-testid="button-player-signin"
+                >
+                  <User className="w-4 h-4 mr-2" />
+                  Player Sign In
+                </Button>
+              </div>
+            )}
+          </Card>
+
+          <Card className="p-4">
             <h3 className="font-semibold mb-3">About</h3>
             <p className="text-sm text-muted-foreground mb-2">Par for the Course</p>
             <p className="text-xs text-muted-foreground">Version 2.1.0</p>
@@ -409,6 +512,31 @@ export function SettingsPanel({ settings, players, onUpdateSettings, onAddPlayer
         <PlayerSelectionDialog
           onClose={() => setShowPlayerSelection(false)}
         />
+      )}
+
+      <PlayerLoginDialog
+        isOpen={showPlayerLogin}
+        onClose={() => setShowPlayerLogin(false)}
+        onLoginSuccess={handlePlayerLoginSuccess}
+      />
+
+      {showProfile && loggedInPlayer && playerPin && (
+        <div className="fixed inset-0 z-50 bg-background">
+          <PlayerProfilePage
+            player={loggedInPlayer}
+            history={playerHistory}
+            playerPin={playerPin}
+            onLogout={() => {
+              handlePlayerLogout();
+              setShowProfile(false);
+            }}
+            onBack={() => setShowProfile(false)}
+            onPlayerUpdated={(updatedPlayer) => {
+              setLoggedInPlayer(updatedPlayer);
+              localStorage.setItem("settingsLoggedInPlayer", JSON.stringify(updatedPlayer));
+            }}
+          />
+        </div>
       )}
     </div>
   );
