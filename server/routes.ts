@@ -32,6 +32,8 @@ function deletePlayerSession(token: string) {
   playerSessions.delete(token);
 }
 
+type AlertType = "par_with_scratch" | "below_par_with_scratch" | "rapid_scoring" | "score_reduction";
+
 interface CheatAlert {
   id: number;
   roomCode: string;
@@ -39,6 +41,8 @@ interface CheatAlert {
   hole: number;
   par: number;
   scratches: number;
+  alertType: AlertType;
+  message: string;
   timestamp: Date;
   dismissed: boolean;
 }
@@ -46,7 +50,9 @@ interface CheatAlert {
 let cheatAlertIdCounter = 0;
 const cheatAlerts: CheatAlert[] = [];
 
-function addCheatAlert(roomCode: string, playerName: string, hole: number, par: number, scratches: number) {
+const playerScoreTimestamps = new Map<string, number[]>();
+
+function addCheatAlert(roomCode: string, playerName: string, hole: number, par: number, scratches: number, alertType: AlertType, message: string) {
   cheatAlerts.push({
     id: ++cheatAlertIdCounter,
     roomCode,
@@ -54,12 +60,25 @@ function addCheatAlert(roomCode: string, playerName: string, hole: number, par: 
     hole,
     par,
     scratches,
+    alertType,
+    message,
     timestamp: new Date(),
     dismissed: false,
   });
   if (cheatAlerts.length > 500) {
     cheatAlerts.splice(0, cheatAlerts.length - 500);
   }
+}
+
+function trackScoreTiming(playerId: number, roomCode: string): boolean {
+  const key = `${roomCode}-${playerId}`;
+  const now = Date.now();
+  const timestamps = playerScoreTimestamps.get(key) || [];
+  timestamps.push(now);
+  const twoMinutesAgo = now - 2 * 60 * 1000;
+  const recent = timestamps.filter(t => t > twoMinutesAgo);
+  playerScoreTimestamps.set(key, recent);
+  return recent.length >= 3;
 }
 
 function getCheatAlertsForTournament(roomCode: string): CheatAlert[] {
@@ -73,6 +92,60 @@ function getAllCheatAlerts(): CheatAlert[] {
 function dismissCheatAlert(id: number) {
   const alert = cheatAlerts.find(a => a.id === id);
   if (alert) alert.dismissed = true;
+}
+
+async function runCheatDetection(
+  roomCode: string,
+  tournamentId: number,
+  tournamentPlayerId: number,
+  hole: number,
+  par: number,
+  strokes: number,
+  scratches: number,
+  playersCache?: any[]
+) {
+  try {
+    let players = playersCache;
+    if (!players) {
+      players = await storage.getPlayersInTournament(tournamentId);
+    }
+    const player = players.find(p => p.id === tournamentPlayerId);
+    const playerName = player?.playerName || "Unknown player";
+    const total = strokes + scratches;
+
+    if (scratches > 0 && par > 0 && total < par) {
+      addCheatAlert(roomCode, playerName, hole, par, scratches, "below_par_with_scratch",
+        `Scored ${total} (below par ${par}) with ${scratches} scratch${scratches > 1 ? "es" : ""}. Highly suspicious.`);
+    } else if (scratches > 0 && par > 0 && total === par) {
+      addCheatAlert(roomCode, playerName, hole, par, scratches, "par_with_scratch",
+        `Scored par (${par}) with ${scratches} scratch${scratches > 1 ? "es" : ""}. Please verify.`);
+    }
+
+    const existingScores = await storage.getPlayerScores(tournamentPlayerId);
+    const existingForHole = existingScores.find(s => s.hole === hole);
+    if (existingForHole) {
+      const oldTotal = existingForHole.strokes + existingForHole.scratches;
+      const newTotal = strokes + scratches;
+      if (newTotal < oldTotal) {
+        addCheatAlert(roomCode, playerName, hole, par, scratches, "score_reduction",
+          `Reduced hole ${hole} score from ${oldTotal} to ${newTotal}. Was this a legitimate correction?`);
+      }
+    }
+
+    if (trackScoreTiming(tournamentPlayerId, roomCode)) {
+      const alreadyFlagged = cheatAlerts.some(a =>
+        !a.dismissed && a.alertType === "rapid_scoring" &&
+        a.playerName === playerName && a.roomCode === roomCode &&
+        (Date.now() - a.timestamp.getTime()) < 2 * 60 * 1000
+      );
+      if (!alreadyFlagged) {
+        addCheatAlert(roomCode, playerName, hole, par, scratches, "rapid_scoring",
+          `Submitted 3+ hole scores within 2 minutes. Possible bulk entry or suspicious pace.`);
+      }
+    }
+  } catch (err) {
+    console.error("Error in cheat detection:", err);
+  }
 }
 
 const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY || "";
@@ -1030,26 +1103,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const strokes = parsed.data.strokes;
       const par = parsed.data.par;
       const hole = parsed.data.hole;
+      const playerId = parsed.data.tournamentPlayerId;
+
+      await runCheatDetection(req.params.roomCode, tournament.id, playerId, hole, par, strokes, scratches);
 
       const score = await storage.upsertScore({
-        tournamentPlayerId: parsed.data.tournamentPlayerId,
+        tournamentPlayerId: playerId,
         hole,
         par,
         strokes,
         scratches,
         penalties: parsed.data.penalties || 0,
       });
-
-      if (scratches > 0 && par > 0 && (strokes + scratches) === par) {
-        try {
-          const players = await storage.getPlayersInTournament(tournament.id);
-          const player = players.find(p => p.id === parsed.data.tournamentPlayerId);
-          const playerName = player?.playerName || "Unknown player";
-          addCheatAlert(req.params.roomCode, playerName, hole, par, scratches);
-        } catch (err) {
-          console.error("Error creating cheat detection alert:", err);
-        }
-      }
 
       res.json(score);
     } catch (error) {
@@ -1134,11 +1199,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const results = [];
-      const pendingAlerts: { playerName: string; par: number; hole: number; scratches: number }[] = [];
       let tournamentPlayersCache: any[] | null = null;
 
       for (const score of parsed.data.scores) {
         const sc = score.scratches || 0;
+
+        if (!tournamentPlayersCache) {
+          tournamentPlayersCache = await storage.getPlayersInTournament(tournament.id);
+        }
+        await runCheatDetection(req.params.roomCode, tournament.id, score.tournamentPlayerId, score.hole, score.par, score.strokes, sc, tournamentPlayersCache);
+
         const saved = await storage.upsertScore({
           tournamentPlayerId: score.tournamentPlayerId,
           hole: score.hole,
@@ -1148,23 +1218,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           penalties: score.penalties || 0,
         });
         results.push(saved);
-
-        if (sc > 0 && score.par > 0 && (score.strokes + sc) === score.par) {
-          if (!tournamentPlayersCache) {
-            tournamentPlayersCache = await storage.getPlayersInTournament(tournament.id);
-          }
-          const player = tournamentPlayersCache.find(p => p.id === score.tournamentPlayerId);
-          pendingAlerts.push({
-            playerName: player?.playerName || "Unknown player",
-            par: score.par,
-            hole: score.hole,
-            scratches: sc,
-          });
-        }
-      }
-
-      for (const alert of pendingAlerts) {
-        addCheatAlert(req.params.roomCode, alert.playerName, alert.hole, alert.par, alert.scratches);
       }
 
       res.json(results);

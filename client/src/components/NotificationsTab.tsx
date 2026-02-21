@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Send, CheckCircle, AlertCircle, Zap, Loader2, User, Users, Bell, BellOff, Clock, Search, ShieldAlert, X, Inbox } from "lucide-react";
+import { Send, CheckCircle, AlertCircle, Zap, Loader2, User, Users, Bell, BellOff, Clock, Search, ShieldAlert, X, Inbox, Timer, ArrowDownCircle } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { queryClient } from "@/lib/queryClient";
 import type { UniversalPlayer } from "@shared/schema";
@@ -58,6 +58,8 @@ interface CheatAlert {
   hole: number;
   par: number;
   scratches: number;
+  alertType: string;
+  message: string;
   timestamp: string;
 }
 
@@ -203,49 +205,76 @@ function ReceivedPane({ directorPin }: { directorPin: string }) {
         </Card>
       )}
 
-      {alerts.map((alert) => (
-        <Card
-          key={alert.id}
-          className="p-4"
-          data-testid={`alert-${alert.id}`}
-        >
-          <div className="flex items-start gap-3">
-            <ShieldAlert className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
-            <div className="flex-1 min-w-0">
-              <p className="font-semibold text-sm">Suspicious Score</p>
-              <p className="text-sm mt-1">
-                <span className="font-medium">{alert.playerName}</span> scored par ({alert.par}) on hole {alert.hole} with {alert.scratches} scratch{alert.scratches > 1 ? "es" : ""}.
-              </p>
-              <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
-                <span>Room: {alert.roomCode}</span>
-                <span>{new Date(alert.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+      {alerts.map((alert) => {
+        const alertConfig: Record<string, { icon: typeof ShieldAlert; color: string; label: string }> = {
+          par_with_scratch: { icon: ShieldAlert, color: "text-amber-500", label: "Suspicious Score" },
+          below_par_with_scratch: { icon: AlertCircle, color: "text-red-500", label: "Highly Suspicious" },
+          rapid_scoring: { icon: Timer, color: "text-orange-500", label: "Rapid Scoring" },
+          score_reduction: { icon: ArrowDownCircle, color: "text-blue-500", label: "Score Reduced" },
+        };
+        const config = alertConfig[alert.alertType] || alertConfig.par_with_scratch;
+        const AlertIcon = config.icon;
+
+        return (
+          <Card
+            key={alert.id}
+            className="p-4"
+            data-testid={`alert-${alert.id}`}
+          >
+            <div className="flex items-start gap-3">
+              <AlertIcon className={cn("w-5 h-5 flex-shrink-0 mt-0.5", config.color)} />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <p className="font-semibold text-sm">{config.label}</p>
+                </div>
+                <p className="text-sm mt-1">
+                  <span className="font-medium">{alert.playerName}</span> &mdash; {alert.message}
+                </p>
+                <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground flex-wrap">
+                  <span>Room: {alert.roomCode}</span>
+                  <span>Hole {alert.hole}</span>
+                  <span>{new Date(alert.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span>
+                </div>
               </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => handleDismiss(alert.id)}
+                disabled={dismissing === alert.id}
+                data-testid={`button-dismiss-alert-${alert.id}`}
+              >
+                {dismissing === alert.id ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <X className="w-4 h-4" />
+                )}
+              </Button>
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => handleDismiss(alert.id)}
-              disabled={dismissing === alert.id}
-              data-testid={`button-dismiss-alert-${alert.id}`}
-            >
-              {dismissing === alert.id ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <X className="w-4 h-4" />
-              )}
-            </Button>
-          </div>
-        </Card>
-      ))}
+          </Card>
+        );
+      })}
 
       <Card className="p-4">
-        <h3 className="font-semibold mb-2">About Alerts</h3>
-        <ul className="text-sm text-muted-foreground space-y-1">
-          <li>Alerts are triggered when a player's total score equals par but includes scratches.</li>
-          <li>This may indicate the score was not entered correctly.</li>
-          <li>Dismiss an alert after reviewing it.</li>
-          <li>Alerts refresh automatically every 10 seconds.</li>
+        <h3 className="font-semibold mb-2">Alert Types</h3>
+        <ul className="text-sm text-muted-foreground space-y-2">
+          <li className="flex items-start gap-2">
+            <ShieldAlert className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
+            <span><span className="font-medium text-foreground">Suspicious Score</span> &mdash; Player scored par but had scratches.</span>
+          </li>
+          <li className="flex items-start gap-2">
+            <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+            <span><span className="font-medium text-foreground">Highly Suspicious</span> &mdash; Player scored below par with scratches.</span>
+          </li>
+          <li className="flex items-start gap-2">
+            <Timer className="w-4 h-4 text-orange-500 flex-shrink-0 mt-0.5" />
+            <span><span className="font-medium text-foreground">Rapid Scoring</span> &mdash; 3+ holes submitted within 2 minutes.</span>
+          </li>
+          <li className="flex items-start gap-2">
+            <ArrowDownCircle className="w-4 h-4 text-blue-500 flex-shrink-0 mt-0.5" />
+            <span><span className="font-medium text-foreground">Score Reduced</span> &mdash; A previously submitted score was lowered.</span>
+          </li>
         </ul>
+        <p className="text-xs text-muted-foreground mt-3">Alerts refresh automatically every 10 seconds. Dismiss after reviewing.</p>
       </Card>
     </div>
   );
