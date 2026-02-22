@@ -195,6 +195,7 @@ function GameApp() {
         onUpdatePlayerColor={game.updatePlayerColor}
         onMovePlayer={game.movePlayer}
         onStartGame={handleStartGame}
+        onBack={() => setScreen("splash")}
       />
     );
   }
@@ -219,6 +220,17 @@ function GameApp() {
           onSetParForAll={(par) => game.setParForAllPlayers(game.currentHole, par)}
           onRecordSetupTime={game.recordSetupTime}
           onHome={() => setScreen("splash")}
+          onRemovePlayer={(playerId) => {
+            if (tournament.isConnected) {
+              const tournamentPlayer = tournament.myPlayers.find(
+                tp => tp.playerName.toLowerCase().trim() === game.players.find(p => p.id === playerId)?.name.toLowerCase().trim()
+              );
+              if (tournamentPlayer) {
+                tournament.removePlayerFromTournament(tournamentPlayer.id);
+              }
+            }
+            game.removePlayer(playerId);
+          }}
         />
       )}
 

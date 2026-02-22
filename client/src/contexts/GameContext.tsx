@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
 import type { Player, HoleScore, GameSession, Settings, SetupTime } from "@shared/schema";
-import { PLAYER_COLORS } from "@/lib/constants";
+import { PLAYER_COLORS, MAX_HOLES } from "@/lib/constants";
 
 interface GameState {
   players: Player[];
@@ -122,10 +122,27 @@ export function GameProvider({ children }: { children: ReactNode }) {
   };
 
   const removePlayer = (id: string) => {
-    setGameState((prev) => ({
-      ...prev,
-      players: prev.players.filter((p) => p.id !== id).map((p, i) => ({ ...p, order: i })),
-    }));
+    saveHistory(gameState);
+    setGameState((prev) => {
+      const removedIndex = prev.players.findIndex((p) => p.id === id);
+      const newPlayers = prev.players.filter((p) => p.id !== id).map((p, i) => ({ ...p, order: i }));
+      let newPlayerIndex = prev.currentPlayerIndex;
+      
+      if (newPlayers.length === 0) {
+        newPlayerIndex = 0;
+      } else if (removedIndex <= prev.currentPlayerIndex) {
+        newPlayerIndex = Math.max(0, prev.currentPlayerIndex - 1);
+      }
+      if (newPlayerIndex >= newPlayers.length) {
+        newPlayerIndex = 0;
+      }
+      
+      return {
+        ...prev,
+        players: newPlayers,
+        currentPlayerIndex: newPlayerIndex,
+      };
+    });
   };
 
   const updatePlayerName = (id: string, name: string) => {
@@ -169,6 +186,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
   };
 
   const updateScore = (playerId: string, hole: number, scoreUpdate: Partial<HoleScore>) => {
+    if (hole > MAX_HOLES) return;
     saveHistory(gameState);
     setGameState((prev) => {
       const playerScores = prev.scores[playerId] || [];
@@ -199,11 +217,48 @@ export function GameProvider({ children }: { children: ReactNode }) {
     });
   };
 
+  const sortPlayersByPreviousHole = (players: Player[], scores: Record<string, HoleScore[]>, previousHole: number): Player[] => {
+    if (previousHole < 1) return players;
+    
+    return [...players].sort((a, b) => {
+      const aScore = scores[a.id]?.find(s => s.hole === previousHole);
+      const bScore = scores[b.id]?.find(s => s.hole === previousHole);
+      const aTotal = aScore ? aScore.strokes + aScore.scratches + aScore.penalties : Infinity;
+      const bTotal = bScore ? bScore.strokes + bScore.scratches + bScore.penalties : Infinity;
+      
+      if (aTotal !== bTotal) return aTotal - bTotal;
+      
+      const aTotalAll = (scores[a.id] || []).reduce((sum, s) => sum + s.strokes + s.scratches + s.penalties, 0);
+      const bTotalAll = (scores[b.id] || []).reduce((sum, s) => sum + s.strokes + s.scratches + s.penalties, 0);
+      if (aTotalAll !== bTotalAll) return aTotalAll - bTotalAll;
+      
+      return a.name.localeCompare(b.name);
+    }).map((p, i) => ({ ...p, order: i }));
+  };
+
   const nextCard = () => {
     saveHistory(gameState);
     setGameState((prev) => {
       const nextPlayerIndex = (prev.currentPlayerIndex + 1) % prev.players.length;
-      const nextHole = nextPlayerIndex === 0 ? prev.currentHole + 1 : prev.currentHole;
+      const wouldAdvanceHole = nextPlayerIndex === 0;
+      const nextHole = wouldAdvanceHole ? prev.currentHole + 1 : prev.currentHole;
+      
+      if (wouldAdvanceHole && prev.currentHole >= MAX_HOLES) {
+        return {
+          ...prev,
+          isComplete: true,
+        };
+      }
+      
+      if (wouldAdvanceHole) {
+        const sortedPlayers = sortPlayersByPreviousHole(prev.players, prev.scores, prev.currentHole);
+        return {
+          ...prev,
+          players: sortedPlayers,
+          currentPlayerIndex: 0,
+          currentHole: nextHole,
+        };
+      }
       
       return {
         ...prev,

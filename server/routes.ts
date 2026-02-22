@@ -1166,6 +1166,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const hole = parsed.data.hole;
       const playerId = parsed.data.tournamentPlayerId;
 
+      if (hole > 18) {
+        return res.status(400).json({ error: "Maximum of 18 holes allowed" });
+      }
+
       await runCheatDetection(req.params.roomCode, tournament.id, playerId, hole, par, strokes, scratches);
 
       const score = await storage.upsertScore({
@@ -1263,6 +1267,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let tournamentPlayersCache: any[] | null = null;
 
       for (const score of parsed.data.scores) {
+        if (score.hole > 18) continue;
         const sc = score.scratches || 0;
 
         if (!tournamentPlayersCache) {

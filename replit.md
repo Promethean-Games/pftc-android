@@ -76,6 +76,10 @@ The server handles tournament creation, player registration, score synchronizati
 3. **Device-Based Identity**: Devices get unique IDs stored in localStorage for player assignment
 4. **Master Director PIN System**: Tournament directors authenticate with master PIN (3141) verified server-side, granting access to create/manage all tournaments
 5. **Player Authentication**: Players authenticate with their unique code + 4-digit PIN for profile access
+6. **18-Hole Limit**: Games are strictly limited to 18 holes. Both frontend and backend enforce this limit. Game auto-completes after hole 18.
+7. **Roster Order**: At each new hole, players are re-sorted by lowest score on the previous hole (tiebreak: lowest total score, then alphabetical)
+8. **Table-Based Grouping**: TD sets number of tables (not players per group), and players are distributed evenly across tables using round-robin
+9. **DNF Player Removal**: Players can remove a group member mid-game with a serious confirmation dialog; syncs with tournament server if connected
 
 ### Tournament Director Flow
 - Access via Settings gear icon on splash screen

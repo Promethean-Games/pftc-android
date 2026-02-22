@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PlayerColorPicker } from "./PlayerColorPicker";
-import { ChevronUp, ChevronDown, X } from "lucide-react";
+import { ChevronUp, ChevronDown, X, ArrowLeft } from "lucide-react";
 import type { Player } from "@shared/schema";
 import { LOGO_URL, MAX_PLAYERS } from "@/lib/constants";
 
@@ -16,6 +16,7 @@ interface PlayerSetupProps {
   onUpdatePlayerColor: (id: string, color: string) => void;
   onMovePlayer: (id: string, direction: "up" | "down") => void;
   onStartGame: () => void;
+  onBack?: () => void;
 }
 
 export function PlayerSetup({
@@ -26,6 +27,7 @@ export function PlayerSetup({
   onUpdatePlayerColor,
   onMovePlayer,
   onStartGame,
+  onBack,
 }: PlayerSetupProps) {
   const [showColorPicker, setShowColorPicker] = useState<string | null>(null);
   const [newPlayerName, setNewPlayerName] = useState("");
@@ -59,6 +61,18 @@ export function PlayerSetup({
 
   return (
     <div className="flex flex-col min-h-screen p-6 pb-8">
+      {onBack && (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onBack}
+          className="self-start mb-2 text-muted-foreground"
+          data-testid="button-back-to-splash"
+        >
+          <ArrowLeft className="w-4 h-4 mr-1" />
+          Back
+        </Button>
+      )}
       <div className="flex flex-col items-center mb-4">
         <img 
           src={LOGO_URL} 

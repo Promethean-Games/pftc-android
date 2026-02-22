@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Bell, X } from "lucide-react";
+import { Bell } from "lucide-react";
 import { isPushSupported, subscribeToPush, getPermissionState } from "@/lib/pushNotifications";
 
 const PROMPT_DISMISSED_KEY = "pushPromptDismissed";
@@ -49,48 +48,40 @@ export function PushPrompt() {
   if (!visible) return null;
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 p-4 animate-in slide-in-from-bottom duration-500">
-      <Card className="max-w-md mx-auto p-4 shadow-lg border-primary/20">
-        <div className="flex gap-3">
-          <div className="flex-shrink-0 w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-            <Bell className="w-5 h-5 text-primary" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <h4 className="font-semibold text-sm">Stay in the loop?</h4>
-            <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
-              We'll keep you posted on leaderboard shakeups, tee times, and tournament updates. 
-              No spam, just the good stuff.
-            </p>
-            <div className="flex items-center gap-2 mt-3">
-              <Button
-                size="sm"
-                onClick={handleAllow}
-                disabled={subscribing}
-                data-testid="button-push-allow"
-              >
-                {subscribing ? "Setting up..." : "Sounds good"}
-              </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={handleDismiss}
-                data-testid="button-push-dismiss"
-              >
-                Maybe later
-              </Button>
-            </div>
-          </div>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/95 backdrop-blur-sm animate-in fade-in duration-300">
+      <div className="flex flex-col items-center justify-center text-center px-8 max-w-sm mx-auto">
+        <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-6">
+          <Bell className="w-10 h-10 text-primary" />
+        </div>
+        
+        <h2 className="text-2xl font-bold mb-3" data-testid="text-push-title">
+          Stay in the Loop
+        </h2>
+        
+        <p className="text-muted-foreground text-base leading-relaxed mb-8" data-testid="text-push-description">
+          Get notified about leaderboard updates, tee times, and tournament results. 
+          No spam — just the good stuff.
+        </p>
+
+        <div className="w-full space-y-3">
           <Button
-            size="icon"
-            variant="ghost"
-            className="flex-shrink-0 h-6 w-6"
-            onClick={handleDismiss}
-            data-testid="button-push-close"
+            className="w-full h-14 text-lg font-semibold"
+            onClick={handleAllow}
+            disabled={subscribing}
+            data-testid="button-push-allow"
           >
-            <X className="w-4 h-4" />
+            {subscribing ? "Setting up..." : "Turn On Notifications"}
+          </Button>
+          <Button
+            variant="ghost"
+            className="w-full h-12 text-base text-muted-foreground"
+            onClick={handleDismiss}
+            data-testid="button-push-dismiss"
+          >
+            Maybe Later
           </Button>
         </div>
-      </Card>
+      </div>
     </div>
   );
 }

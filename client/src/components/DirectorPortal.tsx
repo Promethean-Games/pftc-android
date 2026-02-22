@@ -107,7 +107,7 @@ export function DirectorPortal({ onClose }: DirectorPortalProps) {
   }, []);
 
   // Group management settings
-  const [groupSize, setGroupSize] = useState(4);
+  const [numTables, setNumTables] = useState(4);
   const [isAutoAssigning, setIsAutoAssigning] = useState(false);
   const [isShuffling, setIsShuffling] = useState(false);
   const [showGroupTools, setShowGroupTools] = useState(false);
@@ -385,22 +385,27 @@ export function DirectorPortal({ onClose }: DirectorPortalProps) {
     setIsSavingScores(false);
   };
 
-  // Auto-assign players to groups evenly
-  const handleAutoAssignGroups = async () => {
-    if (tournament.allPlayers.length === 0) return;
-    setIsAutoAssigning(true);
-    
-    const players = [...tournament.allPlayers];
-    const numGroups = Math.ceil(players.length / groupSize);
+  // Distribute players evenly across the set number of tables
+  const distributePlayersToGroups = (players: { id: number }[], tables: number) => {
     const updates: { playerId: number; groupName: string }[] = [];
-    
     players.forEach((player, index) => {
-      const groupNum = (index % numGroups) + 1;
+      const groupNum = (index % tables) + 1;
       updates.push({ 
         playerId: player.id, 
         groupName: `Group ${groupNum}` 
       });
     });
+    return updates;
+  };
+
+  // Auto-assign players to groups evenly across tables
+  const handleAutoAssignGroups = async () => {
+    if (tournament.allPlayers.length === 0) return;
+    setIsAutoAssigning(true);
+    
+    const players = [...tournament.allPlayers];
+    const tables = Math.min(numTables, players.length);
+    const updates = distributePlayersToGroups(players, tables);
     
     await tournament.batchUpdatePlayerGroups(updates);
     setIsAutoAssigning(false);
@@ -418,16 +423,8 @@ export function DirectorPortal({ onClose }: DirectorPortalProps) {
       [players[i], players[j]] = [players[j], players[i]];
     }
     
-    const numGroups = Math.ceil(players.length / groupSize);
-    const updates: { playerId: number; groupName: string }[] = [];
-    
-    players.forEach((player, index) => {
-      const groupNum = Math.floor(index / groupSize) + 1;
-      updates.push({ 
-        playerId: player.id, 
-        groupName: `Group ${Math.min(groupNum, numGroups)}` 
-      });
-    });
+    const tables = Math.min(numTables, players.length);
+    const updates = distributePlayersToGroups(players, tables);
     
     await tournament.batchUpdatePlayerGroups(updates);
     setIsShuffling(false);
@@ -793,28 +790,28 @@ export function DirectorPortal({ onClose }: DirectorPortalProps) {
               {showGroupTools && (
                 <div className="mt-4 space-y-4">
                   <div className="flex items-center gap-3">
-                    <Label htmlFor="group-size" className="text-sm whitespace-nowrap">
-                      Players per group:
+                    <Label htmlFor="num-tables" className="text-sm whitespace-nowrap">
+                      Number of tables:
                     </Label>
                     <div className="flex items-center gap-2">
                       <Button
                         variant="outline"
                         size="icon"
                         className="h-8 w-8"
-                        onClick={() => setGroupSize(Math.max(2, groupSize - 1))}
-                        disabled={groupSize <= 2}
-                        data-testid="button-decrease-group-size"
+                        onClick={() => setNumTables(Math.max(2, numTables - 1))}
+                        disabled={numTables <= 2}
+                        data-testid="button-decrease-num-tables"
                       >
                         -
                       </Button>
-                      <span className="w-8 text-center font-bold text-lg">{groupSize}</span>
+                      <span className="w-8 text-center font-bold text-lg">{numTables}</span>
                       <Button
                         variant="outline"
                         size="icon"
                         className="h-8 w-8"
-                        onClick={() => setGroupSize(Math.min(8, groupSize + 1))}
-                        disabled={groupSize >= 8}
-                        data-testid="button-increase-group-size"
+                        onClick={() => setNumTables(Math.min(12, numTables + 1))}
+                        disabled={numTables >= 12}
+                        data-testid="button-increase-num-tables"
                       >
                         +
                       </Button>
@@ -827,14 +824,14 @@ export function DirectorPortal({ onClose }: DirectorPortalProps) {
                       <p className="text-xs opacity-60">Players</p>
                     </div>
                     <div className="p-2 rounded-lg bg-black/5 dark:bg-white/5">
-                      <p className="text-2xl font-bold">{Object.keys(groupedPlayers).length}</p>
-                      <p className="text-xs opacity-60">Groups</p>
+                      <p className="text-2xl font-bold">{Math.min(numTables, tournament.allPlayers.length)}</p>
+                      <p className="text-xs opacity-60">Tables</p>
                     </div>
                     <div className="p-2 rounded-lg bg-black/5 dark:bg-white/5">
                       <p className="text-2xl font-bold">
-                        {Math.ceil(tournament.allPlayers.length / groupSize)}
+                        {tournament.allPlayers.length > 0 ? Math.ceil(tournament.allPlayers.length / Math.min(numTables, tournament.allPlayers.length)) : 0}
                       </p>
-                      <p className="text-xs opacity-60">Target</p>
+                      <p className="text-xs opacity-60">Per Table</p>
                     </div>
                   </div>
 
