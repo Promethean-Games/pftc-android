@@ -553,12 +553,27 @@ export function DirectorPortal({ onClose }: DirectorPortalProps) {
     ? Math.min(...tournament.leaderboard.map(e => e.holesCompleted))
     : 0;
 
-  const themeClasses = {
+  const themeClasses: Record<DirectorTheme, string> = {
     "default": "bg-background text-foreground",
     "dark-green": "bg-emerald-950 text-emerald-50",
     "dark-blue": "bg-slate-900 text-slate-50",
-    "light": "bg-gray-50 text-gray-900",
+    "light": "bg-background text-foreground",
   };
+
+  useEffect(() => {
+    const portal = document.getElementById("director-portal");
+    if (!portal) return;
+    if (directorTheme === "light") {
+      portal.style.colorScheme = "light";
+      portal.setAttribute("data-theme", "light");
+    } else if (directorTheme === "dark-green" || directorTheme === "dark-blue") {
+      portal.style.colorScheme = "dark";
+      portal.setAttribute("data-theme", "dark");
+    } else {
+      portal.style.colorScheme = "";
+      portal.removeAttribute("data-theme");
+    }
+  }, [directorTheme]);
 
   return (
     <div 
