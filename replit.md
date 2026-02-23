@@ -39,7 +39,7 @@ The server handles tournament creation, player registration, score synchronizati
 
 ### Handicapping System
 - **Universal Player IDs**: Players can be linked to a persistent universal identity that tracks them across tournaments
-- **Handicap Calculation**: Based on average strokes-over-par from last 5 completed tournaments, normalized to 18 holes
+- **Handicap Calculation**: Simple average of relativeToPar across all completed tournaments (e.g., +5 and +10 yields +7.5)
 - **Provisional Handicap**: Players with fewer than 5 completed tournaments have a "provisional" flag
 - **Tournament Completion Flow**: When director completes a tournament, results are saved to history and handicaps are recalculated for all linked players
 - **Director UI Integration**: DirectorPortal has "Find Existing Player" search to link tournament players to universal identities

@@ -490,11 +490,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   async recalculateHandicap(universalPlayerId: number): Promise<UniversalPlayer> {
-    // Get last 5 completed tournaments
-    const history = await this.getPlayerTournamentHistory(universalPlayerId, 5);
+    const history = await this.getPlayerTournamentHistory(universalPlayerId);
     
     if (history.length === 0) {
-      // No history, set null handicap
       const [updated] = await db
         .update(universalPlayers)
         .set({ 
@@ -508,26 +506,15 @@ export class DatabaseStorage implements IStorage {
       return updated;
     }
     
-    // Calculate average strokes over par per 18 holes
-    let totalRelativeToPar = 0;
-    let totalHolesPlayed = 0;
-    
-    for (const result of history) {
-      totalRelativeToPar += result.relativeToPar;
-      totalHolesPlayed += result.holesPlayed;
-    }
-    
-    // Normalize to 18 holes
-    const handicap = totalHolesPlayed > 0 
-      ? (totalRelativeToPar / totalHolesPlayed) * 18
-      : null;
+    const totalRelativeToPar = history.reduce((sum, r) => sum + r.relativeToPar, 0);
+    const handicap = Math.round((totalRelativeToPar / history.length) * 10) / 10;
     
     const isProvisional = history.length < 5;
     
     const [updated] = await db
       .update(universalPlayers)
       .set({ 
-        handicap: handicap ? Math.round(handicap * 10) / 10 : null,
+        handicap,
         isProvisional,
         completedTournaments: history.length,
         updatedAt: new Date()
