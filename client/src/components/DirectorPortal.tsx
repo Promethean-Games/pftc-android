@@ -251,11 +251,17 @@ export function DirectorPortal({ onClose }: DirectorPortalProps) {
       const data = await res.json();
       setShowConfirmComplete(false);
       
+      const savedCount = data.saved?.length || 0;
+      const skippedCount = data.skipped?.length || 0;
+      const duplicateCount = data.alreadyRecorded?.length || 0;
+      const totalCount = savedCount + skippedCount + duplicateCount;
+      
       const parts: string[] = [];
-      if (data.saved?.length > 0) parts.push(`Scores saved: ${data.saved.join(", ")}`);
+      parts.push(`Records saved: ${savedCount}/${totalCount}. ${duplicateCount} duplicate${duplicateCount !== 1 ? "s" : ""}.`);
+      if (data.saved?.length > 0) parts.push(`Saved: ${data.saved.join(", ")}`);
       if (data.skipped?.length > 0) parts.push(`Skipped: ${data.skipped.join(", ")}`);
       if (data.alreadyRecorded?.length > 0) parts.push(`Already recorded: ${data.alreadyRecorded.join(", ")}`);
-      alert(parts.length > 0 ? parts.join("\n\n") : "Tournament completed.");
+      alert(parts.join("\n\n"));
       await tournament.refreshPlayers();
       await tournament.refreshLeaderboard();
     } catch (err) {
