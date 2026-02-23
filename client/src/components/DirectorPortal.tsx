@@ -251,10 +251,19 @@ export function DirectorPortal({ onClose }: DirectorPortalProps) {
     setIsCompleting(true);
     try {
       const directorPin = localStorage.getItem("directorPin") || "3141";
-      await apiRequest("POST", `/api/tournaments/${tournament.roomCode}/complete`, {
+      const res = await apiRequest("POST", `/api/tournaments/${tournament.roomCode}/complete`, {
         directorPin,
       });
+      const data = await res.json();
       setShowConfirmComplete(false);
+      
+      const parts: string[] = [];
+      if (data.saved?.length > 0) parts.push(`Saved: ${data.saved.join(", ")}`);
+      if (data.skipped?.length > 0) parts.push(`Skipped: ${data.skipped.join(", ")}`);
+      if (data.alreadyRecorded?.length > 0) parts.push(`Already recorded: ${data.alreadyRecorded.join(", ")}`);
+      if (parts.length > 0) {
+        alert(parts.join("\n\n"));
+      }
     } catch (err) {
       console.error("Failed to complete tournament:", err);
     }

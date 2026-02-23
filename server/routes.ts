@@ -1646,37 +1646,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Tournament not found" });
       }
       
-      // Get all players and their scores
       const players = await storage.getTournamentPlayers(tournament.id);
       const leaderboard = await storage.getLeaderboard(tournament.id);
       
-      // Save results for players with universal IDs and recalculate handicaps
+      const saved: string[] = [];
+      const skipped: string[] = [];
+      const alreadyRecorded: string[] = [];
+      
       for (const entry of leaderboard) {
         const player = players.find(p => p.id === entry.playerId);
-        if (player?.universalPlayerId && entry.holesCompleted > 0) {
-          // Save to history
-          await storage.addTournamentHistory({
-            universalPlayerId: player.universalPlayerId,
-            tournamentId: tournament.id,
-            tournamentName: tournament.name,
-            totalStrokes: entry.totalStrokes,
-            totalPar: entry.totalPar,
-            holesPlayed: entry.holesCompleted,
-            relativeToPar: entry.relativeToPar,
-            totalScratches: entry.totalScratches,
-            totalPenalties: entry.totalPenalties,
-          });
-          
-          // Recalculate handicap
-          await storage.recalculateHandicap(player.universalPlayerId);
+        if (!player?.universalPlayerId || entry.holesCompleted === 0) {
+          skipped.push(entry.playerName + (!player?.universalPlayerId ? " (no universal ID)" : " (no scores)"));
+          continue;
         }
+        
+        const existingHistory = await storage.getPlayerTournamentHistory(player.universalPlayerId);
+        const alreadyHas = existingHistory.some(h => h.tournamentId === tournament.id);
+        if (alreadyHas) {
+          alreadyRecorded.push(entry.playerName);
+          continue;
+        }
+        
+        await storage.addTournamentHistory({
+          universalPlayerId: player.universalPlayerId,
+          tournamentId: tournament.id,
+          tournamentName: tournament.name,
+          totalStrokes: entry.totalStrokes,
+          totalPar: entry.totalPar,
+          holesPlayed: entry.holesCompleted,
+          relativeToPar: entry.relativeToPar,
+          totalScratches: entry.totalScratches,
+          totalPenalties: entry.totalPenalties,
+        });
+        
+        await storage.recalculateHandicap(player.universalPlayerId);
+        saved.push(entry.playerName);
       }
       
-      // Mark tournament as inactive
       await storage.closeTournament(tournament.id);
       
       sendPushToTournament(req.params.roomCode, "Tournament Complete!", `${tournament.name} has finished. Check the final leaderboard!`, `complete-${req.params.roomCode}`);
-      res.json({ success: true, message: "Tournament completed and handicaps updated" });
+      res.json({ 
+        success: true, 
+        message: "Tournament completed and handicaps updated",
+        saved,
+        skipped,
+        alreadyRecorded,
+      });
     } catch (error) {
       console.error("Error completing tournament:", error);
       res.status(500).json({ error: "Failed to complete tournament" });
