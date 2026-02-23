@@ -884,12 +884,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: parsed.error.errors[0]?.message || "Invalid request" });
       }
 
+      let universalPlayerId: number | null = null;
+      if (parsed.data.universalId) {
+        const universalPlayer = await storage.getUniversalPlayerByCode(parsed.data.universalId);
+        if (universalPlayer) {
+          universalPlayerId = universalPlayer.id;
+        }
+      }
+
       const player = await storage.addPlayerToTournament({
         tournamentId: tournament.id,
         playerName: parsed.data.playerName,
         deviceId: parsed.data.deviceId || null,
         groupName: parsed.data.groupName || null,
         universalId: parsed.data.universalId || null,
+        universalPlayerId,
         contactInfo: parsed.data.contactInfo || null,
       });
 
@@ -1655,12 +1664,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       for (const entry of leaderboard) {
         const player = players.find(p => p.id === entry.playerId);
-        if (!player?.universalPlayerId || entry.holesCompleted === 0) {
-          skipped.push(entry.playerName + (!player?.universalPlayerId ? " (no universal ID)" : " (no scores)"));
+        
+        let resolvedUniversalPlayerId = player?.universalPlayerId || null;
+        if (!resolvedUniversalPlayerId && player?.universalId) {
+          const universalPlayer = await storage.getUniversalPlayerByCode(player.universalId);
+          if (universalPlayer) {
+            resolvedUniversalPlayerId = universalPlayer.id;
+            await storage.linkTournamentPlayerToUniversal(player.id, universalPlayer.id);
+          }
+        }
+        
+        if (!resolvedUniversalPlayerId || entry.holesCompleted === 0) {
+          skipped.push(entry.playerName + (!resolvedUniversalPlayerId ? " (no universal ID)" : " (no scores)"));
           continue;
         }
         
-        const existingHistory = await storage.getPlayerTournamentHistory(player.universalPlayerId);
+        const existingHistory = await storage.getPlayerTournamentHistory(resolvedUniversalPlayerId);
         const alreadyHas = existingHistory.some(h => h.tournamentId === tournament.id);
         if (alreadyHas) {
           alreadyRecorded.push(entry.playerName);
@@ -1668,7 +1687,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         await storage.addTournamentHistory({
-          universalPlayerId: player.universalPlayerId,
+          universalPlayerId: resolvedUniversalPlayerId,
           tournamentId: tournament.id,
           tournamentName: tournament.name,
           totalStrokes: entry.totalStrokes,
@@ -1679,7 +1698,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           totalPenalties: entry.totalPenalties,
         });
         
-        await storage.recalculateHandicap(player.universalPlayerId);
+        await storage.recalculateHandicap(resolvedUniversalPlayerId);
         saved.push(entry.playerName);
       }
       
