@@ -369,10 +369,10 @@ export class DatabaseStorage implements IStorage {
     }
 
     return leaderboard.sort((a, b) => {
-      if (a.holesCompleted !== b.holesCompleted) {
-        return b.holesCompleted - a.holesCompleted;
+      if (a.totalStrokes !== b.totalStrokes) {
+        return a.totalStrokes - b.totalStrokes;
       }
-      return a.relativeToPar - b.relativeToPar;
+      return b.holesCompleted - a.holesCompleted;
     });
   }
 
