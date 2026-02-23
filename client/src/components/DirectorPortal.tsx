@@ -546,7 +546,6 @@ export function DirectorPortal({ onClose }: DirectorPortalProps) {
   });
 
   // Calculate stats
-  const totalStrokes = tournament.leaderboard.reduce((sum, e) => sum + e.totalStrokes, 0);
   const leadingHole = tournament.leaderboard.length > 0
     ? Math.max(...tournament.leaderboard.map(e => e.holesCompleted))
     : 0;
@@ -693,27 +692,6 @@ export function DirectorPortal({ onClose }: DirectorPortalProps) {
                 <p className="text-xs opacity-70">Leading Hole</p>
               </Card>
             </div>
-
-            {/* Quick Stats */}
-            <Card className="p-4">
-              <h3 className="font-semibold mb-3">Quick Stats</h3>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="opacity-70">Total Strokes</span>
-                  <span className="font-mono">{totalStrokes}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="opacity-70">Active Devices</span>
-                  <span className="font-mono">
-                    {tournament.allPlayers.filter(p => p.deviceId).length}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="opacity-70">Room Code</span>
-                  <span className="font-mono font-bold">{tournament.roomCode}</span>
-                </div>
-              </div>
-            </Card>
 
             {/* Top 3 Leaderboard Preview */}
             <Card className="p-4">
