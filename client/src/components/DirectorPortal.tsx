@@ -44,6 +44,7 @@ interface UniversalPlayer {
   name: string;
   email: string | null;
   contactInfo: string | null;
+  uniqueCode: string;
   handicap: number | null;
   isProvisional: boolean;
   completedTournaments: number;
@@ -126,6 +127,12 @@ export function DirectorPortal({ onClose }: DirectorPortalProps) {
   const [scoreEntryPlayer, setScoreEntryPlayer] = useState<ScoreEntryData | null>(null);
   const [isSavingScores, setIsSavingScores] = useState(false);
   const [numHoles, setNumHoles] = useState(18);
+  
+  // Leaderboard sorting
+  type LeaderboardSort = "score" | "name" | "id" | "handicap";
+  const [leaderboardSort, setLeaderboardSort] = useState<LeaderboardSort>("score");
+  const [leaderboardSortAsc, setLeaderboardSortAsc] = useState(true);
+  const [universalPlayersMap, setUniversalPlayersMap] = useState<Map<number, UniversalPlayer>>(new Map());
 
   const handleSearchUniversalPlayers = async (query: string) => {
     setUniversalSearchQuery(query);
@@ -181,6 +188,58 @@ export function DirectorPortal({ onClose }: DirectorPortalProps) {
     }, 5000);
     return () => clearInterval(interval);
   }, [tournament]);
+
+  useEffect(() => {
+    const fetchUniversalPlayers = async () => {
+      try {
+        const directorPin = localStorage.getItem("directorPin") || "3141";
+        const res = await fetch(`/api/universal-players?directorPin=${directorPin}`);
+        if (res.ok) {
+          const data: UniversalPlayer[] = await res.json();
+          const map = new Map<number, UniversalPlayer>();
+          data.forEach(p => map.set(p.id, p));
+          setUniversalPlayersMap(map);
+        }
+      } catch (err) {
+        console.error("Failed to fetch universal players:", err);
+      }
+    };
+    fetchUniversalPlayers();
+  }, []);
+
+  const toggleLeaderboardSort = (col: LeaderboardSort) => {
+    if (leaderboardSort === col) {
+      setLeaderboardSortAsc(!leaderboardSortAsc);
+    } else {
+      setLeaderboardSort(col);
+      setLeaderboardSortAsc(col === "name" || col === "id");
+    }
+  };
+
+  const sortedLeaderboard = [...tournament.leaderboard].sort((a, b) => {
+    const dir = leaderboardSortAsc ? 1 : -1;
+    switch (leaderboardSort) {
+      case "name":
+        return dir * a.playerName.localeCompare(b.playerName);
+      case "id": {
+        const pA = tournament.allPlayers.find(p => p.id === a.playerId);
+        const pB = tournament.allPlayers.find(p => p.id === b.playerId);
+        const codeA = pA?.universalId || "";
+        const codeB = pB?.universalId || "";
+        return dir * codeA.localeCompare(codeB);
+      }
+      case "handicap": {
+        const pA = tournament.allPlayers.find(p => p.id === a.playerId);
+        const pB = tournament.allPlayers.find(p => p.id === b.playerId);
+        const hcA = pA?.universalPlayerId ? (universalPlayersMap.get(pA.universalPlayerId)?.handicap ?? 999) : 999;
+        const hcB = pB?.universalPlayerId ? (universalPlayersMap.get(pB.universalPlayerId)?.handicap ?? 999) : 999;
+        return dir * (hcA - hcB);
+      }
+      case "score":
+      default:
+        return dir * (a.totalStrokes - b.totalStrokes || b.holesCompleted - a.holesCompleted);
+    }
+  });
 
 
   const handleAddPlayer = async () => {
@@ -1138,38 +1197,61 @@ export function DirectorPortal({ onClose }: DirectorPortalProps) {
                 <Trophy className="w-4 h-4" />
                 Full Leaderboard
               </h3>
-              <div className="space-y-1">
-                {tournament.leaderboard.map((entry, index) => (
-                  <div
-                    key={entry.playerId}
-                    className="flex items-center gap-3 p-3 rounded-lg hover:bg-black/5 dark:hover:bg-white/5"
-                    data-testid={`leaderboard-row-${entry.playerId}`}
+              <div className="flex gap-1 mb-3 flex-wrap">
+                {(["score", "name", "id", "handicap"] as LeaderboardSort[]).map(col => (
+                  <Button
+                    key={col}
+                    variant={leaderboardSort === col ? "default" : "outline"}
+                    size="sm"
+                    className="gap-1"
+                    onClick={() => toggleLeaderboardSort(col)}
+                    data-testid={`sort-leaderboard-${col}`}
                   >
-                    <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                      index === 0 ? "bg-yellow-500 text-yellow-950" :
-                      index === 1 ? "bg-gray-300 text-gray-700" :
-                      index === 2 ? "bg-amber-600 text-amber-50" :
-                      "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
-                    }`}>
-                      {index + 1}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium truncate">{entry.playerName}</p>
-                      <p className="text-xs opacity-60">
-                        {entry.groupName || "No group"} • {entry.holesCompleted} holes
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className={`font-mono text-lg font-bold ${
-                        entry.relativeToPar < 0 ? "text-green-600" :
-                        entry.relativeToPar > 0 ? "text-red-500" : ""
-                      }`}>
-                        {entry.relativeToPar > 0 ? "+" : ""}{entry.relativeToPar}
-                      </p>
-                      <p className="text-xs opacity-60">{entry.totalStrokes} strokes</p>
-                    </div>
-                  </div>
+                    {col === "score" ? "Score" : col === "name" ? "Name" : col === "id" ? "ID" : "Handicap"}
+                    {leaderboardSort === col && (
+                      leaderboardSortAsc ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />
+                    )}
+                  </Button>
                 ))}
+              </div>
+              <div className="space-y-1">
+                {sortedLeaderboard.map((entry, index) => {
+                  const tp = tournament.allPlayers.find(p => p.id === entry.playerId);
+                  const up = tp?.universalPlayerId ? universalPlayersMap.get(tp.universalPlayerId) : null;
+                  const originalRank = tournament.leaderboard.findIndex(e => e.playerId === entry.playerId) + 1;
+                  return (
+                    <div
+                      key={entry.playerId}
+                      className="flex items-center gap-3 p-3 rounded-lg hover:bg-black/5 dark:hover:bg-white/5"
+                      data-testid={`leaderboard-row-${entry.playerId}`}
+                    >
+                      <span className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                        originalRank === 1 ? "bg-yellow-500 text-yellow-950" :
+                        originalRank === 2 ? "bg-gray-300 text-gray-700" :
+                        originalRank === 3 ? "bg-amber-600 text-amber-50" :
+                        "bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
+                      }`}>
+                        {originalRank}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium truncate">{entry.playerName}</p>
+                        <p className="text-xs opacity-60">
+                          {tp?.universalId || ""}{tp?.universalId ? " • " : ""}{entry.groupName || "No group"} • {entry.holesCompleted} holes
+                          {up?.handicap != null ? ` • HC: ${up.handicap}` : ""}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className={`font-mono text-lg font-bold ${
+                          entry.relativeToPar < 0 ? "text-green-600" :
+                          entry.relativeToPar > 0 ? "text-red-500" : ""
+                        }`}>
+                          {entry.relativeToPar > 0 ? "+" : ""}{entry.relativeToPar}
+                        </p>
+                        <p className="text-xs opacity-60">{entry.totalStrokes} strokes</p>
+                      </div>
+                    </div>
+                  );
+                })}
                 {tournament.leaderboard.length === 0 && (
                   <p className="text-center opacity-50 py-8">No scores recorded yet</p>
                 )}

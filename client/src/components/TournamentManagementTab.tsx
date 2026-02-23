@@ -102,8 +102,8 @@ export function TournamentManagementTab({ directorPin }: TournamentManagementTab
     }
   };
 
-  const handleSelectTournament = async (roomCode: string) => {
-    const success = await tournament.joinRoom(roomCode);
+  const handleSelectTournament = async (roomCode: string, allowInactive?: boolean) => {
+    const success = await tournament.joinRoom(roomCode, allowInactive);
     if (success) {
       tournament.setIsDirector(true);
       tournament.setDirectorCredentials(directorPin);
@@ -443,7 +443,8 @@ export function TournamentManagementTab({ directorPin }: TournamentManagementTab
               {archivedTournaments.map(t => (
                 <Card 
                   key={t.id} 
-                  className="p-4 opacity-70"
+                  className="p-4 opacity-70 hover-elevate cursor-pointer"
+                  onClick={() => handleSelectTournament(t.roomCode, true)}
                   data-testid={`card-archived-${t.roomCode}`}
                 >
                   <div className="flex items-center justify-between gap-2">
@@ -486,7 +487,7 @@ export function TournamentManagementTab({ directorPin }: TournamentManagementTab
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => handleUnarchiveTournament(t.roomCode)}
+                        onClick={(e) => { e.stopPropagation(); handleUnarchiveTournament(t.roomCode); }}
                         data-testid={`button-unarchive-${t.roomCode}`}
                       >
                         <RotateCcw className="w-4 h-4" />
@@ -494,7 +495,7 @@ export function TournamentManagementTab({ directorPin }: TournamentManagementTab
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => handleDownloadBackup(t.roomCode)}
+                        onClick={(e) => { e.stopPropagation(); handleDownloadBackup(t.roomCode); }}
                       >
                         <Download className="w-4 h-4" />
                       </Button>
@@ -502,7 +503,7 @@ export function TournamentManagementTab({ directorPin }: TournamentManagementTab
                         variant="ghost"
                         size="icon"
                         className="text-destructive hover:text-destructive"
-                        onClick={() => setShowDeleteConfirm(t.roomCode)}
+                        onClick={(e) => { e.stopPropagation(); setShowDeleteConfirm(t.roomCode); }}
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>

@@ -23,7 +23,7 @@ interface TournamentContextValue {
   isDirector: boolean;
   directorPin: string | null;
 
-  joinRoom: (code: string) => Promise<boolean>;
+  joinRoom: (code: string, allowInactive?: boolean) => Promise<boolean>;
   leaveRoom: () => void;
   setIsDirector: (value: boolean) => void;
   setDirectorCredentials: (pin: string) => void;
@@ -111,7 +111,7 @@ export function TournamentProvider({ children }: { children: ReactNode }) {
     }
   }, [roomCode, refreshLeaderboard, refreshPlayers]);
 
-  const joinRoom = async (code: string): Promise<boolean> => {
+  const joinRoom = async (code: string, allowInactive?: boolean): Promise<boolean> => {
     setIsLoading(true);
     setError(null);
     try {
@@ -122,7 +122,7 @@ export function TournamentProvider({ children }: { children: ReactNode }) {
         return false;
       }
       const tournament = await response.json();
-      if (!tournament.isActive) {
+      if (!tournament.isActive && !allowInactive) {
         setError("Tournament has ended");
         setIsLoading(false);
         return false;
