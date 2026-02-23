@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Home, Trophy, Settings as SettingsIcon, Save } from "lucide-react";
+import { Home, Trophy, Settings as SettingsIcon, Save, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface BottomNavProps {
@@ -7,9 +7,10 @@ interface BottomNavProps {
   onTabChange: (tab: "game" | "summary" | "settings" | "save") => void;
   viewOnly?: boolean;
   isTournament?: boolean;
+  onGoHome?: () => void;
 }
 
-export function BottomNav({ activeTab, onTabChange, viewOnly, isTournament }: BottomNavProps) {
+export function BottomNav({ activeTab, onTabChange, viewOnly, isTournament, onGoHome }: BottomNavProps) {
   const allTabs = [
     { id: "game" as const, icon: Home, label: "Game" },
     { id: "summary" as const, icon: Trophy, label: "Leaderboard" },
@@ -26,6 +27,17 @@ export function BottomNav({ activeTab, onTabChange, viewOnly, isTournament }: Bo
 
   return (
     <div className="fixed bottom-0 left-0 right-0 h-16 bg-card border-t flex items-center z-40">
+      {viewOnly && onGoHome && (
+        <Button
+          variant="ghost"
+          className="h-full rounded-none flex flex-col gap-1 items-center justify-center px-4"
+          onClick={onGoHome}
+          data-testid="nav-home"
+        >
+          <LogOut className="w-5 h-5" />
+          <span className="text-xs">Exit</span>
+        </Button>
+      )}
       {tabs.map((tab) => {
         const Icon = tab.icon;
         const isActive = activeTab === tab.id;

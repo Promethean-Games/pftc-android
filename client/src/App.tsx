@@ -274,7 +274,18 @@ function GameApp() {
         />
       )}
 
-      <BottomNav activeTab={activeTab} onTabChange={handleTabChange} viewOnly={viewOnly} isTournament={!!tournament.roomCode} />
+      <BottomNav
+        activeTab={activeTab}
+        onTabChange={handleTabChange}
+        viewOnly={viewOnly}
+        isTournament={!!tournament.roomCode}
+        onGoHome={() => {
+          game.endGame();
+          setViewOnly(false);
+          setActiveTab("game");
+          setScreen("splash");
+        }}
+      />
     </div>
   );
 }
