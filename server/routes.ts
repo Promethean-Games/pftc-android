@@ -1658,6 +1658,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const players = await storage.getTournamentPlayers(tournament.id);
       const leaderboard = await storage.getLeaderboard(tournament.id);
       
+      console.log(`Completing tournament ${tournament.name} (${req.params.roomCode}): ${players.length} players, ${leaderboard.length} leaderboard entries`);
+      
       const saved: string[] = [];
       const skipped: string[] = [];
       const alreadyRecorded: string[] = [];
@@ -1665,17 +1667,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       for (const entry of leaderboard) {
         const player = players.find(p => p.id === entry.playerId);
         
+        console.log(`  Player: ${entry.playerName} (id=${entry.playerId}) universalPlayerId=${player?.universalPlayerId} universalId=${player?.universalId} holes=${entry.holesCompleted} strokes=${entry.totalStrokes}`);
+        
         let resolvedUniversalPlayerId = player?.universalPlayerId || null;
         if (!resolvedUniversalPlayerId && player?.universalId) {
           const universalPlayer = await storage.getUniversalPlayerByCode(player.universalId);
           if (universalPlayer) {
             resolvedUniversalPlayerId = universalPlayer.id;
             await storage.linkTournamentPlayerToUniversal(player.id, universalPlayer.id);
+            console.log(`    Resolved universalId ${player.universalId} -> universalPlayerId ${universalPlayer.id}`);
+          } else {
+            console.log(`    Could not resolve universalId ${player.universalId} to any universal player`);
           }
         }
         
         if (!resolvedUniversalPlayerId || entry.holesCompleted === 0) {
           skipped.push(entry.playerName + (!resolvedUniversalPlayerId ? " (no universal ID)" : " (no scores)"));
+          console.log(`    SKIPPED: ${!resolvedUniversalPlayerId ? "no universal ID" : "no scores"}`);
           continue;
         }
         
@@ -1683,6 +1691,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const alreadyHas = existingHistory.some(h => h.tournamentId === tournament.id);
         if (alreadyHas) {
           alreadyRecorded.push(entry.playerName);
+          console.log(`    ALREADY RECORDED`);
           continue;
         }
         
@@ -1700,9 +1709,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         await storage.recalculateHandicap(resolvedUniversalPlayerId);
         saved.push(entry.playerName);
+        console.log(`    SAVED to history`);
       }
       
       await storage.closeTournament(tournament.id);
+      
+      console.log(`Tournament complete: saved=${saved.length} skipped=${skipped.length} alreadyRecorded=${alreadyRecorded.length}`);
       
       sendPushToTournament(req.params.roomCode, "Tournament Complete!", `${tournament.name} has finished. Check the final leaderboard!`, `complete-${req.params.roomCode}`);
       res.json({ 

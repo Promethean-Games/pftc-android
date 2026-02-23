@@ -86,7 +86,6 @@ export function DirectorPortal({ onClose }: DirectorPortalProps) {
   const [newPlayerContact, setNewPlayerContact] = useState("");
   const [isAdding, setIsAdding] = useState(false);
   const playerNameInputRef = useRef<HTMLInputElement>(null);
-  const [showConfirmClose, setShowConfirmClose] = useState(false);
   const [editingPlayer, setEditingPlayer] = useState<EditPlayerData | null>(null);
   
   // Theme settings - synced from localStorage (TDDashboard owns persistence)
@@ -242,11 +241,6 @@ export function DirectorPortal({ onClose }: DirectorPortalProps) {
     }
   };
 
-  const handleCloseTournament = async () => {
-    await tournament.closeTournament();
-    setShowConfirmClose(false);
-  };
-
   const handleCompleteTournament = async () => {
     setIsCompleting(true);
     try {
@@ -258,14 +252,15 @@ export function DirectorPortal({ onClose }: DirectorPortalProps) {
       setShowConfirmComplete(false);
       
       const parts: string[] = [];
-      if (data.saved?.length > 0) parts.push(`Saved: ${data.saved.join(", ")}`);
+      if (data.saved?.length > 0) parts.push(`Scores saved: ${data.saved.join(", ")}`);
       if (data.skipped?.length > 0) parts.push(`Skipped: ${data.skipped.join(", ")}`);
       if (data.alreadyRecorded?.length > 0) parts.push(`Already recorded: ${data.alreadyRecorded.join(", ")}`);
-      if (parts.length > 0) {
-        alert(parts.join("\n\n"));
-      }
+      alert(parts.length > 0 ? parts.join("\n\n") : "Tournament completed.");
+      await tournament.refreshPlayers();
+      await tournament.refreshLeaderboard();
     } catch (err) {
       console.error("Failed to complete tournament:", err);
+      alert("Failed to complete tournament. Please try again.");
     }
     setIsCompleting(false);
   };
@@ -702,12 +697,12 @@ export function DirectorPortal({ onClose }: DirectorPortalProps) {
                 </div>
 
                 {showConfirmComplete ? (
-                  <div className="space-y-2 p-3 border border-green-500/30 rounded-lg bg-green-500/5">
-                    <p className="text-sm font-medium text-green-600 dark:text-green-400">
-                      Complete Tournament?
+                  <div className="space-y-2 p-3 border border-destructive/30 rounded-lg bg-destructive/5">
+                    <p className="text-sm font-medium text-destructive">
+                      End Tournament?
                     </p>
                     <p className="text-sm opacity-70">
-                      This will save all player results and update their handicaps based on their performance.
+                      This will end the tournament, save all player scores to their history, and update handicaps. Players will no longer be able to submit scores.
                     </p>
                     <div className="flex gap-2">
                       <Button
@@ -719,60 +714,26 @@ export function DirectorPortal({ onClose }: DirectorPortalProps) {
                         Cancel
                       </Button>
                       <Button
-                        className="flex-1 bg-green-600 hover:bg-green-700"
+                        variant="destructive"
+                        className="flex-1"
                         onClick={handleCompleteTournament}
                         disabled={isCompleting}
                         data-testid="button-confirm-complete-tournament"
                       >
-                        {isCompleting ? "Saving..." : "Complete & Save"}
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  <Button
-                    variant="outline"
-                    className="w-full gap-2 border-green-500/50 text-green-600 hover:bg-green-500/10"
-                    onClick={() => setShowConfirmComplete(true)}
-                    disabled={!tournament.tournamentInfo?.isStarted || !tournament.tournamentInfo?.isActive}
-                    data-testid="button-complete-tournament"
-                  >
-                    <Trophy className="w-4 h-4" />
-                    Complete Tournament & Save Handicaps
-                  </Button>
-                )}
-
-                {showConfirmClose ? (
-                  <div className="space-y-2">
-                    <p className="text-sm opacity-70">
-                      Are you sure you want to end this tournament? Players will no longer be able to submit scores.
-                    </p>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        className="flex-1"
-                        onClick={() => setShowConfirmClose(false)}
-                      >
-                        Cancel
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        className="flex-1"
-                        onClick={handleCloseTournament}
-                        data-testid="button-confirm-close-tournament"
-                      >
-                        End Tournament
+                        {isCompleting ? "Saving..." : "End & Save Scores"}
                       </Button>
                     </div>
                   </div>
                 ) : (
                   <Button
                     variant="destructive"
-                    className="w-full"
-                    onClick={() => setShowConfirmClose(true)}
-                    disabled={!tournament.tournamentInfo?.isActive}
-                    data-testid="button-close-tournament"
+                    className="w-full gap-2"
+                    onClick={() => setShowConfirmComplete(true)}
+                    disabled={!tournament.tournamentInfo?.isStarted}
+                    data-testid="button-complete-tournament"
                   >
-                    {tournament.tournamentInfo?.isActive ? "End Tournament" : "Tournament Ended"}
+                    <Trophy className="w-4 h-4" />
+                    {tournament.tournamentInfo?.isActive ? "End Tournament & Save Scores" : "Re-Save Scores to Player History"}
                   </Button>
                 )}
               </div>
