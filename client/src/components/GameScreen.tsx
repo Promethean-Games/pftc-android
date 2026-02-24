@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ChevronLeft, ChevronRight, Undo2, Home } from "lucide-react";
 import type { Player, HoleScore, SetupTime } from "@shared/schema";
 import { PAR_OPTIONS, LEADER_ICON_URL, MAX_HOLES } from "@/lib/constants";
@@ -47,6 +48,7 @@ export function GameScreen({
 }: GameScreenProps) {
   const [showDrawDialog, setShowDrawDialog] = useState(false);
   const [showTableSetupDialog, setShowTableSetupDialog] = useState(false);
+  const [showFinishConfirm, setShowFinishConfirm] = useState(false);
   const [pendingPar, setPendingPar] = useState<number | null>(null);
   const [drawConfirmTime, setDrawConfirmTime] = useState<number | null>(null);
   const [lastHole, setLastHole] = useState(currentHole);
@@ -410,7 +412,13 @@ export function GameScreen({
               "w-full h-12 text-base",
               allPlayersHaveScores && par > 0 && strokes > 0 && "animate-pulse"
             )}
-            onClick={onNextCard}
+            onClick={() => {
+              if (isFinishingGame) {
+                setShowFinishConfirm(true);
+              } else {
+                onNextCard();
+              }
+            }}
             disabled={!canAdvance}
             data-testid="button-next-card"
           >
@@ -452,6 +460,34 @@ export function GameScreen({
         />
       )}
 
+      <Dialog open={showFinishConfirm} onOpenChange={setShowFinishConfirm}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Finish Game</DialogTitle>
+            <DialogDescription className="pt-2">
+              To finalize and submit your score(s), click continue. This action cannot be undone. Any questions can be directed towards your Tournament Director.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex gap-2 sm:gap-0">
+            <Button
+              variant="ghost"
+              onClick={() => setShowFinishConfirm(false)}
+              data-testid="button-finish-cancel"
+            >
+              Go Back
+            </Button>
+            <Button
+              onClick={() => {
+                setShowFinishConfirm(false);
+                onNextCard();
+              }}
+              data-testid="button-finish-confirm"
+            >
+              Continue
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
