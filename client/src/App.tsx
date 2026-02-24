@@ -128,6 +128,13 @@ function GameApp() {
     setActiveTab("summary");
   };
 
+  useEffect(() => {
+    if (game.isComplete && screen === "game" && !viewOnly) {
+      setViewOnly(true);
+      setActiveTab("summary");
+    }
+  }, [game.isComplete]);
+
   const handleEndGame = () => {
     game.endGame();
     setActiveTab("summary");
