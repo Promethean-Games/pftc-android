@@ -393,22 +393,24 @@ export function SettingsPanel({ settings, players, onUpdateSettings, onAddPlayer
             </div>
           </Card>
 
-          <Card className="p-4">
-            <h3 className="font-semibold mb-4">Game</h3>
-            
-            <div className="flex items-center justify-between py-3">
-              <Label htmlFor="autosave-toggle" className="flex-1">
-                <div className="font-medium">Auto-Save</div>
-                <div className="text-sm text-muted-foreground">Automatically save game progress</div>
-              </Label>
-              <Switch
-                id="autosave-toggle"
-                checked={settings.autoSave}
-                onCheckedChange={(checked) => onUpdateSettings({ autoSave: checked })}
-                data-testid="switch-autosave"
-              />
-            </div>
-          </Card>
+          {!viewOnly && (
+            <Card className="p-4">
+              <h3 className="font-semibold mb-4">Game</h3>
+              
+              <div className="flex items-center justify-between py-3">
+                <Label htmlFor="autosave-toggle" className="flex-1">
+                  <div className="font-medium">Auto-Save</div>
+                  <div className="text-sm text-muted-foreground">Automatically save game progress</div>
+                </Label>
+                <Switch
+                  id="autosave-toggle"
+                  checked={settings.autoSave}
+                  onCheckedChange={(checked) => onUpdateSettings({ autoSave: checked })}
+                  data-testid="switch-autosave"
+                />
+              </div>
+            </Card>
+          )}
 
           {pushSupported && (
             <Card className="p-4">
@@ -435,51 +437,53 @@ export function SettingsPanel({ settings, players, onUpdateSettings, onAddPlayer
             </Card>
           )}
 
-          <Card className="p-4">
-            <h3 className="font-semibold mb-3 flex items-center gap-2">
-              <User className="w-4 h-4" />
-              My Profile
-            </h3>
-            {loggedInPlayer ? (
-              <div className="space-y-2">
-                <p className="text-sm">
-                  Signed in as <span className="font-semibold">{loggedInPlayer.name}</span>
-                  <span className="text-muted-foreground ml-1">({loggedInPlayer.uniqueCode})</span>
-                </p>
-                <div className="flex gap-2">
+          {!viewOnly && (
+            <Card className="p-4">
+              <h3 className="font-semibold mb-3 flex items-center gap-2">
+                <User className="w-4 h-4" />
+                My Profile
+              </h3>
+              {loggedInPlayer ? (
+                <div className="space-y-2">
+                  <p className="text-sm">
+                    Signed in as <span className="font-semibold">{loggedInPlayer.name}</span>
+                    <span className="text-muted-foreground ml-1">({loggedInPlayer.uniqueCode})</span>
+                  </p>
+                  <div className="flex gap-2">
+                    <Button
+                      className="flex-1"
+                      onClick={() => setShowProfile(true)}
+                      data-testid="button-view-profile"
+                    >
+                      View Profile
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={handlePlayerLogout}
+                      data-testid="button-player-signout"
+                    >
+                      Sign Out
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">
+                    Sign in with your player code to view your stats and handicap.
+                  </p>
                   <Button
-                    className="flex-1"
-                    onClick={() => setShowProfile(true)}
-                    data-testid="button-view-profile"
-                  >
-                    View Profile
-                  </Button>
-                  <Button
+                    className="w-full"
                     variant="outline"
-                    onClick={handlePlayerLogout}
-                    data-testid="button-player-signout"
+                    onClick={() => setShowPlayerLogin(true)}
+                    data-testid="button-player-signin"
                   >
-                    Sign Out
+                    <User className="w-4 h-4 mr-2" />
+                    Player Sign In
                   </Button>
                 </div>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground">
-                  Sign in with your player code to view your stats and handicap.
-                </p>
-                <Button
-                  className="w-full"
-                  variant="outline"
-                  onClick={() => setShowPlayerLogin(true)}
-                  data-testid="button-player-signin"
-                >
-                  <User className="w-4 h-4 mr-2" />
-                  Player Sign In
-                </Button>
-              </div>
-            )}
-          </Card>
+              )}
+            </Card>
+          )}
 
           <Card className="p-4">
             <h3 className="font-semibold mb-3">About</h3>
