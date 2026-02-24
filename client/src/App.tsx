@@ -220,17 +220,6 @@ function GameApp() {
           onSetParForAll={(par) => game.setParForAllPlayers(game.currentHole, par)}
           onRecordSetupTime={game.recordSetupTime}
           onHome={() => setScreen("splash")}
-          onRemovePlayer={(playerId) => {
-            if (tournament.isConnected) {
-              const tournamentPlayer = tournament.myPlayers.find(
-                tp => tp.playerName.toLowerCase().trim() === game.players.find(p => p.id === playerId)?.name.toLowerCase().trim()
-              );
-              if (tournamentPlayer) {
-                tournament.removePlayerFromTournament(tournamentPlayer.id);
-              }
-            }
-            game.removePlayer(playerId);
-          }}
         />
       )}
 
@@ -265,6 +254,7 @@ function GameApp() {
           onUpdateSettings={game.updateSettings}
           onAddPlayer={game.addPlayer}
           onEndGame={handleEndGame}
+          viewOnly={viewOnly}
           onLogout={() => {
             game.endGame();
             setViewOnly(false);

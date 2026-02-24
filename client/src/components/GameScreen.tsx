@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ChevronLeft, ChevronRight, Undo2, Home, UserX } from "lucide-react";
+import { ChevronLeft, ChevronRight, Undo2, Home } from "lucide-react";
 import type { Player, HoleScore, SetupTime } from "@shared/schema";
 import { PAR_OPTIONS, LEADER_ICON_URL, MAX_HOLES } from "@/lib/constants";
 import { getScoreCallout } from "@/lib/game-utils";
@@ -27,7 +26,6 @@ interface GameScreenProps {
   onSetParForAll: (par: number) => void;
   onRecordSetupTime: (setupTime: SetupTime) => void;
   onHome?: () => void;
-  onRemovePlayer?: (id: string) => void;
 }
 
 export function GameScreen({
@@ -46,11 +44,9 @@ export function GameScreen({
   onSetParForAll,
   onRecordSetupTime,
   onHome,
-  onRemovePlayer,
 }: GameScreenProps) {
   const [showDrawDialog, setShowDrawDialog] = useState(false);
   const [showTableSetupDialog, setShowTableSetupDialog] = useState(false);
-  const [showDnfDialog, setShowDnfDialog] = useState(false);
   const [pendingPar, setPendingPar] = useState<number | null>(null);
   const [drawConfirmTime, setDrawConfirmTime] = useState<number | null>(null);
   const [lastHole, setLastHole] = useState(currentHole);
@@ -268,16 +264,6 @@ export function GameScreen({
             <img src={LEADER_ICON_URL} alt="Leader" className="w-5 h-5" data-testid="img-leader" />
           )}
           <span className="text-2xl font-bold" data-testid="text-player-name">{currentPlayer.name}</span>
-          {onRemovePlayer && players.length > 1 && (
-            <button
-              onClick={() => setShowDnfDialog(true)}
-              className="absolute right-2 top-1/2 -translate-y-1/2 opacity-40 hover:opacity-100 transition-opacity p-1"
-              data-testid="button-dnf-player"
-              aria-label="Mark player as DNF"
-            >
-              <UserX className="w-4 h-4" />
-            </button>
-          )}
         </div>
         
         <Button
@@ -466,46 +452,6 @@ export function GameScreen({
         />
       )}
 
-      <Dialog open={showDnfDialog} onOpenChange={setShowDnfDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Remove {currentPlayer.name}?</DialogTitle>
-            <DialogDescription className="space-y-3 pt-2">
-              <span className="block font-semibold text-destructive">
-                This action is irreversible.
-              </span>
-              <span className="block">
-                Removing a player mid-game is equivalent to a DNF (Did Not Finish). 
-                This should only be done with approval from both the player and the Tournament Director.
-              </span>
-              <span className="block font-semibold">
-                Unauthorized removal is considered cheating and may result in disqualification.
-              </span>
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="flex gap-2 sm:gap-0">
-            <Button
-              variant="ghost"
-              onClick={() => setShowDnfDialog(false)}
-              data-testid="button-dnf-cancel"
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={() => {
-                if (onRemovePlayer) {
-                  onRemovePlayer(currentPlayer.id);
-                }
-                setShowDnfDialog(false);
-              }}
-              data-testid="button-dnf-confirm"
-            >
-              Remove Player (DNF)
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

@@ -21,9 +21,10 @@ interface SettingsPanelProps {
   onAddPlayer: (name: string, position?: number) => void;
   onEndGame: () => void;
   onLogout?: () => void;
+  viewOnly?: boolean;
 }
 
-export function SettingsPanel({ settings, players, onUpdateSettings, onAddPlayer, onEndGame, onLogout }: SettingsPanelProps) {
+export function SettingsPanel({ settings, players, onUpdateSettings, onAddPlayer, onEndGame, onLogout, viewOnly = false }: SettingsPanelProps) {
   const [newPlayerName, setNewPlayerName] = useState("");
   const [insertPosition, setInsertPosition] = useState<string>("end");
   const [roomCodeInput, setRoomCodeInput] = useState("");
@@ -227,19 +228,23 @@ export function SettingsPanel({ settings, players, onUpdateSettings, onAddPlayer
                   </Button>
                 </div>
                 
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Users className="w-4 h-4" />
-                  <span>{tournament.myPlayers.length} player(s) assigned to this device</span>
-                </div>
-                
-                <Button
-                  variant="secondary"
-                  className="w-full"
-                  onClick={() => setShowPlayerSelection(true)}
-                  data-testid="button-manage-players"
-                >
-                  Manage My Players
-                </Button>
+                {!viewOnly && (
+                  <>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Users className="w-4 h-4" />
+                      <span>{tournament.myPlayers.length} player(s) assigned to this device</span>
+                    </div>
+                    
+                    <Button
+                      variant="secondary"
+                      className="w-full"
+                      onClick={() => setShowPlayerSelection(true)}
+                      data-testid="button-manage-players"
+                    >
+                      Manage My Players
+                    </Button>
+                  </>
+                )}
 
                 {tournament.isDirector && (
                   <Button
