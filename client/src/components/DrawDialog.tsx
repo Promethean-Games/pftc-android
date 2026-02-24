@@ -5,17 +5,15 @@ import drawImage from "@assets/draw-image.png";
 
 interface DrawDialogProps {
   onSelectPar: (par: number) => void;
-  onClose: () => void;
   isFirstDraw?: boolean;
 }
 
-export function DrawDialog({ onSelectPar, onClose, isFirstDraw = false }: DrawDialogProps) {
+export function DrawDialog({ onSelectPar, isFirstDraw = false }: DrawDialogProps) {
   const [selectedPar, setSelectedPar] = useState<number | null>(null);
 
   const handleConfirm = () => {
     if (selectedPar) {
       onSelectPar(selectedPar);
-      onClose();
     }
   };
 
@@ -73,24 +71,14 @@ export function DrawDialog({ onSelectPar, onClose, isFirstDraw = false }: DrawDi
           </Select>
         </div>
 
-        <div className="flex gap-3">
-          <Button
-            variant="outline"
-            className="flex-1 h-12"
-            onClick={onClose}
-            data-testid="button-cancel-draw"
-          >
-            Cancel
-          </Button>
-          <Button
-            className="flex-1 h-12"
-            onClick={handleConfirm}
-            disabled={!selectedPar}
-            data-testid="button-confirm-draw"
-          >
-            Confirm
-          </Button>
-        </div>
+        <Button
+          className="w-full h-14 text-lg"
+          onClick={handleConfirm}
+          disabled={!selectedPar}
+          data-testid="button-confirm-draw"
+        >
+          Confirm Par
+        </Button>
       </div>
     </div>
   );

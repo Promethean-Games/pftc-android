@@ -316,29 +316,40 @@ export function GameScreen({
       </div>
 
       {/* Par Selection */}
-      <div className={cn("flex items-center gap-3 mb-3", leftHandedMode && "flex-row-reverse")}>
-        <label htmlFor="par-select" className="text-base font-medium">Par:</label>
-        <Select value={par > 0 ? par.toString() : ""} onValueChange={(v) => setPar(parseInt(v))}>
-          <SelectTrigger className="w-32 h-11" id="par-select" data-testid="select-par">
-            <SelectValue placeholder="--" />
-          </SelectTrigger>
-          <SelectContent>
-            {PAR_OPTIONS.map((p) => (
-              <SelectItem key={p} value={p.toString()}>{p}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        {par > 0 && strokes >= par + 5 && (
-          <Button
-            variant="outline"
-            onClick={handleMercy}
-            className="h-11 px-4"
-            data-testid="button-mercy"
-          >
-            Mercy (+5)
-          </Button>
-        )}
-      </div>
+      {par === 0 ? (
+        <button
+          className="w-full mb-3 p-4 rounded-md border-2 border-dashed border-primary text-center"
+          onClick={() => setShowDrawDialog(true)}
+          data-testid="button-set-par-banner"
+        >
+          <span className="text-lg font-bold text-primary">Tap to Set Par</span>
+          <span className="block text-sm text-muted-foreground mt-1">Par must be set before scoring</span>
+        </button>
+      ) : (
+        <div className={cn("flex items-center gap-3 mb-3", leftHandedMode && "flex-row-reverse")}>
+          <label htmlFor="par-select" className="text-base font-medium">Par:</label>
+          <Select value={par.toString()} onValueChange={(v) => setPar(parseInt(v))}>
+            <SelectTrigger className="w-32 h-11" id="par-select" data-testid="select-par">
+              <SelectValue placeholder="--" />
+            </SelectTrigger>
+            <SelectContent>
+              {PAR_OPTIONS.map((p) => (
+                <SelectItem key={p} value={p.toString()}>{p}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {strokes >= par + 5 && (
+            <Button
+              variant="outline"
+              onClick={handleMercy}
+              className="h-11 px-4"
+              data-testid="button-mercy"
+            >
+              Mercy (+5)
+            </Button>
+          )}
+        </div>
+      )}
 
       {/* Scratch & Penalty */}
       <div className={cn("flex gap-3 mb-4", leftHandedMode && "flex-row-reverse")}>
@@ -407,17 +418,22 @@ export function GameScreen({
           <Undo2 className="w-5 h-5 mr-2" />
           Undo
         </Button>
-        <Button
-          className={cn(
-            "flex-1 h-12 text-base",
-            allPlayersHaveScores && par > 0 && strokes > 0 && "animate-pulse"
+        <div className="flex-1 flex flex-col gap-1">
+          <Button
+            className={cn(
+              "w-full h-12 text-base",
+              allPlayersHaveScores && par > 0 && strokes > 0 && "animate-pulse"
+            )}
+            onClick={onNextCard}
+            disabled={!canAdvance}
+            data-testid="button-next-card"
+          >
+            {isFinishingGame ? "Finish Game" : "Next Card"}
+          </Button>
+          {!canAdvance && par === 0 && (
+            <span className="text-xs text-center text-destructive" data-testid="text-par-required">Set par to continue</span>
           )}
-          onClick={onNextCard}
-          disabled={!canAdvance}
-          data-testid="button-next-card"
-        >
-          {isFinishingGame ? "Finish Game" : "Next Card"}
-        </Button>
+        </div>
       </div>
 
       {onHome && (
@@ -438,7 +454,6 @@ export function GameScreen({
       {showDrawDialog && (
         <DrawDialog
           onSelectPar={handleDrawPar}
-          onClose={() => setShowDrawDialog(false)}
           isFirstDraw={currentHole === 1}
         />
       )}
