@@ -4,7 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { 
   ArrowLeft, 
   Users, 
@@ -115,6 +115,7 @@ export function DirectorPortal({ onClose }: DirectorPortalProps) {
   const [playerSortBy, setPlayerSortBy] = useState<"name" | "hole" | "score">("name");
   const [isCompleting, setIsCompleting] = useState(false);
   const [showConfirmComplete, setShowConfirmComplete] = useState(false);
+  const [dnfPlayer, setDnfPlayer] = useState<{ id: number; name: string } | null>(null);
 
   // Universal player search
   const [universalSearchQuery, setUniversalSearchQuery] = useState("");
@@ -1164,7 +1165,14 @@ export function DirectorPortal({ onClose }: DirectorPortalProps) {
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8 text-destructive hover:text-destructive"
-                          onClick={() => handleRemovePlayer(player.id)}
+                          onClick={() => {
+                            if (tournament.tournamentInfo?.isStarted) {
+                              setDnfPlayer({ id: player.id, name: player.playerName });
+                            } else {
+                              handleRemovePlayer(player.id);
+                            }
+                          }}
+                          title={tournament.tournamentInfo?.isStarted ? "Mark as DNF" : "Remove player"}
                           data-testid={`button-remove-player-${player.id}`}
                         >
                           <Trash2 className="w-4 h-4" />
@@ -1491,6 +1499,46 @@ export function DirectorPortal({ onClose }: DirectorPortalProps) {
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!dnfPlayer} onOpenChange={() => setDnfPlayer(null)}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Mark {dnfPlayer?.name} as DNF?</DialogTitle>
+            <DialogDescription className="space-y-3 pt-2">
+              <span className="block font-semibold text-destructive">
+                This action is irreversible.
+              </span>
+              <span className="block">
+                This player will be removed from the active tournament. Their scores up to this point will be lost.
+              </span>
+              <span className="block">
+                Only use this for players who cannot continue playing (Did Not Finish).
+              </span>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex gap-2 sm:gap-0">
+            <Button
+              variant="ghost"
+              onClick={() => setDnfPlayer(null)}
+              data-testid="button-dnf-cancel"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (dnfPlayer) {
+                  handleRemovePlayer(dnfPlayer.id);
+                }
+                setDnfPlayer(null);
+              }}
+              data-testid="button-dnf-confirm"
+            >
+              Confirm DNF
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
