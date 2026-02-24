@@ -1234,6 +1234,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get player scores (public - for spectators)
+  app.get("/api/tournaments/:roomCode/players/:playerId/box-score", async (req, res) => {
+    try {
+      const tournament = await storage.getTournamentByCode(req.params.roomCode);
+      if (!tournament) {
+        return res.status(404).json({ error: "Tournament not found" });
+      }
+
+      const playerId = parseInt(req.params.playerId);
+      if (isNaN(playerId)) {
+        return res.status(400).json({ error: "Invalid player ID" });
+      }
+
+      const players = await storage.getPlayersInTournament(tournament.id);
+      const player = players.find(p => p.id === playerId);
+      if (!player) {
+        return res.status(404).json({ error: "Player not found in this tournament" });
+      }
+
+      const scores = await storage.getPlayerScores(playerId);
+      const uniqueHoles = new Set(scores.map(s => s.hole));
+      const dedupedScores = Array.from(uniqueHoles).map(hole => {
+        const holeScores = scores.filter(s => s.hole === hole);
+        return holeScores[holeScores.length - 1];
+      }).sort((a, b) => a.hole - b.hole);
+
+      res.json({
+        playerId: player.id,
+        playerName: player.playerName,
+        groupName: player.groupName,
+        scores: dedupedScores.map(s => ({
+          hole: s.hole,
+          par: s.par,
+          strokes: s.strokes,
+          scratches: s.scratches,
+          penalties: s.penalties,
+        })),
+      });
+    } catch (error) {
+      console.error("Error getting player box score:", error);
+      res.status(500).json({ error: "Failed to get player box score" });
+    }
+  });
+
   // Get leaderboard
   app.get("/api/tournaments/:roomCode/leaderboard", async (req, res) => {
     try {

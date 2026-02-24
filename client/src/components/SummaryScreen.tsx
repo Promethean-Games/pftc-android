@@ -3,11 +3,19 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Trophy, Users, RefreshCw, Target, OctagonAlert, CircleSlash } from "lucide-react";
+import { Trophy, Users, RefreshCw, OctagonAlert, CircleSlash, Loader2 } from "lucide-react";
 import type { Player, HoleScore, LeaderboardEntry } from "@shared/schema";
 import { calculatePlayerTotal, getLeaderboard } from "@/lib/game-utils";
 import { useTournament } from "@/contexts/TournamentContext";
 import { cn } from "@/lib/utils";
+import { apiRequest } from "@/lib/queryClient";
+
+interface BoxScoreData {
+  playerId: number;
+  playerName: string;
+  groupName: string | null;
+  scores: { hole: number; par: number; strokes: number; scratches: number; penalties: number }[];
+}
 
 interface SummaryScreenProps {
   players: Player[];
@@ -22,6 +30,8 @@ export function SummaryScreen({ players, scores, onNewGame, onSubmitToSheets, is
   const [isLandscape, setIsLandscape] = useState(false);
   const [activeTab, setActiveTab] = useState<"local" | "tournament">(viewOnly ? "tournament" : "local");
   const [selectedPlayer, setSelectedPlayer] = useState<LeaderboardEntry | null>(null);
+  const [boxScore, setBoxScore] = useState<BoxScoreData | null>(null);
+  const [boxScoreLoading, setBoxScoreLoading] = useState(false);
   const tournament = useTournament();
   
   useEffect(() => {
@@ -51,6 +61,21 @@ export function SummaryScreen({ players, scores, onNewGame, onSubmitToSheets, is
       }
     }
   }, [tournament.leaderboard]);
+
+  const fetchBoxScore = async (entry: LeaderboardEntry) => {
+    setSelectedPlayer(entry);
+    setBoxScore(null);
+    setBoxScoreLoading(true);
+    try {
+      const res = await apiRequest("GET", `/api/tournaments/${tournament.roomCode}/players/${entry.playerId}/box-score`);
+      const data: BoxScoreData = await res.json();
+      setBoxScore(data);
+    } catch {
+      setBoxScore(null);
+    } finally {
+      setBoxScoreLoading(false);
+    }
+  };
   
   const leaderboard = getLeaderboard(players, scores);
   const leader = leaderboard[0];
@@ -135,7 +160,7 @@ export function SummaryScreen({ players, scores, onNewGame, onSubmitToSheets, is
                       index === 0 && "border-primary border-2 bg-primary/5",
                       isMyPlayer && "bg-muted/50"
                     )}
-                    onClick={() => setSelectedPlayer(entry)}
+                    onClick={() => fetchBoxScore(entry)}
                     data-testid={`tournament-leaderboard-${entry.playerId}`}
                   >
                     <span className={cn(
@@ -404,15 +429,12 @@ export function SummaryScreen({ players, scores, onNewGame, onSubmitToSheets, is
         </>
       )}
 
-      <Dialog open={!!selectedPlayer} onOpenChange={() => setSelectedPlayer(null)}>
-        <DialogContent className="sm:max-w-sm">
+      <Dialog open={!!selectedPlayer} onOpenChange={() => { setSelectedPlayer(null); setBoxScore(null); }}>
+        <DialogContent className="sm:max-w-md max-h-[85vh] overflow-y-auto">
           {selectedPlayer && (() => {
             const rank = tournament.leaderboard.findIndex(e => e.playerId === selectedPlayer.playerId) + 1;
             const avgStrokesPerHole = selectedPlayer.holesCompleted > 0 
               ? (selectedPlayer.totalStrokes / selectedPlayer.holesCompleted).toFixed(1) 
-              : "\u2014";
-            const avgParPerHole = selectedPlayer.holesCompleted > 0
-              ? (selectedPlayer.totalPar / selectedPlayer.holesCompleted).toFixed(1)
               : "\u2014";
             return (
               <>
@@ -428,14 +450,13 @@ export function SummaryScreen({ players, scores, onNewGame, onSubmitToSheets, is
                     {selectedPlayer.playerName}
                   </DialogTitle>
                   <DialogDescription>
-                    {selectedPlayer.groupName || "No group"} • Current tournament stats
+                    {selectedPlayer.groupName || "No group"} • {selectedPlayer.holesCompleted} holes played
                   </DialogDescription>
                 </DialogHeader>
 
                 <div className="space-y-3 mt-2">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-muted/50 rounded-lg p-3 text-center">
-                      <Target className="w-5 h-5 mx-auto mb-1 text-blue-500" />
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="bg-muted/50 rounded-md p-3 text-center">
                       <p className={cn(
                         "text-2xl font-bold font-mono",
                         selectedPlayer.relativeToPar < 0 && "text-green-500",
@@ -445,41 +466,98 @@ export function SummaryScreen({ players, scores, onNewGame, onSubmitToSheets, is
                       </p>
                       <p className="text-xs text-muted-foreground">vs Par</p>
                     </div>
-                    <div className="bg-muted/50 rounded-lg p-3 text-center">
-                      <Trophy className="w-5 h-5 mx-auto mb-1 text-amber-500" />
+                    <div className="bg-muted/50 rounded-md p-3 text-center">
                       <p className="text-2xl font-bold font-mono">{selectedPlayer.totalStrokes}</p>
-                      <p className="text-xs text-muted-foreground">Total Strokes</p>
+                      <p className="text-xs text-muted-foreground">Strokes</p>
                     </div>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-3">
-                    <div className="bg-muted/50 rounded-lg p-3 text-center">
-                      <p className="text-xl font-bold">{selectedPlayer.holesCompleted}</p>
-                      <p className="text-xs text-muted-foreground">Holes</p>
-                    </div>
-                    <div className="bg-muted/50 rounded-lg p-3 text-center">
-                      <p className="text-xl font-bold">{avgStrokesPerHole}</p>
+                    <div className="bg-muted/50 rounded-md p-3 text-center">
+                      <p className="text-2xl font-bold font-mono">{avgStrokesPerHole}</p>
                       <p className="text-xs text-muted-foreground">Avg/Hole</p>
-                    </div>
-                    <div className="bg-muted/50 rounded-lg p-3 text-center">
-                      <p className="text-xl font-bold">{selectedPlayer.totalPar}</p>
-                      <p className="text-xs text-muted-foreground">Total Par</p>
                     </div>
                   </div>
 
                   {(selectedPlayer.totalPenalties > 0 || selectedPlayer.totalScratches > 0) && (
                     <div className="grid grid-cols-2 gap-3">
-                      <div className="bg-muted/50 rounded-lg p-3 text-center">
+                      <div className="bg-muted/50 rounded-md p-3 text-center">
                         <OctagonAlert className="w-4 h-4 mx-auto mb-1 text-red-500" />
-                        <p className="text-xl font-bold">{selectedPlayer.totalPenalties}</p>
+                        <p className="text-lg font-bold">{selectedPlayer.totalPenalties}</p>
                         <p className="text-xs text-muted-foreground">Penalties</p>
                       </div>
-                      <div className="bg-muted/50 rounded-lg p-3 text-center">
+                      <div className="bg-muted/50 rounded-md p-3 text-center">
                         <CircleSlash className="w-4 h-4 mx-auto mb-1 text-orange-500" />
-                        <p className="text-xl font-bold">{selectedPlayer.totalScratches}</p>
+                        <p className="text-lg font-bold">{selectedPlayer.totalScratches}</p>
                         <p className="text-xs text-muted-foreground">Scratches</p>
                       </div>
                     </div>
+                  )}
+
+                  {boxScoreLoading && (
+                    <div className="flex items-center justify-center py-6">
+                      <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                    </div>
+                  )}
+
+                  {boxScore && boxScore.scores.length > 0 && (
+                    <div>
+                      <h4 className="text-sm font-semibold mb-2">Hole-by-Hole</h4>
+                      <div className="rounded-md border overflow-hidden">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="w-14 text-center">Hole</TableHead>
+                              <TableHead className="w-14 text-center">Par</TableHead>
+                              <TableHead className="w-14 text-center">Score</TableHead>
+                              <TableHead className="text-center">+/-</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {boxScore.scores.map((s) => {
+                              const total = s.strokes + s.scratches + s.penalties;
+                              const diff = total - s.par;
+                              return (
+                                <TableRow key={s.hole}>
+                                  <TableCell className="text-center font-medium">{s.hole}</TableCell>
+                                  <TableCell className="text-center text-muted-foreground">{s.par}</TableCell>
+                                  <TableCell className="text-center font-bold">
+                                    {total}
+                                    {(s.scratches > 0 || s.penalties > 0) && (
+                                      <span className="text-xs text-muted-foreground ml-1">
+                                        ({s.strokes}{s.scratches > 0 && `+${s.scratches}S`}{s.penalties > 0 && `+${s.penalties}P`})
+                                      </span>
+                                    )}
+                                  </TableCell>
+                                  <TableCell className={cn(
+                                    "text-center font-mono font-bold",
+                                    diff < 0 && "text-green-500",
+                                    diff > 0 && "text-red-500"
+                                  )}>
+                                    {diff > 0 ? "+" : ""}{diff}
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            })}
+                            <TableRow className="bg-muted/30 font-bold">
+                              <TableCell className="text-center">Total</TableCell>
+                              <TableCell className="text-center">{selectedPlayer.totalPar}</TableCell>
+                              <TableCell className="text-center">{selectedPlayer.totalStrokes}</TableCell>
+                              <TableCell className={cn(
+                                "text-center font-mono",
+                                selectedPlayer.relativeToPar < 0 && "text-green-500",
+                                selectedPlayer.relativeToPar > 0 && "text-red-500"
+                              )}>
+                                {selectedPlayer.relativeToPar > 0 ? "+" : ""}{selectedPlayer.relativeToPar}
+                              </TableCell>
+                            </TableRow>
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </div>
+                  )}
+
+                  {boxScore && boxScore.scores.length === 0 && (
+                    <p className="text-center text-muted-foreground text-sm py-4">
+                      No scores recorded yet
+                    </p>
                   )}
                 </div>
               </>
