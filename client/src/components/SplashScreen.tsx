@@ -22,6 +22,7 @@ interface SplashScreenProps {
 export function SplashScreen({ onNewGame, onLoadGame, onStartTournamentGame, onViewOnly }: SplashScreenProps) {
   const [roomCodeInput, setRoomCodeInput] = useState("");
   const [joinError, setJoinError] = useState<string | null>(null);
+  const [showJoinInput, setShowJoinInput] = useState(false);
   const [showPlayerSelection, setShowPlayerSelection] = useState(false);
   const [showTDSignIn, setShowTDSignIn] = useState(false);
   const [showTournamentManagement, setShowTournamentManagement] = useState(false);
@@ -193,68 +194,87 @@ export function SplashScreen({ onNewGame, onLoadGame, onStartTournamentGame, onV
         </Button>
 
         {/* Tournament Join Section */}
-        <Card className="p-4 mt-6">
-          <div className="flex items-center gap-2 mb-3">
-            <Trophy className="w-5 h-5 text-primary" />
-            <h3 className="font-semibold">Join Tournament</h3>
-          </div>
-          
-          {tournament.isConnected ? (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between p-3 bg-primary/10 rounded-lg">
-                <div>
-                  <p className="font-medium">{tournament.tournamentInfo?.name}</p>
-                  <p className="text-sm text-muted-foreground">
-                    Room: {tournament.roomCode}
-                  </p>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowPlayerSelection(true)}
-                  data-testid="button-manage-players-splash"
-                >
-                  Manage Players
-                </Button>
+        {tournament.isConnected ? (
+          <div className="space-y-2 mt-4">
+            <div className="flex items-center justify-between p-3 bg-primary/10 rounded-md">
+              <div>
+                <p className="font-medium">{tournament.tournamentInfo?.name}</p>
+                <p className="text-sm text-muted-foreground">
+                  Room: {tournament.roomCode}
+                </p>
               </div>
               <Button
-                variant="ghost"
+                variant="outline"
                 size="sm"
-                className="w-full"
-                onClick={() => tournament.leaveRoom()}
-                data-testid="button-leave-room-splash"
+                onClick={() => setShowPlayerSelection(true)}
+                data-testid="button-manage-players-splash"
               >
-                Leave Tournament
+                Manage Players
               </Button>
             </div>
-          ) : (
-            <div className="space-y-2">
-              <div className="flex gap-2">
-                <Input
-                  value={roomCodeInput}
-                  onChange={(e) => setRoomCodeInput(e.target.value.toUpperCase())}
-                  placeholder="Enter room code"
-                  className="flex-1 font-mono text-center tracking-widest text-lg"
-                  maxLength={6}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") handleJoinRoom();
-                  }}
-                  data-testid="input-room-code-splash"
-                />
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full"
+              onClick={() => tournament.leaveRoom()}
+              data-testid="button-leave-room-splash"
+            >
+              Leave Tournament
+            </Button>
+          </div>
+        ) : (
+          <div className="space-y-2 mt-4">
+            {!showJoinInput ? (
+              <Button
+                size="lg"
+                className="w-full text-lg h-14 bg-emerald-800 hover:bg-emerald-900 text-white border-emerald-900"
+                onClick={() => setShowJoinInput(true)}
+                data-testid="button-join-tournament"
+              >
+                <Trophy className="w-5 h-5 mr-2" />
+                Join Tournament
+              </Button>
+            ) : (
+              <div className="space-y-2">
+                <div className="flex gap-2">
+                  <Input
+                    value={roomCodeInput}
+                    onChange={(e) => setRoomCodeInput(e.target.value.toUpperCase())}
+                    placeholder="Enter room code"
+                    className="flex-1 font-mono text-center tracking-widest text-lg h-14"
+                    maxLength={6}
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") handleJoinRoom();
+                    }}
+                    data-testid="input-room-code-splash"
+                  />
+                  <Button
+                    size="lg"
+                    className="h-14 bg-emerald-800 hover:bg-emerald-900 text-white border-emerald-900"
+                    onClick={handleJoinRoom}
+                    disabled={tournament.isLoading || !roomCodeInput.trim()}
+                    data-testid="button-join-room-splash"
+                  >
+                    {tournament.isLoading ? "..." : "Join"}
+                  </Button>
+                </div>
                 <Button
-                  onClick={handleJoinRoom}
-                  disabled={tournament.isLoading || !roomCodeInput.trim()}
-                  data-testid="button-join-room-splash"
+                  variant="ghost"
+                  size="sm"
+                  className="w-full text-muted-foreground"
+                  onClick={() => { setShowJoinInput(false); setJoinError(null); setRoomCodeInput(""); }}
+                  data-testid="button-cancel-join"
                 >
-                  {tournament.isLoading ? "..." : "Join"}
+                  Cancel
                 </Button>
+                {joinError && (
+                  <p className="text-sm text-destructive text-center">{joinError}</p>
+                )}
               </div>
-              {joinError && (
-                <p className="text-sm text-destructive text-center">{joinError}</p>
-              )}
-            </div>
-          )}
-        </Card>
+            )}
+          </div>
+        )}
       </div>
 
       {showPlayerSelection && tournament.isConnected && (
