@@ -8,6 +8,8 @@ interface TournamentInfo {
   roomCode: string;
   isActive: boolean;
   isStarted: boolean;
+  startedAt: string | null;
+  completedAt: string | null;
 }
 
 interface TournamentContextValue {
@@ -270,7 +272,7 @@ export function TournamentProvider({ children }: { children: ReactNode }) {
     try {
       await apiRequest("POST", `/api/tournaments/${roomCode}/close`, { directorPin });
       if (tournamentInfo) {
-        setTournamentInfo({ ...tournamentInfo, isActive: false });
+        setTournamentInfo({ ...tournamentInfo, isActive: false, completedAt: new Date().toISOString() });
       }
     } catch (err) {
       console.error("Failed to close tournament:", err);
@@ -282,7 +284,7 @@ export function TournamentProvider({ children }: { children: ReactNode }) {
     try {
       await apiRequest("POST", `/api/tournaments/${roomCode}/start`, { directorPin });
       if (tournamentInfo) {
-        setTournamentInfo({ ...tournamentInfo, isStarted: true });
+        setTournamentInfo({ ...tournamentInfo, isStarted: true, startedAt: new Date().toISOString() });
       }
       return true;
     } catch (err) {

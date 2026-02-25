@@ -34,6 +34,7 @@ import {
   ClipboardList,
   Save,
   ArrowUpDown,
+  Clock,
 } from "lucide-react";
 import { useTournament } from "@/contexts/TournamentContext";
 import { apiRequest } from "@/lib/queryClient";
@@ -76,6 +77,19 @@ interface ScoreEntryData {
   playerId: number;
   playerName: string;
   scores: HoleScore[];
+}
+
+function formatRuntime(startedAt: string | null, completedAt: string | null, now: number): string | null {
+  if (!startedAt) return null;
+  const start = new Date(startedAt).getTime();
+  const end = completedAt ? new Date(completedAt).getTime() : now;
+  const elapsed = Math.max(0, Math.floor((end - start) / 1000));
+  const hours = Math.floor(elapsed / 3600);
+  const minutes = Math.floor((elapsed % 3600) / 60);
+  const seconds = elapsed % 60;
+  if (hours > 0) return `${hours}h ${minutes}m ${seconds}s`;
+  if (minutes > 0) return `${minutes}m ${seconds}s`;
+  return `${seconds}s`;
 }
 
 export function DirectorPortal({ onClose }: DirectorPortalProps) {
@@ -132,6 +146,16 @@ export function DirectorPortal({ onClose }: DirectorPortalProps) {
   // Leaderboard sorting
   type LeaderboardSort = "score" | "name" | "id" | "handicap";
   const [leaderboardSort, setLeaderboardSort] = useState<LeaderboardSort>("score");
+
+  // Live tournament runtime timer
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const info = tournament.tournamentInfo;
+    if (info?.startedAt && !info.completedAt) {
+      const interval = setInterval(() => setNow(Date.now()), 1000);
+      return () => clearInterval(interval);
+    }
+  }, [tournament.tournamentInfo?.startedAt, tournament.tournamentInfo?.completedAt]);
   const [leaderboardSortAsc, setLeaderboardSortAsc] = useState(true);
   const [universalPlayersMap, setUniversalPlayersMap] = useState<Map<number, UniversalPlayer>>(new Map());
 
@@ -596,9 +620,17 @@ export function DirectorPortal({ onClose }: DirectorPortalProps) {
                 </span>
               )}
             </div>
-            <p className="text-sm opacity-70 truncate">
-              {tournament.tournamentInfo?.name || "New Tournament"}
-            </p>
+            <div className="flex items-center gap-2 flex-wrap">
+              <p className="text-sm opacity-70 truncate">
+                {tournament.tournamentInfo?.name || "New Tournament"}
+              </p>
+              {tournament.tournamentInfo?.startedAt && (
+                <span className="inline-flex items-center gap-1 text-xs opacity-70" data-testid="text-tournament-runtime">
+                  <Clock className="w-3 h-3" />
+                  {formatRuntime(tournament.tournamentInfo.startedAt, tournament.tournamentInfo.completedAt, now)}
+                </span>
+              )}
+            </div>
           </div>
           <Button
             variant="ghost"

@@ -206,15 +206,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async closeTournament(id: number): Promise<void> {
-    await db.update(tournaments).set({ isActive: false }).where(eq(tournaments.id, id));
+    await db.update(tournaments).set({ isActive: false, completedAt: new Date() }).where(eq(tournaments.id, id));
   }
 
   async reopenTournament(id: number): Promise<void> {
-    await db.update(tournaments).set({ isActive: true }).where(eq(tournaments.id, id));
+    await db.update(tournaments).set({ isActive: true, completedAt: null }).where(eq(tournaments.id, id));
   }
 
   async startTournament(id: number): Promise<void> {
-    await db.update(tournaments).set({ isStarted: true }).where(eq(tournaments.id, id));
+    await db.update(tournaments).set({ isStarted: true, startedAt: new Date() }).where(eq(tournaments.id, id));
   }
 
   async deleteTournament(id: number): Promise<void> {

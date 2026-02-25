@@ -64,6 +64,8 @@ export const tournaments = pgTable("tournaments", {
   isHandicapped: boolean("is_handicapped").notNull().default(false),
   directorPin: text("director_pin").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
 });
 
 export const tournamentsRelations = relations(tournaments, ({ many }) => ({

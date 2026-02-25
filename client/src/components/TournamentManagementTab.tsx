@@ -21,7 +21,8 @@ import {
   Archive,
   RotateCcw,
   FileDown,
-  FileUp
+  FileUp,
+  Clock,
 } from "lucide-react";
 import { useTournament } from "@/contexts/TournamentContext";
 import { DirectorPortal } from "./DirectorPortal";
@@ -44,8 +45,11 @@ interface TournamentSummary {
   roomCode: string;
   name: string;
   isActive: boolean;
+  isStarted?: boolean;
   isHandicapped?: boolean;
   createdAt: string;
+  startedAt: string | null;
+  completedAt: string | null;
   stats: TournamentStats;
 }
 
@@ -63,6 +67,28 @@ export function TournamentManagementTab({ directorPin }: TournamentManagementTab
   const [isImporting, setIsImporting] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const { toast } = useToast();
+
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const hasActiveStarted = tournaments.some(t => t.isActive && t.startedAt && !t.completedAt);
+    if (hasActiveStarted) {
+      const interval = setInterval(() => setNow(Date.now()), 1000);
+      return () => clearInterval(interval);
+    }
+  }, [tournaments]);
+
+  const formatRuntime = (startedAt: string | null, completedAt: string | null): string | null => {
+    if (!startedAt) return null;
+    const start = new Date(startedAt).getTime();
+    const end = completedAt ? new Date(completedAt).getTime() : now;
+    const elapsed = Math.max(0, Math.floor((end - start) / 1000));
+    const hours = Math.floor(elapsed / 3600);
+    const minutes = Math.floor((elapsed % 3600) / 60);
+    const seconds = elapsed % 60;
+    if (hours > 0) return `${hours}h ${minutes}m ${seconds}s`;
+    if (minutes > 0) return `${minutes}m ${seconds}s`;
+    return `${seconds}s`;
+  };
 
   const fetchTournaments = async () => {
     try {
@@ -368,6 +394,12 @@ export function TournamentManagementTab({ directorPin }: TournamentManagementTab
                           <Users className="w-3 h-3" />
                           {t.stats.playerCount} players
                         </span>
+                        {t.startedAt && (
+                          <span className="flex items-center gap-1" data-testid={`text-runtime-${t.roomCode}`}>
+                            <Clock className="w-3 h-3" />
+                            {formatRuntime(t.startedAt, t.completedAt)}
+                          </span>
+                        )}
                       </div>
                       {t.stats.playersWithScores > 0 && (
                         <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground flex-wrap">
@@ -461,6 +493,12 @@ export function TournamentManagementTab({ directorPin }: TournamentManagementTab
                           <Users className="w-3 h-3" />
                           {t.stats.playerCount} players
                         </span>
+                        {t.startedAt && (
+                          <span className="flex items-center gap-1" data-testid={`text-runtime-archived-${t.roomCode}`}>
+                            <Clock className="w-3 h-3" />
+                            {formatRuntime(t.startedAt, t.completedAt)}
+                          </span>
+                        )}
                       </div>
                       {t.stats.playersWithScores > 0 && (
                         <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground flex-wrap">
