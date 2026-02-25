@@ -84,8 +84,9 @@ The server handles tournament creation, player registration, score synchronizati
 ### Tournament Director Flow
 - Access via Settings gear icon on splash screen
 - Enter 4-digit master PIN (3141) - verified server-side via POST /api/director/verify
-- TDDashboard provides a unified tabbed interface with two tabs:
+- TDDashboard provides a unified tabbed interface with three tabs:
   - **Tournaments Tab**: Create, view, delete, backup, archive/unarchive, import/export tournaments
+  - **Settings Tab**: Theme selector and Payout Calculator (with tournament tagging via dropdown)
   - **Players Tab (Player Directory)**: Consolidated player management with unified dialog:
     - Search players by name, code, or email; click player card to open management dialog
     - Profile tab: Edit name, email, phone, t-shirt size; override handicap; merge/delete actions
@@ -94,7 +95,7 @@ The server handles tournament creation, player registration, score synchronizati
     - Merge duplicate player records via dialog
     - Export/Import: Download all players as JSON, import from previously exported file (skips duplicates by code)
     - Custom player codes: When adding a player, optionally specify a custom code (e.g., PC7000)
-- DirectorPortal provides per-tournament dashboard with player management, groups, and start functionality
+- DirectorPortal provides per-tournament dashboard with player management, groups, start functionality, and inline payout calculator ($ icon in header)
 - All director endpoints require master PIN or tournament-specific PIN for authorization
 - Manual History API Endpoints:
   - `POST /api/universal-players/:playerId/history` - Add manual tournament history

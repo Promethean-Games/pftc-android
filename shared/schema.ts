@@ -118,6 +118,26 @@ export const tournamentScoresRelations = relations(tournamentScores, ({ one }) =
   }),
 }));
 
+// Tournament payouts - payout calculations linked to tournaments
+export const tournamentPayouts = pgTable("tournament_payouts", {
+  id: serial("id").primaryKey(),
+  tournamentId: integer("tournament_id").notNull().references(() => tournaments.id).unique(),
+  numPlayers: integer("num_players").notNull(),
+  entryFee: real("entry_fee").notNull(),
+  addedPrize: real("added_prize").notNull().default(0),
+  numSpots: integer("num_spots").notNull(),
+  percentages: jsonb("percentages").notNull().$type<number[]>(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const tournamentPayoutsRelations = relations(tournamentPayouts, ({ one }) => ({
+  tournament: one(tournaments, {
+    fields: [tournamentPayouts.tournamentId],
+    references: [tournaments.id],
+  }),
+}));
+
 // Push notification subscriptions
 export const pushSubscriptions = pgTable("push_subscriptions", {
   id: serial("id").primaryKey(),
@@ -137,6 +157,7 @@ export const insertPlayerTournamentHistorySchema = createInsertSchema(playerTour
 export const insertTournamentSchema = createInsertSchema(tournaments).omit({ id: true, createdAt: true });
 export const insertTournamentPlayerSchema = createInsertSchema(tournamentPlayers).omit({ id: true, createdAt: true });
 export const insertTournamentScoreSchema = createInsertSchema(tournamentScores).omit({ id: true });
+export const insertTournamentPayoutSchema = createInsertSchema(tournamentPayouts).omit({ id: true, createdAt: true, updatedAt: true });
 export const insertPushSubscriptionSchema = createInsertSchema(pushSubscriptions).omit({ id: true, createdAt: true });
 
 // Types from database
@@ -150,6 +171,8 @@ export type TournamentPlayer = typeof tournamentPlayers.$inferSelect;
 export type InsertTournamentPlayer = z.infer<typeof insertTournamentPlayerSchema>;
 export type TournamentScore = typeof tournamentScores.$inferSelect;
 export type InsertTournamentScore = z.infer<typeof insertTournamentScoreSchema>;
+export type TournamentPayout = typeof tournamentPayouts.$inferSelect;
+export type InsertTournamentPayout = z.infer<typeof insertTournamentPayoutSchema>;
 export type PushSubscription = typeof pushSubscriptions.$inferSelect;
 export type InsertPushSubscription = z.infer<typeof insertPushSubscriptionSchema>;
 

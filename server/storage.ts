@@ -5,6 +5,7 @@ import {
   universalPlayers,
   playerTournamentHistory,
   pushSubscriptions,
+  tournamentPayouts,
   type Tournament,
   type InsertTournament,
   type TournamentPlayer,
@@ -18,6 +19,7 @@ import {
   type InsertPlayerTournamentHistory,
   type PushSubscription,
   type InsertPushSubscription,
+  type TournamentPayout,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, sql, desc, ilike, or } from "drizzle-orm";
@@ -79,6 +81,11 @@ export interface IStorage {
   recalculateHandicap(universalPlayerId: number): Promise<UniversalPlayer>;
   getTournamentPlayers(tournamentId: number): Promise<TournamentPlayer[]>;
   getLiveTournamentStats(universalPlayerId: number): Promise<LiveTournamentStat[]>;
+
+  // Payout operations
+  upsertTournamentPayout(tournamentId: number, data: { numPlayers: number; entryFee: number; addedPrize: number; numSpots: number; percentages: number[] }): Promise<TournamentPayout>;
+  getTournamentPayout(tournamentId: number): Promise<TournamentPayout | undefined>;
+  deleteTournamentPayout(tournamentId: number): Promise<void>;
 
   // Push subscription operations
   upsertPushSubscription(sub: InsertPushSubscription): Promise<PushSubscription>;
@@ -659,6 +666,28 @@ export class DatabaseStorage implements IStorage {
 
   async getAllPushSubscriptions(): Promise<PushSubscription[]> {
     return db.select().from(pushSubscriptions);
+  }
+
+  async upsertTournamentPayout(tournamentId: number, data: { numPlayers: number; entryFee: number; addedPrize: number; numSpots: number; percentages: number[] }): Promise<TournamentPayout> {
+    const existing = await db.select().from(tournamentPayouts).where(eq(tournamentPayouts.tournamentId, tournamentId));
+    if (existing.length > 0) {
+      const [updated] = await db.update(tournamentPayouts)
+        .set({ ...data, updatedAt: new Date() })
+        .where(eq(tournamentPayouts.tournamentId, tournamentId))
+        .returning();
+      return updated;
+    }
+    const [created] = await db.insert(tournamentPayouts).values({ tournamentId, ...data }).returning();
+    return created;
+  }
+
+  async getTournamentPayout(tournamentId: number): Promise<TournamentPayout | undefined> {
+    const [payout] = await db.select().from(tournamentPayouts).where(eq(tournamentPayouts.tournamentId, tournamentId));
+    return payout;
+  }
+
+  async deleteTournamentPayout(tournamentId: number): Promise<void> {
+    await db.delete(tournamentPayouts).where(eq(tournamentPayouts.tournamentId, tournamentId));
   }
 }
 

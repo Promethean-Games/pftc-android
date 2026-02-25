@@ -450,6 +450,74 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get tournament payout
+  app.get("/api/tournaments/:roomCode/payout", async (req, res) => {
+    try {
+      const tournament = await storage.getTournamentByCode(req.params.roomCode);
+      if (!tournament) {
+        return res.status(404).json({ error: "Tournament not found" });
+      }
+      const directorPin = req.query.directorPin as string;
+      const isMasterDirector = directorPin === MASTER_DIRECTOR_PIN;
+      const isTournamentDirector = await storage.verifyDirectorPin(req.params.roomCode, directorPin);
+      if (!isMasterDirector && !isTournamentDirector) {
+        return res.status(403).json({ error: "Invalid director credentials" });
+      }
+      const payout = await storage.getTournamentPayout(tournament.id);
+      res.json(payout || null);
+    } catch (error) {
+      console.error("Error getting payout:", error);
+      res.status(500).json({ error: "Failed to get payout" });
+    }
+  });
+
+  // Save/update tournament payout
+  app.put("/api/tournaments/:roomCode/payout", async (req, res) => {
+    try {
+      const tournament = await storage.getTournamentByCode(req.params.roomCode);
+      if (!tournament) {
+        return res.status(404).json({ error: "Tournament not found" });
+      }
+      const { directorPin, numPlayers, entryFee, addedPrize, numSpots, percentages } = req.body;
+      const isMasterDirector = directorPin === MASTER_DIRECTOR_PIN;
+      const isTournamentDirector = await storage.verifyDirectorPin(req.params.roomCode, directorPin);
+      if (!isMasterDirector && !isTournamentDirector) {
+        return res.status(403).json({ error: "Invalid director credentials" });
+      }
+      if (!numPlayers || !numSpots || !percentages || !Array.isArray(percentages)) {
+        return res.status(400).json({ error: "Missing required payout fields" });
+      }
+      const payout = await storage.upsertTournamentPayout(tournament.id, {
+        numPlayers, entryFee: entryFee || 0, addedPrize: addedPrize || 0, numSpots, percentages,
+      });
+      res.json(payout);
+    } catch (error) {
+      console.error("Error saving payout:", error);
+      res.status(500).json({ error: "Failed to save payout" });
+    }
+  });
+
+  // Delete tournament payout
+  app.delete("/api/tournaments/:roomCode/payout", async (req, res) => {
+    try {
+      const tournament = await storage.getTournamentByCode(req.params.roomCode);
+      if (!tournament) {
+        return res.status(404).json({ error: "Tournament not found" });
+      }
+      const directorPin = req.query.directorPin as string;
+      const isMasterDirector = directorPin === MASTER_DIRECTOR_PIN;
+      const isTournamentDirector = await storage.verifyDirectorPin(req.params.roomCode, directorPin);
+      if (!isMasterDirector && !isTournamentDirector) {
+        return res.status(403).json({ error: "Invalid director credentials" });
+      }
+      await storage.deleteTournamentPayout(tournament.id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting payout:", error);
+      res.status(500).json({ error: "Failed to delete payout" });
+    }
+  });
+
   // Start tournament (director only - master PIN or tournament PIN)
   app.post("/api/tournaments/:roomCode/start", async (req, res) => {
     try {

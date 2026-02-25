@@ -35,10 +35,12 @@ import {
   Save,
   ArrowUpDown,
   Clock,
+  DollarSign,
 } from "lucide-react";
 import { useTournament } from "@/contexts/TournamentContext";
 import { apiRequest } from "@/lib/queryClient";
 import { NotificationsTab } from "./NotificationsTab";
+import { PayoutCalculator } from "./PayoutCalculator";
 
 interface UniversalPlayer {
   id: number;
@@ -95,6 +97,7 @@ function formatRuntime(startedAt: string | null, completedAt: string | null, now
 export function DirectorPortal({ onClose }: DirectorPortalProps) {
   const tournament = useTournament();
   const [activeTab, setActiveTab] = useState<NavTab>("dashboard");
+  const [showPayout, setShowPayout] = useState(false);
   const [newPlayerName, setNewPlayerName] = useState("");
   const [newPlayerGroup, setNewPlayerGroup] = useState("");
   const [newPlayerUniversalId, setNewPlayerUniversalId] = useState("");
@@ -635,6 +638,15 @@ export function DirectorPortal({ onClose }: DirectorPortalProps) {
           <Button
             variant="ghost"
             size="icon"
+            onClick={() => setShowPayout(!showPayout)}
+            title="Payout Calculator"
+            data-testid="button-toggle-payout"
+          >
+            <DollarSign className="w-5 h-5" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
             onClick={() => tournament.refreshLeaderboard()}
             data-testid="button-refresh-leaderboard"
           >
@@ -682,6 +694,17 @@ export function DirectorPortal({ onClose }: DirectorPortalProps) {
           </button>
         </div>
       </div>
+
+      {/* Payout Calculator Panel */}
+      {showPayout && (
+        <div className="border-b p-4 bg-muted/30">
+          <PayoutCalculator
+            directorPin={localStorage.getItem("directorPin") || "3141"}
+            linkedRoomCode={tournament.roomCode || undefined}
+            onClose={() => setShowPayout(false)}
+          />
+        </div>
+      )}
 
       {/* Scrollable Content */}
       <div className="flex-1 overflow-y-auto p-4 pb-20">
