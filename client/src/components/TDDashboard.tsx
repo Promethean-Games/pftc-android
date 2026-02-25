@@ -1,9 +1,9 @@
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Trophy, Users, Settings, Palette, DollarSign, Minus, Plus } from "lucide-react";
+import { ArrowLeft, Trophy, Users, Settings, Palette, DollarSign, Minus, Plus, GripVertical } from "lucide-react";
 import { TournamentManagementTab } from "./TournamentManagementTab";
 import { PlayerDirectoryTab } from "./PlayerDirectoryTab";
 import { Card } from "@/components/ui/card";
@@ -15,6 +15,168 @@ interface TDDashboardProps {
 }
 
 type DirectorTheme = "default" | "dark-green" | "dark-blue" | "light";
+
+const PLACE_COLORS = [
+  "bg-yellow-500",
+  "bg-gray-400",
+  "bg-amber-700",
+  "bg-blue-500",
+  "bg-emerald-500",
+  "bg-purple-500",
+  "bg-pink-500",
+  "bg-orange-500",
+  "bg-cyan-500",
+  "bg-rose-500",
+];
+
+const PLACE_COLORS_HEX = [
+  "#eab308",
+  "#9ca3af",
+  "#b45309",
+  "#3b82f6",
+  "#10b981",
+  "#a855f7",
+  "#ec4899",
+  "#f97316",
+  "#06b6d4",
+  "#f43f5e",
+];
+
+function ordinal(n: number): string {
+  if (n === 1) return "1st";
+  if (n === 2) return "2nd";
+  if (n === 3) return "3rd";
+  return `${n}th`;
+}
+
+interface MultiHandleSliderProps {
+  percentages: number[];
+  onChange: (newPercentages: number[]) => void;
+}
+
+function MultiHandleSlider({ percentages, onChange }: MultiHandleSliderProps) {
+  const trackRef = useRef<HTMLDivElement>(null);
+  const draggingRef = useRef<number | null>(null);
+  const startXRef = useRef(0);
+  const startPercentsRef = useRef<number[]>([]);
+
+  const cumulative = percentages.reduce<number[]>((acc, pct, i) => {
+    acc.push((acc[i - 1] || 0) + pct);
+    return acc;
+  }, []);
+
+  const handlePositions = cumulative.slice(0, -1);
+
+  const getPercentFromX = useCallback((clientX: number): number => {
+    if (!trackRef.current) return 0;
+    const rect = trackRef.current.getBoundingClientRect();
+    const x = clientX - rect.left;
+    return Math.max(0, Math.min(100, (x / rect.width) * 100));
+  }, []);
+
+  const handlePointerDown = useCallback((handleIndex: number, e: React.PointerEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    draggingRef.current = handleIndex;
+    startXRef.current = getPercentFromX(e.clientX);
+    startPercentsRef.current = [...percentages];
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  }, [percentages, getPercentFromX]);
+
+  const handlePointerMove = useCallback((e: React.PointerEvent) => {
+    if (draggingRef.current === null) return;
+    e.preventDefault();
+
+    const handleIndex = draggingRef.current;
+    const currentPercent = getPercentFromX(e.clientX);
+    const delta = currentPercent - startXRef.current;
+    const startPerc = startPercentsRef.current;
+
+    const leftIdx = handleIndex;
+    const rightIdx = handleIndex + 1;
+
+    let newLeft = startPerc[leftIdx] + delta;
+    let newRight = startPerc[rightIdx] - delta;
+
+    if (newLeft < 1) {
+      newRight += (newLeft - 1);
+      newLeft = 1;
+    }
+    if (newRight < 1) {
+      newLeft += (newRight - 1);
+      newRight = 1;
+    }
+
+    newLeft = Math.max(1, Math.round(newLeft));
+    newRight = Math.max(1, Math.round(newRight));
+
+    const combined = startPerc[leftIdx] + startPerc[rightIdx];
+    if (newLeft + newRight !== combined) {
+      newRight = combined - newLeft;
+    }
+    if (newRight < 1) {
+      newRight = 1;
+      newLeft = combined - 1;
+    }
+
+    const updated = [...startPerc];
+    updated[leftIdx] = newLeft;
+    updated[rightIdx] = newRight;
+    onChange(updated);
+  }, [getPercentFromX, onChange]);
+
+  const handlePointerUp = useCallback(() => {
+    draggingRef.current = null;
+  }, []);
+
+  return (
+    <div className="space-y-2">
+      <div
+        ref={trackRef}
+        className="relative h-12 rounded-md overflow-visible flex select-none touch-none"
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerLeave={handlePointerUp}
+        data-testid="slider-track"
+      >
+        {percentages.map((pct, i) => (
+          <div
+            key={i}
+            className={cn(
+              "h-full flex items-center justify-center relative",
+              PLACE_COLORS[i % PLACE_COLORS.length],
+              i === 0 && "rounded-l-md",
+              i === percentages.length - 1 && "rounded-r-md"
+            )}
+            style={{ width: `${pct}%`, minWidth: pct > 0 ? "2px" : "0px" }}
+          >
+            {pct >= 8 && (
+              <span className="text-xs font-bold text-white drop-shadow-md truncate px-1" data-testid={`text-segment-pct-${i}`}>
+                {Math.round(pct)}%
+              </span>
+            )}
+          </div>
+        ))}
+
+        {handlePositions.map((pos, i) => (
+          <div
+            key={`handle-${i}`}
+            className="absolute top-0 h-full flex items-center z-10"
+            style={{ left: `${pos}%`, transform: "translateX(-50%)" }}
+          >
+            <div
+              className="w-6 h-14 rounded-md bg-background border-2 border-foreground/30 flex items-center justify-center cursor-ew-resize shadow-md"
+              onPointerDown={(e) => handlePointerDown(i, e)}
+              data-testid={`handle-payout-${i}`}
+            >
+              <GripVertical className="w-3 h-3 text-muted-foreground" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function PayoutCalculator() {
   const [numPlayers, setNumPlayers] = useState(16);
@@ -37,51 +199,8 @@ function PayoutCalculator() {
     setPercentages(newPercentages);
   };
 
-  const handleSliderChange = (index: number, newValue: number) => {
-    const updated = [...percentages];
-    const oldValue = updated[index];
-    const diff = newValue - oldValue;
-
-    if (diff === 0) return;
-
-    updated[index] = newValue;
-
-    const otherIndices = updated.map((_, i) => i).filter(i => i !== index);
-    const otherTotal = otherIndices.reduce((s, i) => s + updated[i], 0);
-
-    if (otherTotal === 0) {
-      const share = Math.floor(-diff / otherIndices.length);
-      const leftover = -diff - share * otherIndices.length;
-      otherIndices.forEach((i, idx) => {
-        updated[i] = share + (idx < leftover ? 1 : 0);
-      });
-    } else {
-      let remaining = -diff;
-      for (let pass = 0; remaining !== 0 && pass < 10; pass++) {
-        const availableIndices = otherIndices.filter(i => remaining > 0 ? updated[i] > 0 : true);
-        if (availableIndices.length === 0) break;
-        const perItem = remaining > 0 ? Math.min(1, Math.ceil(remaining / availableIndices.length)) : Math.max(-1, Math.floor(remaining / availableIndices.length));
-        for (const i of availableIndices) {
-          if (remaining === 0) break;
-          const change = remaining > 0 ? Math.min(perItem, remaining, updated[i]) : Math.max(perItem, remaining);
-          updated[i] -= change;
-          remaining -= change;
-        }
-      }
-    }
-
-    const total = updated.reduce((s, v) => s + v, 0);
-    if (total !== 100) {
-      const adjustIdx = otherIndices.find(i => updated[i] > 0) ?? otherIndices[0];
-      if (adjustIdx !== undefined) {
-        updated[adjustIdx] += 100 - total;
-      }
-    }
-
-    setPercentages(updated.map(v => Math.max(0, Math.min(100, v))));
-  };
-
-  const payouts = percentages.map(pct => ({
+  const payouts = percentages.map((pct, i) => ({
+    place: i + 1,
     percentage: pct,
     amount: Math.round((pct / 100) * totalPrizePool * 100) / 100,
   }));
@@ -172,31 +291,32 @@ function PayoutCalculator() {
         </div>
 
         <div className="space-y-3">
-          <Label className="text-xs font-semibold">Payout Distribution</Label>
-          {payouts.map((payout, index) => (
-            <div key={index} className="space-y-1">
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-sm font-medium w-12">
-                  {index === 0 ? "1st" : index === 1 ? "2nd" : index === 2 ? "3rd" : `${index + 1}th`}
-                </span>
-                <div className="flex-1">
-                  <input
-                    type="range"
-                    min={0}
-                    max={100}
-                    value={payout.percentage}
-                    onChange={(e) => handleSliderChange(index, parseInt(e.target.value))}
-                    className="w-full h-2 rounded-lg appearance-none cursor-pointer accent-primary"
-                    data-testid={`slider-payout-${index}`}
-                  />
-                </div>
-                <span className="text-sm font-mono w-12 text-right" data-testid={`text-payout-pct-${index}`}>
-                  {payout.percentage}%
-                </span>
-                <span className="text-sm font-bold w-20 text-right" data-testid={`text-payout-amount-${index}`}>
-                  ${payout.amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </span>
+          <Label className="text-xs font-semibold">Drag handles to adjust payout split</Label>
+          <MultiHandleSlider
+            percentages={percentages}
+            onChange={setPercentages}
+          />
+        </div>
+
+        <div className="space-y-2">
+          {payouts.map((payout) => (
+            <div key={payout.place} className="flex items-center gap-2">
+              <div
+                className={cn("w-3 h-3 rounded-full flex-shrink-0", PLACE_COLORS[(payout.place - 1) % PLACE_COLORS.length])}
+              />
+              <span className="text-sm font-medium w-8">{ordinal(payout.place)}</span>
+              <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
+                <div
+                  className={cn("h-full rounded-full transition-all", PLACE_COLORS[(payout.place - 1) % PLACE_COLORS.length])}
+                  style={{ width: `${payout.percentage}%` }}
+                />
               </div>
+              <span className="text-sm font-mono w-10 text-right text-muted-foreground" data-testid={`text-payout-pct-${payout.place - 1}`}>
+                {payout.percentage}%
+              </span>
+              <span className="text-sm font-bold w-20 text-right" data-testid={`text-payout-amount-${payout.place - 1}`}>
+                ${payout.amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </span>
             </div>
           ))}
         </div>
@@ -207,7 +327,7 @@ function PayoutCalculator() {
             <span className={cn(
               "font-bold",
               percentages.reduce((s, v) => s + v, 0) === 100 ? "text-green-600" : "text-destructive"
-            )}>
+            )} data-testid="text-total-distributed">
               {percentages.reduce((s, v) => s + v, 0)}%
               {" "}(${payouts.reduce((s, p) => s + p.amount, 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
             </span>
