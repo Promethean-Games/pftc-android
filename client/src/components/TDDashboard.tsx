@@ -1,10 +1,13 @@
-import { useState } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { ArrowLeft, Trophy, Users, Palette } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { ArrowLeft, Trophy, Users, Settings, Palette, DollarSign, Minus, Plus } from "lucide-react";
 import { TournamentManagementTab } from "./TournamentManagementTab";
 import { PlayerDirectoryTab } from "./PlayerDirectoryTab";
 import { Card } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 
 interface TDDashboardProps {
   onClose: () => void;
@@ -13,8 +16,210 @@ interface TDDashboardProps {
 
 type DirectorTheme = "default" | "dark-green" | "dark-blue" | "light";
 
+function PayoutCalculator() {
+  const [numPlayers, setNumPlayers] = useState(16);
+  const [entryFee, setEntryFee] = useState(20);
+  const [addedPrize, setAddedPrize] = useState(0);
+  const [numSpots, setNumSpots] = useState(3);
+  const [percentages, setPercentages] = useState<number[]>([50, 30, 20]);
+
+  const totalPrizePool = numPlayers * entryFee + addedPrize;
+
+  const adjustSpots = (newCount: number) => {
+    const clamped = Math.max(1, Math.min(10, newCount));
+    const newPercentages: number[] = [];
+    const basePercent = Math.floor(100 / clamped);
+    let remainder = 100 - basePercent * clamped;
+    for (let i = 0; i < clamped; i++) {
+      newPercentages.push(basePercent + (i < remainder ? 1 : 0));
+    }
+    setNumSpots(clamped);
+    setPercentages(newPercentages);
+  };
+
+  const handleSliderChange = (index: number, newValue: number) => {
+    const updated = [...percentages];
+    const oldValue = updated[index];
+    const diff = newValue - oldValue;
+
+    if (diff === 0) return;
+
+    updated[index] = newValue;
+
+    const otherIndices = updated.map((_, i) => i).filter(i => i !== index);
+    const otherTotal = otherIndices.reduce((s, i) => s + updated[i], 0);
+
+    if (otherTotal === 0) {
+      const share = Math.floor(-diff / otherIndices.length);
+      const leftover = -diff - share * otherIndices.length;
+      otherIndices.forEach((i, idx) => {
+        updated[i] = share + (idx < leftover ? 1 : 0);
+      });
+    } else {
+      let remaining = -diff;
+      for (let pass = 0; remaining !== 0 && pass < 10; pass++) {
+        const availableIndices = otherIndices.filter(i => remaining > 0 ? updated[i] > 0 : true);
+        if (availableIndices.length === 0) break;
+        const perItem = remaining > 0 ? Math.min(1, Math.ceil(remaining / availableIndices.length)) : Math.max(-1, Math.floor(remaining / availableIndices.length));
+        for (const i of availableIndices) {
+          if (remaining === 0) break;
+          const change = remaining > 0 ? Math.min(perItem, remaining, updated[i]) : Math.max(perItem, remaining);
+          updated[i] -= change;
+          remaining -= change;
+        }
+      }
+    }
+
+    const total = updated.reduce((s, v) => s + v, 0);
+    if (total !== 100) {
+      const adjustIdx = otherIndices.find(i => updated[i] > 0) ?? otherIndices[0];
+      if (adjustIdx !== undefined) {
+        updated[adjustIdx] += 100 - total;
+      }
+    }
+
+    setPercentages(updated.map(v => Math.max(0, Math.min(100, v))));
+  };
+
+  const payouts = percentages.map(pct => ({
+    percentage: pct,
+    amount: Math.round((pct / 100) * totalPrizePool * 100) / 100,
+  }));
+
+  return (
+    <Card className="p-4">
+      <h3 className="font-semibold mb-4 flex items-center gap-2">
+        <DollarSign className="w-4 h-4" />
+        Payout Calculator
+      </h3>
+
+      <div className="space-y-4">
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <Label htmlFor="numPlayers" className="text-xs">Number of Players</Label>
+            <Input
+              id="numPlayers"
+              type="number"
+              inputMode="numeric"
+              min={1}
+              value={numPlayers}
+              onChange={(e) => setNumPlayers(Math.max(1, parseInt(e.target.value) || 0))}
+              data-testid="input-num-players"
+            />
+          </div>
+          <div>
+            <Label htmlFor="entryFee" className="text-xs">Entry Fee ($)</Label>
+            <Input
+              id="entryFee"
+              type="number"
+              inputMode="decimal"
+              min={0}
+              step={1}
+              value={entryFee}
+              onChange={(e) => setEntryFee(Math.max(0, parseFloat(e.target.value) || 0))}
+              data-testid="input-entry-fee"
+            />
+          </div>
+          <div>
+            <Label htmlFor="addedPrize" className="text-xs">Added Prize Money ($)</Label>
+            <Input
+              id="addedPrize"
+              type="number"
+              inputMode="decimal"
+              min={0}
+              step={1}
+              value={addedPrize}
+              onChange={(e) => setAddedPrize(Math.max(0, parseFloat(e.target.value) || 0))}
+              data-testid="input-added-prize"
+            />
+          </div>
+          <div>
+            <Label className="text-xs">Spots to Pay</Label>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => adjustSpots(numSpots - 1)}
+                disabled={numSpots <= 1}
+                data-testid="button-decrease-spots"
+              >
+                <Minus className="w-4 h-4" />
+              </Button>
+              <span className="text-lg font-bold w-8 text-center" data-testid="text-num-spots">{numSpots}</span>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => adjustSpots(numSpots + 1)}
+                disabled={numSpots >= 10}
+                data-testid="button-increase-spots"
+              >
+                <Plus className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-muted/50 rounded-lg p-3 text-center">
+          <p className="text-xs text-muted-foreground">Total Prize Pool</p>
+          <p className="text-2xl font-bold" data-testid="text-total-prize-pool">
+            ${totalPrizePool.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+          </p>
+          {addedPrize > 0 && (
+            <p className="text-xs text-muted-foreground">
+              ({numPlayers} x ${entryFee} + ${addedPrize} added)
+            </p>
+          )}
+        </div>
+
+        <div className="space-y-3">
+          <Label className="text-xs font-semibold">Payout Distribution</Label>
+          {payouts.map((payout, index) => (
+            <div key={index} className="space-y-1">
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-sm font-medium w-12">
+                  {index === 0 ? "1st" : index === 1 ? "2nd" : index === 2 ? "3rd" : `${index + 1}th`}
+                </span>
+                <div className="flex-1">
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    value={payout.percentage}
+                    onChange={(e) => handleSliderChange(index, parseInt(e.target.value))}
+                    className="w-full h-2 rounded-lg appearance-none cursor-pointer accent-primary"
+                    data-testid={`slider-payout-${index}`}
+                  />
+                </div>
+                <span className="text-sm font-mono w-12 text-right" data-testid={`text-payout-pct-${index}`}>
+                  {payout.percentage}%
+                </span>
+                <span className="text-sm font-bold w-20 text-right" data-testid={`text-payout-amount-${index}`}>
+                  ${payout.amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="border-t pt-3">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-muted-foreground">Total distributed:</span>
+            <span className={cn(
+              "font-bold",
+              percentages.reduce((s, v) => s + v, 0) === 100 ? "text-green-600" : "text-destructive"
+            )}>
+              {percentages.reduce((s, v) => s + v, 0)}%
+              {" "}(${payouts.reduce((s, p) => s + p.amount, 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
+            </span>
+          </div>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
 export function TDDashboard({ onClose, directorPin }: TDDashboardProps) {
-  const [activeTab, setActiveTab] = useState<"tournaments" | "players" | "theme">("tournaments");
+  const [activeTab, setActiveTab] = useState<"tournaments" | "players" | "settings">("tournaments");
   const [directorTheme, setDirectorTheme] = useState<DirectorTheme>(() => {
     const saved = localStorage.getItem("directorTheme");
     return (saved as DirectorTheme) || "default";
@@ -42,7 +247,7 @@ export function TDDashboard({ onClose, directorPin }: TDDashboardProps) {
 
       <Tabs 
         value={activeTab} 
-        onValueChange={(v) => setActiveTab(v as "tournaments" | "players" | "theme")}
+        onValueChange={(v) => setActiveTab(v as "tournaments" | "players" | "settings")}
         className="flex-1 flex flex-col"
       >
         <TabsList className="w-full h-auto rounded-none border-b bg-background p-0">
@@ -63,12 +268,12 @@ export function TDDashboard({ onClose, directorPin }: TDDashboardProps) {
             Players
           </TabsTrigger>
           <TabsTrigger 
-            value="theme"
+            value="settings"
             className="flex-1 flex items-center gap-2 py-4 data-[state=active]:bg-muted rounded-none"
-            data-testid="tab-theme"
+            data-testid="tab-settings"
           >
-            <Palette className="h-5 w-5" />
-            Theme
+            <Settings className="h-5 w-5" />
+            Settings
           </TabsTrigger>
         </TabsList>
 
@@ -80,7 +285,7 @@ export function TDDashboard({ onClose, directorPin }: TDDashboardProps) {
           <PlayerDirectoryTab directorPin={directorPin} />
         </TabsContent>
 
-        <TabsContent value="theme" className="flex-1 m-0 p-0 overflow-auto">
+        <TabsContent value="settings" className="flex-1 m-0 p-0 overflow-auto">
           <div className="p-4 space-y-4">
             <Card className="p-4">
               <h3 className="font-semibold mb-4 flex items-center gap-2">
@@ -138,6 +343,8 @@ export function TDDashboard({ onClose, directorPin }: TDDashboardProps) {
                 </button>
               </div>
             </Card>
+
+            <PayoutCalculator />
           </div>
         </TabsContent>
       </Tabs>
