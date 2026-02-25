@@ -245,11 +245,24 @@ export function PayoutCalculator({ directorPin, tournaments, linkedRoomCode, onC
     }
   };
 
-  const payouts = percentages.map((pct, i) => ({
-    place: i + 1,
-    percentage: pct,
-    amount: Math.round((pct / 100) * totalPrizePool * 100) / 100,
-  }));
+  const payouts = (() => {
+    const rawAmounts = percentages.map(pct => (pct / 100) * totalPrizePool);
+    const snapped = rawAmounts.map(a => Math.round(a / 5) * 5);
+    const snappedTotal = snapped.reduce((s, v) => s + v, 0);
+    const diff = totalPrizePool - snappedTotal;
+    if (diff !== 0) {
+      let maxIdx = 0;
+      for (let i = 1; i < snapped.length; i++) {
+        if (snapped[i] > snapped[maxIdx]) maxIdx = i;
+      }
+      snapped[maxIdx] += diff;
+    }
+    return percentages.map((pct, i) => ({
+      place: i + 1,
+      percentage: pct,
+      amount: snapped[i],
+    }));
+  })();
 
   return (
     <Card className="p-4">
@@ -363,7 +376,7 @@ export function PayoutCalculator({ directorPin, tournaments, linkedRoomCode, onC
           <div className="bg-muted/50 rounded-lg p-3 text-center">
             <p className="text-xs text-muted-foreground">Total Prize Pool</p>
             <p className="text-2xl font-bold" data-testid="text-total-prize-pool">
-              ${totalPrizePool.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              ${totalPrizePool.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
             </p>
             {addedPrize > 0 && (
               <p className="text-xs text-muted-foreground">
@@ -397,7 +410,7 @@ export function PayoutCalculator({ directorPin, tournaments, linkedRoomCode, onC
                   {payout.percentage}%
                 </span>
                 <span className="text-sm font-bold w-20 text-right" data-testid={`text-payout-amount-${payout.place - 1}`}>
-                  ${payout.amount.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  ${payout.amount.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                 </span>
               </div>
             ))}
@@ -411,7 +424,7 @@ export function PayoutCalculator({ directorPin, tournaments, linkedRoomCode, onC
                 percentages.reduce((s, v) => s + v, 0) === 100 ? "text-green-600" : "text-destructive"
               )} data-testid="text-total-distributed">
                 {percentages.reduce((s, v) => s + v, 0)}%
-                {" "}(${payouts.reduce((s, p) => s + p.amount, 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
+                {" "}(${payouts.reduce((s, p) => s + p.amount, 0).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })})
               </span>
             </div>
           </div>
