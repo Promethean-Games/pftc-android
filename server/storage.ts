@@ -142,8 +142,12 @@ export class DatabaseStorage implements IStorage {
       
       if (scores.length > 0) {
         const uniqueHoles = new Set(scores.map(s => s.hole));
-        const totalStrokes = scores.reduce((sum, s) => sum + s.strokes, 0);
-        const totalPar = scores.reduce((sum, s) => sum + s.par, 0);
+        const dedupedScores = Array.from(uniqueHoles).map(hole => {
+          const holeScores = scores.filter(s => s.hole === hole);
+          return holeScores[holeScores.length - 1];
+        });
+        const totalStrokes = dedupedScores.reduce((sum, s) => sum + s.strokes + s.scratches + s.penalties, 0);
+        const totalPar = dedupedScores.reduce((sum, s) => sum + s.par, 0);
         playerStats.push({
           holesCompleted: uniqueHoles.size,
           totalStrokes,
@@ -552,12 +556,18 @@ export class DatabaseStorage implements IStorage {
 
       if (scores.length === 0) continue;
 
+      const uniqueHoles = new Set(scores.map(s => s.hole));
+      const dedupedScores = Array.from(uniqueHoles).map(hole => {
+        const holeScores = scores.filter(s => s.hole === hole);
+        return holeScores[holeScores.length - 1];
+      });
+
       let totalStrokes = 0;
       let totalPar = 0;
       let totalPenalties = 0;
       let totalScratches = 0;
-      for (const s of scores) {
-        totalStrokes += s.strokes;
+      for (const s of dedupedScores) {
+        totalStrokes += s.strokes + s.scratches + s.penalties;
         totalPar += s.par;
         totalPenalties += s.penalties;
         totalScratches += s.scratches;
@@ -568,7 +578,7 @@ export class DatabaseStorage implements IStorage {
         tournamentName: row.tournamentName,
         roomCode: row.roomCode,
         playerName: row.playerName,
-        holesPlayed: scores.length,
+        holesPlayed: uniqueHoles.size,
         totalStrokes,
         totalPar,
         relativeToPar: totalStrokes - totalPar,
