@@ -1124,7 +1124,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Player not found in this tournament" });
       }
       
-      await storage.removePlayerFromTournament(playerId);
+      if (tournament.isStarted) {
+        await storage.markPlayerDnf(playerId);
+      } else {
+        await storage.removePlayerFromTournament(playerId);
+      }
       res.json({ success: true });
     } catch (error) {
       console.error("Error removing player:", error);

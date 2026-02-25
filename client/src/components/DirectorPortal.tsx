@@ -262,7 +262,7 @@ export function DirectorPortal({ onClose }: DirectorPortalProps) {
       }
       case "score":
       default:
-        return dir * (a.totalStrokes - b.totalStrokes || b.holesCompleted - a.holesCompleted);
+        return dir * (a.relativeToPar - b.relativeToPar || a.totalStrokes - b.totalStrokes || b.holesCompleted - a.holesCompleted);
     }
   });
 
@@ -1114,11 +1114,17 @@ export function DirectorPortal({ onClose }: DirectorPortalProps) {
                       return (
                       <div
                         key={player.id}
-                        className="flex items-center gap-2 p-3 rounded-lg hover:bg-black/5 dark:hover:bg-white/5"
+                        className={cn(
+                          "flex items-center gap-2 p-3 rounded-lg hover:bg-black/5 dark:hover:bg-white/5",
+                          player.isDnf && "opacity-50"
+                        )}
                       >
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
-                            <p className="font-medium truncate">{player.playerName}</p>
+                            <p className={cn("font-medium truncate", player.isDnf && "line-through")}>{player.playerName}</p>
+                            {player.isDnf && (
+                              <span className="text-xs bg-destructive/20 text-destructive px-1.5 py-0.5 rounded font-medium">DNF</span>
+                            )}
                             {player.universalPlayerId ? (
                               <span className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400" title="Linked for handicapping">
                                 <Link2 className="w-3 h-3" />
@@ -1193,6 +1199,7 @@ export function DirectorPortal({ onClose }: DirectorPortalProps) {
                         >
                           <Edit2 className="w-4 h-4" />
                         </Button>
+                        {!player.isDnf && (
                         <Button
                           variant="ghost"
                           size="icon"
@@ -1209,6 +1216,7 @@ export function DirectorPortal({ onClose }: DirectorPortalProps) {
                         >
                           <Trash2 className="w-4 h-4" />
                         </Button>
+                        )}
                       </div>
                     );
                     })}

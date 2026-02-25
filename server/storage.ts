@@ -54,6 +54,7 @@ export interface IStorage {
   unassignDeviceFromPlayer(playerId: number): Promise<void>;
   updatePlayer(playerId: number, data: Partial<Pick<TournamentPlayer, "playerName" | "groupName" | "universalId" | "contactInfo">>): Promise<TournamentPlayer>;
   removePlayerFromTournament(playerId: number): Promise<void>;
+  markPlayerDnf(playerId: number): Promise<void>;
 
   // Score operations
   upsertScore(score: InsertTournamentScore): Promise<TournamentScore>;
@@ -131,10 +132,11 @@ export class DatabaseStorage implements IStorage {
       };
     }
 
-    // Get scores for each player
+    // Get scores for each active (non-DNF) player
     const playerStats: { holesCompleted: number; totalStrokes: number; totalPar: number }[] = [];
     
     for (const player of players) {
+      if (player.isDnf) continue;
       const scores = await db
         .select()
         .from(tournamentScores)
@@ -307,6 +309,10 @@ export class DatabaseStorage implements IStorage {
     await db.delete(tournamentPlayers).where(eq(tournamentPlayers.id, playerId));
   }
 
+  async markPlayerDnf(playerId: number): Promise<void> {
+    await db.update(tournamentPlayers).set({ isDnf: true, deviceId: null }).where(eq(tournamentPlayers.id, playerId));
+  }
+
   async upsertScore(score: InsertTournamentScore): Promise<TournamentScore> {
     const existing = await db
       .select()
@@ -348,6 +354,7 @@ export class DatabaseStorage implements IStorage {
     const leaderboard: LeaderboardEntry[] = [];
 
     for (const player of players) {
+      if (player.isDnf) continue;
       const scores = await this.getPlayerScores(player.id);
       const uniqueHoles = new Set(scores.map(s => s.hole));
       const dedupedScores = Array.from(uniqueHoles).map(hole => {
@@ -373,6 +380,9 @@ export class DatabaseStorage implements IStorage {
     }
 
     return leaderboard.sort((a, b) => {
+      if (a.relativeToPar !== b.relativeToPar) {
+        return a.relativeToPar - b.relativeToPar;
+      }
       if (a.totalStrokes !== b.totalStrokes) {
         return a.totalStrokes - b.totalStrokes;
       }

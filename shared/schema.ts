@@ -82,6 +82,7 @@ export const tournamentPlayers = pgTable("tournament_players", {
   universalId: text("universal_id"),
   universalPlayerId: integer("universal_player_id").references(() => universalPlayers.id),
   contactInfo: text("contact_info"),
+  isDnf: boolean("is_dnf").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
