@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { ArrowLeft, Trophy, Users, Settings, Palette } from "lucide-react";
+import { ArrowLeft, Trophy, Users, Settings, Palette, ChevronDown, ChevronUp } from "lucide-react";
 import { TournamentManagementTab } from "./TournamentManagementTab";
 import { PlayerDirectoryTab } from "./PlayerDirectoryTab";
 import { PayoutCalculator } from "./PayoutCalculator";
@@ -21,6 +21,7 @@ export function TDDashboard({ onClose, directorPin }: TDDashboardProps) {
     return (saved as DirectorTheme) || "default";
   });
   const [tournamentOptions, setTournamentOptions] = useState<{ id: number; roomCode: string; name: string }[]>([]);
+  const [themeExpanded, setThemeExpanded] = useState(false);
 
   useEffect(() => {
     fetch(`/api/tournaments?directorPin=${encodeURIComponent(directorPin)}`)
@@ -95,67 +96,74 @@ export function TDDashboard({ onClose, directorPin }: TDDashboardProps) {
 
         <TabsContent value="settings" className="flex-1 m-0 p-0 overflow-auto">
           <div className="p-4 space-y-4">
-            <Card className="p-4">
-              <h3 className="font-semibold mb-4 flex items-center gap-2">
-                <Palette className="w-4 h-4" />
-                Director Portal Theme
-              </h3>
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  className={`p-4 rounded-lg border-2 transition-all ${
-                    directorTheme === "default" 
-                      ? "border-green-500 bg-green-500/10" 
-                      : "border-transparent hover:border-gray-300"
-                  }`}
-                  onClick={() => handleThemeChange("default")}
-                  data-testid="theme-default"
-                >
-                  <div className="w-full h-8 rounded bg-gradient-to-r from-gray-800 to-gray-600 mb-2" />
-                  <p className="text-sm font-medium">PftC Default</p>
-                </button>
-                <button
-                  className={`p-4 rounded-lg border-2 transition-all ${
-                    directorTheme === "dark-green" 
-                      ? "border-green-500 bg-green-500/10" 
-                      : "border-transparent hover:border-gray-300"
-                  }`}
-                  onClick={() => handleThemeChange("dark-green")}
-                  data-testid="theme-dark-green"
-                >
-                  <div className="w-full h-8 rounded bg-gradient-to-r from-emerald-900 to-emerald-700 mb-2" />
-                  <p className="text-sm font-medium">Dark Green</p>
-                </button>
-                <button
-                  className={`p-4 rounded-lg border-2 transition-all ${
-                    directorTheme === "dark-blue" 
-                      ? "border-green-500 bg-green-500/10" 
-                      : "border-transparent hover:border-gray-300"
-                  }`}
-                  onClick={() => handleThemeChange("dark-blue")}
-                  data-testid="theme-dark-blue"
-                >
-                  <div className="w-full h-8 rounded bg-gradient-to-r from-slate-900 to-slate-700 mb-2" />
-                  <p className="text-sm font-medium">Dark Blue</p>
-                </button>
-                <button
-                  className={`p-4 rounded-lg border-2 transition-all ${
-                    directorTheme === "light" 
-                      ? "border-green-500 bg-green-500/10" 
-                      : "border-transparent hover:border-gray-300"
-                  }`}
-                  onClick={() => handleThemeChange("light")}
-                  data-testid="theme-light"
-                >
-                  <div className="w-full h-8 rounded bg-gradient-to-r from-gray-100 to-gray-300 mb-2" />
-                  <p className="text-sm font-medium">Light</p>
-                </button>
-              </div>
-            </Card>
-
             <PayoutCalculator
               directorPin={directorPin}
               tournaments={tournamentOptions}
             />
+
+            <Card className="p-4">
+              <button
+                className="w-full flex items-center gap-2 font-semibold"
+                onClick={() => setThemeExpanded(!themeExpanded)}
+                data-testid="button-toggle-theme"
+              >
+                <Palette className="w-4 h-4" />
+                <span className="flex-1 text-left">Director Portal Theme</span>
+                {themeExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              </button>
+              {themeExpanded && (
+                <div className="grid grid-cols-2 gap-3 mt-4">
+                  <button
+                    className={`p-4 rounded-lg border-2 transition-all ${
+                      directorTheme === "default" 
+                        ? "border-green-500 bg-green-500/10" 
+                        : "border-transparent hover:border-gray-300"
+                    }`}
+                    onClick={() => handleThemeChange("default")}
+                    data-testid="theme-default"
+                  >
+                    <div className="w-full h-8 rounded bg-gradient-to-r from-gray-800 to-gray-600 mb-2" />
+                    <p className="text-sm font-medium">PftC Default</p>
+                  </button>
+                  <button
+                    className={`p-4 rounded-lg border-2 transition-all ${
+                      directorTheme === "dark-green" 
+                        ? "border-green-500 bg-green-500/10" 
+                        : "border-transparent hover:border-gray-300"
+                    }`}
+                    onClick={() => handleThemeChange("dark-green")}
+                    data-testid="theme-dark-green"
+                  >
+                    <div className="w-full h-8 rounded bg-gradient-to-r from-emerald-900 to-emerald-700 mb-2" />
+                    <p className="text-sm font-medium">Dark Green</p>
+                  </button>
+                  <button
+                    className={`p-4 rounded-lg border-2 transition-all ${
+                      directorTheme === "dark-blue" 
+                        ? "border-green-500 bg-green-500/10" 
+                        : "border-transparent hover:border-gray-300"
+                    }`}
+                    onClick={() => handleThemeChange("dark-blue")}
+                    data-testid="theme-dark-blue"
+                  >
+                    <div className="w-full h-8 rounded bg-gradient-to-r from-slate-900 to-slate-700 mb-2" />
+                    <p className="text-sm font-medium">Dark Blue</p>
+                  </button>
+                  <button
+                    className={`p-4 rounded-lg border-2 transition-all ${
+                      directorTheme === "light" 
+                        ? "border-green-500 bg-green-500/10" 
+                        : "border-transparent hover:border-gray-300"
+                    }`}
+                    onClick={() => handleThemeChange("light")}
+                    data-testid="theme-light"
+                  >
+                    <div className="w-full h-8 rounded bg-gradient-to-r from-gray-100 to-gray-300 mb-2" />
+                    <p className="text-sm font-medium">Light</p>
+                  </button>
+                </div>
+              )}
+            </Card>
           </div>
         </TabsContent>
       </Tabs>
