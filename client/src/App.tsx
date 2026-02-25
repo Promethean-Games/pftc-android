@@ -237,6 +237,7 @@ function GameApp() {
           onNewGame={handleNewGame}
           isGameOver={game.isComplete}
           viewOnly={viewOnly}
+          onUpdateScore={(playerId, hole, score) => game.updateScore(playerId, hole, score)}
         />
       )}
 

@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Trophy, Users, RefreshCw, OctagonAlert, CircleSlash, Loader2 } from "lucide-react";
+import { Trophy, Users, RefreshCw, OctagonAlert, CircleSlash, Loader2, Pencil } from "lucide-react";
 import type { Player, HoleScore, LeaderboardEntry } from "@shared/schema";
 import { calculatePlayerTotal, getLeaderboard } from "@/lib/game-utils";
 import { useTournament } from "@/contexts/TournamentContext";
@@ -24,14 +24,17 @@ interface SummaryScreenProps {
   onSubmitToSheets?: () => void;
   isGameOver?: boolean;
   viewOnly?: boolean;
+  onUpdateScore?: (playerId: string, hole: number, score: Partial<HoleScore>) => void;
 }
 
-export function SummaryScreen({ players, scores, onNewGame, onSubmitToSheets, isGameOver = false, viewOnly = false }: SummaryScreenProps) {
+export function SummaryScreen({ players, scores, onNewGame, onSubmitToSheets, isGameOver = false, viewOnly = false, onUpdateScore }: SummaryScreenProps) {
   const [isLandscape, setIsLandscape] = useState(false);
   const [activeTab, setActiveTab] = useState<"local" | "tournament">(viewOnly ? "tournament" : "local");
   const [selectedPlayer, setSelectedPlayer] = useState<LeaderboardEntry | null>(null);
   const [boxScore, setBoxScore] = useState<BoxScoreData | null>(null);
   const [boxScoreLoading, setBoxScoreLoading] = useState(false);
+  const [editingCell, setEditingCell] = useState<{ playerId: string; hole: number } | null>(null);
+  const [editValue, setEditValue] = useState("");
   const tournament = useTournament();
   
   useEffect(() => {
@@ -289,14 +292,53 @@ export function SummaryScreen({ players, scores, onNewGame, onSubmitToSheets, is
           {/* Detailed Box Score & Stats (Landscape) */}
           {isLandscape && (() => {
             const showPenaltyCols = !tournament.isConnected;
+            const canEdit = !!onUpdateScore && !viewOnly;
+
+            const commitEdit = (playerId: string, hole: number) => {
+              const val = parseInt(editValue);
+              if (!isNaN(val) && val >= 0 && onUpdateScore) {
+                const playerScores = scores[playerId] || [];
+                const existing = playerScores.find(s => s.hole === hole);
+                const par = existing?.par ?? 3;
+                const scratches = existing?.scratches ?? 0;
+                const penalties = existing?.penalties ?? 0;
+                onUpdateScore(playerId, hole, {
+                  strokes: val,
+                  par,
+                  scratches,
+                  penalties,
+                });
+
+                if (tournament.isConnected) {
+                  const player = players.find(p => p.id === playerId);
+                  if (player) {
+                    const tp = tournament.myPlayers.find(mp => mp.playerName === player.name);
+                    if (tp) {
+                      tournament.syncScore(tp.id, hole, par, val, scratches, penalties);
+                    }
+                  }
+                }
+              }
+              setEditingCell(null);
+              setEditValue("");
+            };
+
             return (
             <Card className="p-4 mb-6">
-              <h3 className="font-bold mb-3">Detailed Box Score & Statistics</h3>
+              <div className="flex items-center justify-between gap-2 mb-3 flex-wrap">
+                <h3 className="font-bold">Detailed Box Score & Statistics</h3>
+                {canEdit && (
+                  <span className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Pencil className="w-3 h-3" />
+                    Tap a score to edit
+                  </span>
+                )}
+              </div>
               <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="min-w-[120px] sticky left-0 bg-card">Player</TableHead>
+                      <TableHead className="min-w-[120px] sticky left-0 bg-card z-10">Player</TableHead>
                       {allHoles.map((hole) => (
                         <TableHead key={hole} className="text-center min-w-[50px]">H{hole}</TableHead>
                       ))}
@@ -320,7 +362,7 @@ export function SummaryScreen({ players, scores, onNewGame, onSubmitToSheets, is
                           index === 1 && "border-2 border-gray-400",
                           index === 2 && "border-2 border-amber-700"
                         )}>
-                          <TableCell className="font-semibold sticky left-0 bg-card">
+                          <TableCell className="font-semibold sticky left-0 bg-card z-10">
                             <div className="flex items-center gap-2">
                               <div 
                                 className="w-4 h-4 rounded-full flex-shrink-0" 
@@ -334,14 +376,46 @@ export function SummaryScreen({ players, scores, onNewGame, onSubmitToSheets, is
                             const par = holeScore?.par || 0;
                             const strokes = holeScore?.strokes || 0;
                             const diff = strokes - par;
+                            const isEditing = editingCell?.playerId === entry.player.id && editingCell?.hole === hole;
+                            
+                            if (isEditing) {
+                              return (
+                                <TableCell key={hole} className="text-center p-1">
+                                  <input
+                                    type="number"
+                                    inputMode="numeric"
+                                    min={0}
+                                    autoFocus
+                                    value={editValue}
+                                    onChange={(e) => setEditValue(e.target.value)}
+                                    onBlur={() => commitEdit(entry.player.id, hole)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter") commitEdit(entry.player.id, hole);
+                                      if (e.key === "Escape") { setEditingCell(null); setEditValue(""); }
+                                    }}
+                                    className="w-12 h-8 text-center text-sm border rounded bg-background focus:outline-none focus:ring-2 focus:ring-primary"
+                                    data-testid={`input-score-${entry.player.id}-h${hole}`}
+                                  />
+                                </TableCell>
+                              );
+                            }
+
                             return (
                               <TableCell 
                                 key={hole} 
                                 className={cn(
                                   "text-center",
                                   diff < 0 && "text-green-500 font-semibold",
-                                  diff > 0 && "text-red-500"
+                                  diff > 0 && "text-red-500",
+                                  canEdit && holeScore && "cursor-pointer hover-elevate"
                                 )}
+                                onClick={() => {
+                                  if (canEdit && holeScore) {
+                                    setEditingCell({ playerId: entry.player.id, hole });
+                                    setEditValue(String(strokes));
+                                  }
+                                }}
+                                data-testid={`cell-score-${entry.player.id}-h${hole}`}
                               >
                                 {holeScore ? strokes : "-"}
                               </TableCell>
