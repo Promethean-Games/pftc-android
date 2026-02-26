@@ -321,7 +321,7 @@ export function GameScreen({
               <SelectValue placeholder="--" />
             </SelectTrigger>
             <SelectContent>
-              {PAR_OPTIONS.map((p) => (
+              {(tournament.isConnected ? [1, 2, 3, 4] : PAR_OPTIONS).map((p) => (
                 <SelectItem key={p} value={p.toString()}>{p}</SelectItem>
               ))}
             </SelectContent>
@@ -449,6 +449,7 @@ export function GameScreen({
         <DrawDialog
           onSelectPar={handleDrawPar}
           isFirstDraw={currentHole === 1}
+          isTournament={tournament.isConnected}
         />
       )}
 
