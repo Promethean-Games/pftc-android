@@ -16,6 +16,10 @@ services:
           property: connectionString
       - key: SESSION_SECRET
         generateValue: true
+      - key: VAPID_PUBLIC_KEY
+        sync: false
+      - key: VAPID_PRIVATE_KEY
+        sync: false
 
 databases:
   - name: par-for-the-course-db
