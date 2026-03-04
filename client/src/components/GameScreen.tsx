@@ -275,7 +275,7 @@ export function GameScreen({
       <div className="flex justify-end mb-3">
         {currentCard && (
           <Button
-            variant="ghost"
+            variant="outline"
             size="sm"
             className="text-muted-foreground"
             onClick={() => setShowCourseViewer(true)}
