@@ -110,7 +110,6 @@ export function SaveLoadDialog({ mode, savedGames, onSave, onLoad, onRename, onD
                 onClick={() => {
                   onLoad?.(AUTOSAVE_KEY);
                   toast({ title: "Game Loaded", description: "Loaded from autosave" });
-                  onClose();
                 }}
                 disabled={mode === "save"}
                 data-testid="button-load-autosave"
@@ -260,7 +259,6 @@ export function SaveLoadDialog({ mode, savedGames, onSave, onLoad, onRename, onD
                         } else {
                           onLoad?.(slot);
                           toast({ title: "Game Loaded", description: `Loaded from ${slot}` });
-                          onClose();
                         }
                       }}
                       data-testid={`button-${mode}-${slot}`}
