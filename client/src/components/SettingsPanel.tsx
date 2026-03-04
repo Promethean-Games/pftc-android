@@ -5,7 +5,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { UserPlus, LogOut, Lock, Unlock } from "lucide-react";
+import { UserPlus, LogOut, Lock, Unlock, Home } from "lucide-react";
 import type { Settings, Player } from "@shared/schema";
 
 interface SettingsPanelProps {
@@ -14,11 +14,12 @@ interface SettingsPanelProps {
   onUpdateSettings: (settings: Partial<Settings>) => void;
   onAddPlayer: (name: string, position?: number) => void;
   onEndGame: () => void;
+  onHome?: () => void;
   onLogout?: () => void;
   viewOnly?: boolean;
 }
 
-export function SettingsPanel({ settings, players, onUpdateSettings, onAddPlayer, onEndGame, onLogout, viewOnly = false }: SettingsPanelProps) {
+export function SettingsPanel({ settings, players, onUpdateSettings, onAddPlayer, onEndGame, onHome, onLogout, viewOnly = false }: SettingsPanelProps) {
   const [newPlayerName, setNewPlayerName] = useState("");
   const [insertPosition, setInsertPosition] = useState<string>("end");
 
@@ -168,7 +169,18 @@ export function SettingsPanel({ settings, players, onUpdateSettings, onAddPlayer
             <p className="text-xs text-muted-foreground">Version 2.1.0</p>
           </Card>
 
-          <div className="pt-4">
+          <div className="pt-4 space-y-3">
+            {onHome && (
+              <Button
+                variant="outline"
+                className="w-full h-12"
+                onClick={onHome}
+                data-testid="button-home"
+              >
+                <Home className="w-4 h-4 mr-2" />
+                Home
+              </Button>
+            )}
             <Button
               variant="destructive"
               className="w-full h-12"
