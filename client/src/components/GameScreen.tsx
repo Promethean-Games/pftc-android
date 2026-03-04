@@ -103,6 +103,7 @@ export function GameScreen({
   const [penalties, setPenalties] = useState(currentScore.penalties || 0);
 
   useEffect(() => {
+    if (isHoleLocked) return;
     if (currentHole !== lastHole) {
       setLastHole(currentHole);
       const existingPar = scores[currentPlayer.id]?.find((s) => s.hole === currentHole)?.par;
@@ -110,9 +111,10 @@ export function GameScreen({
         setShowDrawDialog(true);
       }
     }
-  }, [currentHole, lastHole, scores, currentPlayer.id]);
+  }, [currentHole, lastHole, scores, currentPlayer.id, isHoleLocked]);
 
   useEffect(() => {
+    if (isHoleLocked) return;
     if (currentScore.par === 0) {
       setShowDrawDialog(true);
     }
@@ -401,14 +403,14 @@ export function GameScreen({
         </div>
       )}
 
-      {showDrawDialog && (
+      {showDrawDialog && !isHoleLocked && (
         <DrawDialog
           onSelectPar={handleDrawPar}
           isFirstDraw={currentHole === 1}
         />
       )}
 
-      {showTableSetupDialog && pendingPar !== null && (
+      {showTableSetupDialog && pendingPar !== null && !isHoleLocked && (
         <TableSetupDialog
           hole={currentHole}
           par={pendingPar}
