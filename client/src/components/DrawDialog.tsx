@@ -113,9 +113,13 @@ export function DrawDialog({ onConfirm, drawnCard, onDraw, isFirstDraw = false }
               <h2 className="text-3xl font-bold" data-testid="text-card-reveal">
                 {card.isJoker ? "JOKER!" : `Par ${card.par}`}
               </h2>
-              {card.isJoker && (
+              {card.isJoker ? (
                 <p className="text-muted-foreground" data-testid="text-joker-info">
                   You choose the par for this hole!
+                </p>
+              ) : (
+                <p className="text-muted-foreground" data-testid="text-setup-hint">
+                  Set up your table to match the course below.
                 </p>
               )}
             </div>
@@ -130,7 +134,7 @@ export function DrawDialog({ onConfirm, drawnCard, onDraw, isFirstDraw = false }
               onClick={handleConfirm}
               data-testid="button-confirm-draw"
             >
-              {card.isJoker ? "Choose Par" : "Confirm"}
+              {card.isJoker ? "Choose Par" : "Click to Continue"}
             </Button>
           </>
         )}
