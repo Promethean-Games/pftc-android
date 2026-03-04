@@ -13,6 +13,7 @@ import { useUnlock } from "@/contexts/UnlockContext";
 import { UnlockBanner } from "./UnlockBanner";
 import { useGame } from "@/contexts/GameContext";
 import type { CourseCard } from "@/lib/card-deck";
+import jokerBgPath from "@assets/Joker-ball_1772667618145.png";
 
 interface GameScreenProps {
   players: Player[];
@@ -177,14 +178,28 @@ export function GameScreen({
   const shooterInfo = `${shootersRemaining} shooter${shootersRemaining !== 1 ? "s" : ""} remaining`;
 
   const currentCard = getDrawnCard(currentHole);
+  const isJokerHole = currentCard?.isJoker === true;
 
   return (
     <div 
-      className={cn("flex flex-col p-4 pb-4", leftHandedMode && "left-handed")}
+      className={cn("flex flex-col p-4 pb-4 relative", leftHandedMode && "left-handed")}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
+      {isJokerHole && (
+        <div
+          className="absolute inset-0 pointer-events-none z-0"
+          style={{
+            backgroundImage: `url(${jokerBgPath})`,
+            backgroundRepeat: "no-repeat",
+            backgroundPosition: "center center",
+            backgroundSize: "60%",
+            opacity: 0.04,
+          }}
+          data-testid="joker-background"
+        />
+      )}
       <div className="flex items-center gap-3 mb-4">
         <Button
           size="icon"

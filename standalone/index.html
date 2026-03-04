@@ -405,7 +405,9 @@ function rGame(){
   const co=cs.par>0&&cs.strokes>0?callout(tot,cs.par):'';
   const bd=(cs.scratches>0||cs.penalties>0)?`<div class="text-xs text-muted">${cs.strokes}${cs.scratches>0?' + '+cs.scratches+'S':''}${cs.penalties>0?' + '+cs.penalties+'P':''}</div>`:'';
 
-  return`<div class="screen" data-testid="game-screen">
+  const isJokerHole=dc&&dc.joker;
+  return`<div class="screen" style="position:relative" data-testid="game-screen">
+    ${isJokerHole?`<div style="position:absolute;inset:0;pointer-events:none;z-index:0;background:url('cards/joker-bg.png') no-repeat center center;background-size:60%;opacity:0.04" data-testid="joker-background"></div>`:''}
     ${rPlayerHeader(cp,ldr,st)}
     <div style="height:2px;background:${cp.color}" class="mb-4"></div>
     <div class="flex justify-between items-center mb-3 gap-2">
