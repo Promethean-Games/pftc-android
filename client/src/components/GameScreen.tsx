@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ChevronLeft, ChevronRight, Undo2, Home } from "lucide-react";
+import { ChevronLeft, ChevronRight, Undo2, Home, Eye, X } from "lucide-react";
 import type { Player, HoleScore, SetupTime } from "@shared/schema";
 import { PAR_OPTIONS, LEADER_ICON_URL, MAX_HOLES } from "@/lib/constants";
 import { getScoreCallout } from "@/lib/game-utils";
@@ -56,6 +56,7 @@ export function GameScreen({
   const [showDrawDialog, setShowDrawDialog] = useState(false);
   const [showTableSetupDialog, setShowTableSetupDialog] = useState(false);
   const [showFinishConfirm, setShowFinishConfirm] = useState(false);
+  const [showCourseViewer, setShowCourseViewer] = useState(false);
   const [pendingPar, setPendingPar] = useState<number | null>(null);
   const [pendingCard, setPendingCard] = useState<CourseCard | null>(null);
   const [drawConfirmTime, setDrawConfirmTime] = useState<number | null>(null);
@@ -266,9 +267,24 @@ export function GameScreen({
 
       <div className="h-0.5 mb-4" style={{ backgroundColor: currentPlayer.color }} />
 
-      <div className="flex justify-between items-center mb-3 gap-2">
+      <div className="flex justify-between items-center mb-1 gap-2">
         <div className="text-lg font-bold" data-testid="text-hole">Hole {currentHole}</div>
         <div className="text-sm text-muted-foreground" data-testid="text-shooters-remaining">{shooterInfo}</div>
+      </div>
+
+      <div className="flex justify-end mb-3">
+        {currentCard && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground"
+            onClick={() => setShowCourseViewer(true)}
+            data-testid="button-view-course"
+          >
+            <Eye className="w-4 h-4 mr-1" />
+            View Course
+          </Button>
+        )}
       </div>
 
       {isHoleLocked ? (
@@ -411,6 +427,44 @@ export function GameScreen({
           >
             <Home className="w-4 h-4 mr-1" />
             Home
+          </Button>
+        </div>
+      )}
+
+      {showCourseViewer && currentCard && (
+        <div
+          className="fixed inset-0 bg-background/95 z-50 flex flex-col items-center justify-center p-6"
+          data-testid="course-viewer-overlay"
+          onTouchStart={(e) => e.stopPropagation()}
+          onTouchMove={(e) => e.stopPropagation()}
+          onTouchEnd={(e) => e.stopPropagation()}
+        >
+          <div className="absolute top-4 right-4">
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={() => setShowCourseViewer(false)}
+              data-testid="button-close-course-viewer"
+            >
+              <X className="w-6 h-6" />
+            </Button>
+          </div>
+          <h2 className="text-2xl font-bold mb-4" data-testid="text-course-viewer-title">
+            Hole {currentHole} {currentCard.isJoker ? "- Joker" : `- Par ${currentCard.par}`}
+          </h2>
+          <img
+            src={currentCard.img}
+            alt={currentCard.isJoker ? "Joker" : `Par ${currentCard.par}`}
+            className="max-w-full max-h-[70vh] rounded-lg shadow-lg object-contain"
+            data-testid="img-course-viewer"
+          />
+          <Button
+            variant="outline"
+            className="mt-6"
+            onClick={() => setShowCourseViewer(false)}
+            data-testid="button-done-viewing"
+          >
+            Done
           </Button>
         </div>
       )}
