@@ -167,7 +167,7 @@ function GameApp() {
           onUndo={game.undo}
           canUndo={true}
           onSetParForAll={(par) => game.setParForAllPlayers(game.currentHole, par)}
-          onRecordSetupTime={game.recordSetupTime}
+
         />
       )}
 

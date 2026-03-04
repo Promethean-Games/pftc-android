@@ -3,12 +3,12 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ChevronLeft, ChevronRight, Undo2, Eye, X } from "lucide-react";
-import type { Player, HoleScore, SetupTime } from "@shared/schema";
+import type { Player, HoleScore } from "@shared/schema";
 import { PAR_OPTIONS, LEADER_ICON_URL, MAX_HOLES } from "@/lib/constants";
 import { getScoreCallout } from "@/lib/game-utils";
 import { cn } from "@/lib/utils";
 import { DrawDialog } from "./DrawDialog";
-import { TableSetupDialog } from "./TableSetupDialog";
+
 import { useUnlock } from "@/contexts/UnlockContext";
 import { UnlockBanner } from "./UnlockBanner";
 import { useGame } from "@/contexts/GameContext";
@@ -28,7 +28,6 @@ interface GameScreenProps {
   onUndo: () => void;
   canUndo: boolean;
   onSetParForAll: (par: number) => void;
-  onRecordSetupTime: (setupTime: SetupTime) => void;
 }
 
 export function GameScreen({
@@ -45,19 +44,14 @@ export function GameScreen({
   onUndo,
   canUndo,
   onSetParForAll,
-  onRecordSetupTime,
 }: GameScreenProps) {
   const { isUnlocked, freeHoles } = useUnlock();
   const { drawCard, getDrawnCard } = useGame();
   const isHoleLocked = !isUnlocked && currentHole > freeHoles;
 
   const [showDrawDialog, setShowDrawDialog] = useState(false);
-  const [showTableSetupDialog, setShowTableSetupDialog] = useState(false);
   const [showFinishConfirm, setShowFinishConfirm] = useState(false);
   const [showCourseViewer, setShowCourseViewer] = useState(false);
-  const [pendingPar, setPendingPar] = useState<number | null>(null);
-  const [pendingCard, setPendingCard] = useState<CourseCard | null>(null);
-  const [drawConfirmTime, setDrawConfirmTime] = useState<number | null>(null);
   const [lastHole, setLastHole] = useState(currentHole);
   const isInitialMount = useRef(true);
   const lastPlayerId = useRef(currentPlayer.id);
@@ -155,39 +149,14 @@ export function GameScreen({
     }
   };
 
-  const handleDrawConfirm = (selectedPar: number, card: CourseCard) => {
-    setPendingPar(selectedPar);
-    setPendingCard(card);
-    setDrawConfirmTime(Date.now());
+  const handleDrawConfirm = (selectedPar: number, _card: CourseCard) => {
     setShowDrawDialog(false);
-    if (currentHole === 1) {
-      onSetParForAll(selectedPar);
-      setPar(selectedPar);
-    } else {
-      setShowTableSetupDialog(true);
-    }
+    onSetParForAll(selectedPar);
+    setPar(selectedPar);
   };
 
   const handleDraw = () => {
     return drawCard(currentHole);
-  };
-
-  const handleTableReady = () => {
-    if (pendingPar !== null && drawConfirmTime !== null) {
-      const setupTimeMs = Date.now() - drawConfirmTime;
-      onRecordSetupTime({
-        hole: currentHole,
-        par: pendingPar,
-        setupTimeMs,
-        timestamp: new Date().toISOString(),
-      });
-      onSetParForAll(pendingPar);
-      setPar(pendingPar);
-    }
-    setPendingPar(null);
-    setPendingCard(null);
-    setDrawConfirmTime(null);
-    setShowTableSetupDialog(false);
   };
 
   const allPlayersHaveScores = players.every((player) => {
@@ -458,15 +427,6 @@ export function GameScreen({
           drawnCard={getDrawnCard(currentHole)}
           onDraw={handleDraw}
           isFirstDraw={currentHole === 1}
-        />
-      )}
-
-      {showTableSetupDialog && pendingPar !== null && !isHoleLocked && (
-        <TableSetupDialog
-          hole={currentHole}
-          par={pendingPar}
-          card={pendingCard}
-          onConfirm={handleTableReady}
         />
       )}
 
