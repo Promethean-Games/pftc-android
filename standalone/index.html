@@ -160,7 +160,6 @@ let S = {
   drawPhase: null,
   drawnCard: null,
   showFinish: false,
-  showSaveLoad: null,
   showCardView: false,
   showTutorial: false,
   tutorialIdx: 0,
@@ -290,6 +289,7 @@ function render(){
   persist();
   const app=document.getElementById('app');
   if(S.screen==='splash'){rSplash(app);return;}
+  if(S.screen==='load'){rLoadScreen(app);return;}
   if(S.screen==='setup'){rSetup(app);return;}
   let c='';
   if(S.tab==='game'&&S.game.players.length>0)c=rGame();
@@ -300,7 +300,6 @@ function render(){
 }
 
 function rSplash(app){
-  let ld='';if(S.showSaveLoad==='load')ld=rLoadDialog();
   app.innerHTML=`
     <div class="screen flex flex-col items-center justify-center" style="min-height:100dvh;gap:24px" data-testid="splash-screen">
       <img src="${LOGO}" alt="Logo" style="width:120px;height:120px;border-radius:16px" data-testid="img-logo">
@@ -308,10 +307,10 @@ function rSplash(app){
       <p class="text-muted text-sm">Mini Golf Scoring</p>
       <div class="flex flex-col gap-3 w-full" style="max-width:280px">
         <button class="btn btn-primary btn-xl" data-testid="button-new-game" onclick="S.game=defGame();S.game.deck=shuffleDeck();S.viewOnly=false;S.screen='setup';render()">New Game</button>
-        <button class="btn btn-outline btn-xl" data-testid="button-load-game" onclick="S.showSaveLoad='load';render()">Load Game</button>
+        <button class="btn btn-outline btn-xl" data-testid="button-load-game" onclick="S.screen='load';render()">Load Game</button>
         <button class="btn btn-ghost btn-xl" data-testid="button-how-to-play" onclick="S.showTutorial=true;S.tutorialIdx=0;render()">${I.book} How to Play</button>
       </div>
-    </div>${ld}${S.showTutorial?rTutorial():''}`;
+    </div>${S.showTutorial?rTutorial():''}`;
 }
 
 function rTutorial(){
@@ -619,18 +618,51 @@ function rSaveTab(){
   </div>`;
 }
 
-function rLoadDialog(){
+function rLoadScreen(app){
   const games=getSaved();
+  const auto=games['__autosave__'];
   const slots=Object.entries(games).filter(([k])=>k!=='__autosave__');
-  let items=slots.map(([n,g])=>`
-    <div class="save-item mb-2" data-testid="load-item-${n}">
-      <div class="flex-1"><div class="font-bold">${esc(n)}</div><div class="text-xs text-muted">${g.players?.length||0} players, Hole ${g.hole||g.currentHole||1}</div></div>
-      <button class="btn btn-primary" onclick="loadGame('${esc(n)}');S.showSaveLoad=null;S.screen='game';S.tab='game';render()" data-testid="button-load-${n}">Load</button>
-    </div>`).join('');
-  if(!slots.length)items='<p class="text-muted text-center">No saved games yet</p>';
-  return`<div class="dialog-overlay" onclick="if(event.target===this){S.showSaveLoad=null;render()}" data-testid="load-dialog">
-    <div class="dialog-content"><h2 class="text-xl font-bold mb-4">Load Game</h2>${items}
-    <button class="btn btn-ghost w-full mt-2" onclick="S.showSaveLoad=null;render()" data-testid="button-cancel-load">Cancel</button></div></div>`;
+
+  let autoHtml='';
+  if(auto){
+    const d=auto.updatedAt?new Date(auto.updatedAt).toLocaleString():'';
+    autoHtml=`<div class="card mb-3" style="border-style:dashed" data-testid="slot-autosave">
+      <div class="flex items-center gap-2 mb-2 flex-wrap">
+        <span class="font-bold">Autosave</span>
+        <span class="text-xs text-muted" style="margin-left:auto">${d}</span>
+      </div>
+      <p class="text-sm text-muted mb-2">${auto.players?.length||0} players, Hole ${auto.hole||auto.currentHole||1}</p>
+      <button class="btn btn-outline w-full" style="min-height:44px" onclick="loadGame('__autosave__');S.screen='game';S.tab='game';render()" data-testid="button-load-autosave">Load Autosave</button>
+    </div>`;
+  }
+
+  let items=slots.map(([n,g])=>{
+    const d=g.updatedAt?new Date(g.updatedAt).toLocaleDateString():'';
+    return`<div class="card mb-3" data-testid="load-item-${esc(n)}">
+      <div class="flex items-center justify-between gap-2 mb-2">
+        <span class="font-bold">${esc(n)}</span>
+        <div class="flex items-center gap-2">
+          <span class="text-xs text-muted">${d}</span>
+          <button class="btn btn-ghost btn-icon" style="color:var(--destructive)" onclick="delSlot('${esc(n)}');render()" data-testid="button-delete-load-${esc(n)}">${I.trash}</button>
+        </div>
+      </div>
+      <p class="text-sm text-muted mb-2">${g.players?.length||0} players, Hole ${g.hole||g.currentHole||1}</p>
+      <button class="btn btn-primary w-full" style="min-height:44px" onclick="loadGame('${esc(n)}');S.screen='game';S.tab='game';render()" data-testid="button-load-${esc(n)}">Load</button>
+    </div>`;
+  }).join('');
+
+  if(!auto&&!slots.length)items='<p class="text-muted text-center" style="padding:32px 0">No saved games yet</p>';
+
+  app.innerHTML=`
+    <div class="screen" data-testid="load-screen">
+      <div class="flex items-center gap-2 mb-4">
+        <button class="btn btn-ghost" onclick="S.screen='splash';render()" data-testid="button-back-to-splash">${I.chevL} Back</button>
+        <h1 class="text-xl font-bold flex-1">Saved Games</h1>
+      </div>
+      ${autoHtml}
+      ${slots.length>0?'<h3 class="text-sm text-muted font-bold mb-3" style="text-transform:uppercase">Manual Saves</h3>':''}
+      ${items}
+    </div>`;
 }
 
 function rSettings(){

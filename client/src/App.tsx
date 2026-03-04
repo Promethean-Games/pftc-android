@@ -15,7 +15,7 @@ import { SaveLoadDialog } from "@/components/SaveLoadDialog";
 import { BottomNav } from "@/components/BottomNav";
 import { isLeader } from "@/lib/game-utils";
 
-type Screen = "splash" | "setup" | "game" | "summary";
+type Screen = "splash" | "load" | "setup" | "game" | "summary";
 type ActiveTab = "game" | "summary" | "settings" | "save";
 
 function GameApp() {
@@ -39,7 +39,6 @@ function GameApp() {
     if (saved && ["game", "summary", "settings", "save"].includes(saved)) return saved as ActiveTab;
     return "game";
   });
-  const [showSaveLoad, setShowSaveLoad] = useState<"load" | null>(null);
   const [viewOnly, setViewOnly] = useState(() => {
     return localStorage.getItem("appViewOnly") === "true";
   });
@@ -67,7 +66,7 @@ function GameApp() {
   };
 
   const handleLoadGame = () => {
-    setShowSaveLoad("load");
+    setScreen("load");
   };
 
   const handleStartGame = () => {
@@ -94,7 +93,6 @@ function GameApp() {
 
   const handleLoadSlot = (slot: string) => {
     game.loadGame(slot);
-    setShowSaveLoad(null);
     setScreen("game");
     setActiveTab("game");
   };
@@ -116,22 +114,23 @@ function GameApp() {
 
   if (screen === "splash") {
     return (
-      <>
-        <SplashScreen 
-          onNewGame={handleNewGame} 
-          onLoadGame={handleLoadGame}
-        />
-        {showSaveLoad === "load" && (
-          <SaveLoadDialog
-            mode="load"
-            savedGames={game.getSavedGames()}
-            onLoad={handleLoadSlot}
-            onRename={handleRenameSlot}
-            onDelete={handleDeleteSlot}
-            onClose={() => setShowSaveLoad(null)}
-          />
-        )}
-      </>
+      <SplashScreen 
+        onNewGame={handleNewGame} 
+        onLoadGame={handleLoadGame}
+      />
+    );
+  }
+
+  if (screen === "load") {
+    return (
+      <SaveLoadDialog
+        mode="load"
+        savedGames={game.getSavedGames()}
+        onLoad={handleLoadSlot}
+        onRename={handleRenameSlot}
+        onDelete={handleDeleteSlot}
+        onClose={() => setScreen("splash")}
+      />
     );
   }
 
