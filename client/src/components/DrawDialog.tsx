@@ -63,20 +63,9 @@ export function DrawDialog({ onConfirm, drawnCard, onDraw, isFirstDraw = false }
     <div className="fixed inset-0 bg-background/95 z-50 flex items-center justify-center p-6">
       <div className="w-full max-w-sm text-center space-y-6">
         {isFirstDraw && phase === "tap" && (
-          <div className="space-y-2">
-            <p className="text-muted-foreground text-lg" data-testid="text-first-draw-tip">
-              To begin, the tallest player draws a card at random.
-            </p>
-            <a
-              href="https://www.thegamecrafter.com/games/par-for-the-course-classic"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-primary underline text-sm"
-              data-testid="link-buy-cards"
-            >
-              I don't have cards yet.
-            </a>
-          </div>
+          <p className="text-muted-foreground text-lg" data-testid="text-first-draw-tip">
+            The tallest player tees off first.
+          </p>
         )}
 
         {phase === "tap" && (
