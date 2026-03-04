@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Par for the Course - Mini Golf Scoring</title>
+<meta name="description" content="Mobile-first mini-golf scoring app. Track strokes, scratches, and penalties for up to 8 players across 18 holes.">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0a0a0a;--bg2:#171717;--card:#1c1c1c;--card-border:#2a2a2a;--fg:#fafafa;--fg2:#a1a1aa;--fg3:#71717a;--primary:#22c55e;--primary-fg:#fff;--destructive:#ef4444;--destructive-fg:#fff;--border:#27272a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
+body{background:var(--bg);color:var(--fg);min-height:100dvh;-webkit-tap-highlight-color:transparent;overflow-x:hidden}
+.light{--bg:#fff;--bg2:#f4f4f5;--card:#fff;--card-border:#e4e4e7;--fg:#09090b;--fg2:#71717a;--fg3:#a1a1aa;--border:#e4e4e7}
+button{font-family:inherit;cursor:pointer;border:none;outline:none;-webkit-appearance:none}
+input,select{font-family:inherit;outline:none}
+.btn{display:inline-flex;align-items:center;justify-content:center;border-radius:6px;font-weight:600;transition:opacity .15s;min-height:36px;padding:0 16px;font-size:14px}
+.btn:active{opacity:.8}
+.btn-primary{background:var(--primary);color:var(--primary-fg)}
+.btn-destructive{background:var(--destructive);color:var(--destructive-fg)}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--fg)}
+.btn-ghost{background:transparent;color:var(--fg2)}
+.btn-lg{min-height:44px;padding:0 24px;font-size:16px}
+.btn-xl{min-height:56px;padding:0 32px;font-size:18px;width:100%}
+.btn-icon{min-height:36px;width:36px;padding:0}
+.card{background:var(--card);border:1px solid var(--card-border);border-radius:8px;padding:16px}
+.screen{padding:16px;padding-bottom:72px;min-height:100dvh}
+.text-center{text-align:center}
+.text-muted{color:var(--fg2)}
+.text-sm{font-size:13px}
+.text-xs{font-size:11px}
+.text-lg{font-size:18px}
+.text-xl{font-size:20px}
+.text-2xl{font-size:24px}
+.text-3xl{font-size:30px}
+.font-bold{font-weight:700}
+.font-extrabold{font-weight:800}
+.mb-1{margin-bottom:4px}.mb-2{margin-bottom:8px}.mb-3{margin-bottom:12px}.mb-4{margin-bottom:16px}.mb-6{margin-bottom:24px}
+.mt-1{margin-top:4px}.mt-2{margin-top:8px}
+.gap-1{gap:4px}.gap-2{gap:8px}.gap-3{gap:12px}.gap-4{gap:16px}
+.flex{display:flex}.flex-col{flex-direction:column}.flex-1{flex:1}.items-center{align-items:center}.justify-center{justify-content:center}.justify-between{justify-content:space-between}.flex-wrap{flex-wrap:wrap}
+.grid{display:grid}.grid-2{grid-template-columns:1fr 1fr}.grid-3{grid-template-columns:1fr 1fr 1fr}
+.w-full{width:100%}
+.hidden{display:none!important}
+.truncate{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.color-dot{width:16px;height:16px;border-radius:50%;flex-shrink:0}
+.color-dot-lg{width:24px;height:24px;border-radius:50%;flex-shrink:0}
+#bottom-nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:var(--bg2);border-top:1px solid var(--border);z-index:40;height:56px}
+#bottom-nav button{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;background:none;color:var(--fg3);font-size:10px;gap:2px;border:none}
+#bottom-nav button.active{color:var(--primary)}
+#bottom-nav button svg{width:20px;height:20px}
+.dialog-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:50;display:flex;align-items:center;justify-content:center;padding:16px}
+.dialog-content{background:var(--card);border:1px solid var(--card-border);border-radius:12px;padding:24px;width:100%;max-width:400px;max-height:90vh;overflow-y:auto}
+.select-wrap{position:relative;display:inline-block}
+.select-wrap select{appearance:none;background:var(--bg2);color:var(--fg);border:1px solid var(--border);border-radius:6px;padding:8px 32px 8px 12px;font-size:16px;min-height:44px;cursor:pointer}
+.select-wrap::after{content:"";position:absolute;right:12px;top:50%;transform:translateY(-50%);border-left:5px solid transparent;border-right:5px solid transparent;border-top:6px solid var(--fg2);pointer-events:none}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:6px 8px;text-align:center;border-bottom:1px solid var(--border)}
+th{font-weight:600;color:var(--fg2);font-size:11px;text-transform:uppercase}
+td.player-cell{text-align:left;font-weight:600}
+.score-under{color:#22c55e;font-weight:600}
+.score-over{color:#ef4444}
+.leaderboard-item{display:flex;align-items:center;gap:8px;padding:12px;border-radius:8px;border:1px solid var(--border)}
+.leaderboard-item.gold{border-color:#eab308;border-width:2px;background:rgba(234,179,8,.05)}
+.leaderboard-item.silver{border-color:#9ca3af;border-width:2px;background:rgba(156,163,175,.05)}
+.leaderboard-item.bronze{border-color:#b45309;border-width:2px;background:rgba(180,83,9,.05)}
+.input{background:var(--bg2);color:var(--fg);border:1px solid var(--border);border-radius:6px;padding:8px 12px;font-size:16px;min-height:44px;width:100%}
+.input:focus{border-color:var(--primary)}
+.lock-icon{display:flex;align-items:center;justify-content:center}
+.lock-icon svg{width:12px;height:12px;color:var(--fg3);opacity:.5}
+.pulse{animation:pulse 1.5s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.7}}
+.save-item{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px;border:1px solid var(--border);border-radius:8px}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+const STRIPE_PAYMENT_LINK = "https://buy.stripe.com/7sYeVc82N7czdPqaQ20Jq00";
+const PLAYER_COLORS = ["#ef4444","#3b82f6","#22c55e","#f59e0b","#a855f7","#ec4899","#14b8a6","#f97316"];
+const PAR_OPTIONS = [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15];
+const MAX_HOLES = 18;
+const MAX_PLAYERS = 8;
+const FREE_HOLES = 3;
+const LOGO_URL = "https://prometheangamescom.wordpress.com/wp-content/uploads/2025/08/400x400.png";
+const LEADER_ICON_URL = "https://prometheangamescom.wordpress.com/wp-content/uploads/2025/08/unnamed-file.png";
+
+const SVG = {
+  lock: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>',
+  unlock: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>',
+  chevronLeft: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>',
+  chevronRight: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6 6"/></svg>',
+  undo: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11"/></svg>',
+  home: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>',
+  game: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>',
+  chart: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></svg>',
+  save: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>',
+  settings: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>',
+  plus: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>',
+  x: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>',
+  trash: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>',
+  up: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m18 15-6-6-6 6"/></svg>',
+  down: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>',
+};
+
+let state = {
+  screen: 'splash',
+  activeTab: 'game',
+  viewOnly: false,
+  game: null,
+  history: [],
+  showDrawDialog: false,
+  showTableSetup: false,
+  showFinishConfirm: false,
+  showSaveLoad: null,
+  pendingPar: null,
+  drawConfirmTime: null,
+};
+
+function defaultGame() {
+  return { players: [], currentHole: 1, currentPlayerIndex: 0, scores: {}, isComplete: false, settings: { theme: 'dark', leftHandedMode: false, autoSave: true } };
+}
+
+function init() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('unlock') === 'success') {
+    localStorage.setItem('pftc_unlocked', 'true');
+    window.history.replaceState({}, '', window.location.pathname);
+  } else if (params.get('unlock') === 'cancelled') {
+    window.history.replaceState({}, '', window.location.pathname);
+  }
+  const saved = localStorage.getItem('currentGame');
+  if (saved) { try { state.game = JSON.parse(saved); } catch(e) {} }
+  if (!state.game) state.game = defaultGame();
+  const savedScreen = localStorage.getItem('appScreen');
+  if (savedScreen && ['game','summary'].includes(savedScreen) && state.game.players.length > 0) state.screen = savedScreen;
+  const savedTab = localStorage.getItem('appActiveTab');
+  if (savedTab && ['game','summary','settings','save'].includes(savedTab)) state.activeTab = savedTab;
+  state.viewOnly = localStorage.getItem('appViewOnly') === 'true';
+  applyTheme();
+  render();
+}
+
+function isUnlocked() { return localStorage.getItem('pftc_unlocked') === 'true'; }
+function applyTheme() { document.body.className = state.game?.settings?.theme === 'light' ? 'light' : ''; }
+function persist() {
+  localStorage.setItem('appScreen', state.screen);
+  localStorage.setItem('appActiveTab', state.activeTab);
+  localStorage.setItem('appViewOnly', state.viewOnly ? 'true' : 'false');
+  if (state.game.settings.autoSave && state.game.players.length > 0) {
+    localStorage.setItem('currentGame', JSON.stringify(state.game));
+    const games = JSON.parse(localStorage.getItem('savedGames') || '{}');
+    games['__autosave__'] = { id: 'autosave', ...state.game, createdAt: games['__autosave__']?.createdAt || new Date().toISOString(), updatedAt: new Date().toISOString() };
+    localStorage.setItem('savedGames', JSON.stringify(games));
+  }
+}
+
+function saveHistory() { state.history = [...state.history.slice(-9), JSON.parse(JSON.stringify(state.game))]; }
+function undo() { if (state.history.length > 0) { state.game = state.history.pop(); render(); } }
+
+function calcTotal(scores) {
+  return (scores||[]).reduce((a,s)=>({ ts: a.ts+s.strokes+s.scratches+s.penalties, sc: a.sc+s.scratches, pn: a.pn+s.penalties }),{ts:0,sc:0,pn:0});
+}
+function getLeaderboard() {
+  return state.game.players.map(p=>({player:p, total:calcTotal(state.game.scores[p.id]).ts})).sort((a,b)=>a.total-b.total);
+}
+function getCallout(strokes, par) {
+  const d = strokes - par;
+  if(d===-4) return 'Condor'; if(d===-3) return 'Albatross'; if(d===-2) return 'Eagle';
+  if(d===-1) return 'Birdie'; if(d===0) return 'Par'; if(d===1) return 'Bogey';
+  if(d===2) return 'Double Bogey'; if(d===3) return 'Triple Bogey'; return `+${d}`;
+}
+function isLeaderPlayer(pid) { const lb = getLeaderboard(); return lb.length>0 && lb[0].player.id===pid; }
+
+function addPlayer(name, pos) {
+  const p = { id: crypto.randomUUID(), name, color: PLAYER_COLORS[state.game.players.length % PLAYER_COLORS.length], order: state.game.players.length };
+  if (pos !== undefined && pos >= 0 && pos < state.game.players.length) {
+    state.game.players.splice(pos, 0, p);
+    state.game.players.forEach((pl,i) => pl.order = i);
+  } else {
+    state.game.players.push(p);
+  }
+  state.game.scores[p.id] = [];
+  render();
+}
+
+function removePlayer(id) {
+  saveHistory();
+  const idx = state.game.players.findIndex(p=>p.id===id);
+  state.game.players = state.game.players.filter(p=>p.id!==id);
+  state.game.players.forEach((p,i)=>p.order=i);
+  if (state.game.players.length===0) state.game.currentPlayerIndex=0;
+  else if (idx <= state.game.currentPlayerIndex) state.game.currentPlayerIndex = Math.max(0, state.game.currentPlayerIndex-1);
+  if (state.game.currentPlayerIndex >= state.game.players.length) state.game.currentPlayerIndex=0;
+  render();
+}
+
+function updateScore(pid, hole, upd) {
+  if (hole > MAX_HOLES) return;
+  saveHistory();
+  const ps = state.game.scores[pid] || [];
+  const hi = ps.findIndex(s=>s.hole===hole);
+  if (hi>=0) Object.assign(ps[hi], upd);
+  else ps.push({hole, par:upd.par??3, strokes:upd.strokes??0, scratches:upd.scratches??0, penalties:upd.penalties??0});
+  state.game.scores[pid] = ps;
+}
+
+function setParForAll(hole, par) {
+  saveHistory();
+  state.game.players.forEach(p => {
+    const ps = state.game.scores[p.id] || [];
+    const hi = ps.findIndex(s=>s.hole===hole);
+    if (hi>=0) ps[hi].par = par;
+    else ps.push({hole, par, strokes:0, scratches:0, penalties:0});
+    state.game.scores[p.id] = ps;
+  });
+}
+
+function sortPlayersByPrevHole(prevHole) {
+  if (prevHole < 1) return;
+  state.game.players.sort((a,b) => {
+    const as = state.game.scores[a.id]?.find(s=>s.hole===prevHole);
+    const bs = state.game.scores[b.id]?.find(s=>s.hole===prevHole);
+    const at = as ? as.strokes+as.scratches+as.penalties : Infinity;
+    const bt = bs ? bs.strokes+bs.scratches+bs.penalties : Infinity;
+    if (at !== bt) return at-bt;
+    const ata = calcTotal(state.game.scores[a.id]).ts;
+    const bta = calcTotal(state.game.scores[b.id]).ts;
+    if (ata!==bta) return ata-bta;
+    return a.name.localeCompare(b.name);
+  });
+  state.game.players.forEach((p,i)=>p.order=i);
+}
+
+function nextCard() {
+  saveHistory();
+  const ni = (state.game.currentPlayerIndex+1) % state.game.players.length;
+  const advHole = ni === 0;
+  if (advHole && state.game.currentHole >= MAX_HOLES) { state.game.isComplete = true; state.viewOnly = true; state.activeTab = 'summary'; render(); return; }
+  if (advHole) { sortPlayersByPrevHole(state.game.currentHole); state.game.currentPlayerIndex = 0; state.game.currentHole++; }
+  else { state.game.currentPlayerIndex = ni; }
+  render();
+}
+
+function saveGame(slot) {
+  const games = JSON.parse(localStorage.getItem('savedGames')||'{}');
+  games[slot] = { id: crypto.randomUUID(), ...state.game, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+  localStorage.setItem('savedGames', JSON.stringify(games));
+}
+function loadGame(slot) {
+  const games = JSON.parse(localStorage.getItem('savedGames')||'{}');
+  if (games[slot]) { const g = games[slot]; state.game = { players:g.players, currentHole:g.currentHole, currentPlayerIndex:g.currentPlayerIndex, scores:g.scores, isComplete:g.isComplete, settings:g.settings||state.game.settings }; }
+}
+function getSavedGames() { return JSON.parse(localStorage.getItem('savedGames')||'{}'); }
+function deleteSlot(slot) { const g=getSavedGames(); delete g[slot]; localStorage.setItem('savedGames',JSON.stringify(g)); }
+
+function render() {
+  persist();
+  const app = document.getElementById('app');
+  if (state.screen === 'splash') { renderSplash(app); return; }
+  if (state.screen === 'setup') { renderSetup(app); return; }
+  let content = '';
+  if (state.activeTab === 'game' && state.game.players.length > 0) content = renderGame();
+  else if (state.activeTab === 'summary') content = renderSummary();
+  else if (state.activeTab === 'save') content = renderSaveLoad('save');
+  else if (state.activeTab === 'settings') content = renderSettings();
+  app.innerHTML = `<div style="padding-bottom:64px">${content}</div>${renderBottomNav()}`;
+  attachGameEvents();
+}
+
+function renderSplash(app) {
+  let loadDialog = '';
+  if (state.showSaveLoad === 'load') loadDialog = renderSaveLoadDialog();
+  app.innerHTML = `
+    <div class="screen flex flex-col items-center justify-center" style="min-height:100dvh;gap:24px">
+      <img src="${LOGO_URL}" alt="Logo" style="width:120px;height:120px;border-radius:16px">
+      <h1 class="text-2xl font-bold">Par for the Course</h1>
+      <p class="text-muted text-sm">Mini Golf Scoring</p>
+      <div class="flex flex-col gap-3 w-full" style="max-width:280px">
+        <button class="btn btn-primary btn-xl" onclick="state.game=defaultGame();state.viewOnly=false;state.screen='setup';render()">New Game</button>
+        <button class="btn btn-outline btn-xl" onclick="state.showSaveLoad='load';render()">Load Game</button>
+      </div>
+    </div>${loadDialog}`;
+}
+
+function renderSetup(app) {
+  const players = state.game.players;
+  let list = players.map((p,i) => `
+    <div class="flex items-center gap-2 mb-2" style="padding:8px;border:1px solid var(--border);border-radius:8px">
+      <div class="color-dot" style="background:${p.color}" onclick="cycleColor('${p.id}')"></div>
+      <span class="flex-1 font-bold truncate">${esc(p.name)}</span>
+      <button class="btn btn-ghost btn-icon" onclick="moveP('${p.id}','up')" ${i===0?'disabled':''}>${SVG.up}</button>
+      <button class="btn btn-ghost btn-icon" onclick="moveP('${p.id}','down')" ${i===players.length-1?'disabled':''}>${SVG.down}</button>
+      <button class="btn btn-ghost btn-icon" onclick="removePlayer('${p.id}');render()" style="color:var(--destructive)">${SVG.x}</button>
+    </div>`).join('');
+  app.innerHTML = `
+    <div class="screen">
+      <div class="flex items-center gap-2 mb-4">
+        <button class="btn btn-ghost" onclick="state.screen='splash';render()">Back</button>
+        <h1 class="text-xl font-bold flex-1">Player Setup</h1>
+      </div>
+      ${list}
+      <div class="flex gap-2 mb-4 mt-2">
+        <input class="input flex-1" id="newPlayerName" placeholder="Player name" maxlength="20" onkeydown="if(event.key==='Enter')addP()">
+        <button class="btn btn-primary" onclick="addP()" ${players.length>=MAX_PLAYERS?'disabled':''}>Add</button>
+      </div>
+      <button class="btn btn-primary btn-xl" onclick="state.game.currentHole=1;state.game.currentPlayerIndex=0;state.game.isComplete=false;state.screen='game';state.activeTab='game';render()" ${players.length===0?'disabled':''}>Start Game (${players.length} players)</button>
+    </div>`;
+}
+
+function renderGame() {
+  const g = state.game;
+  const cp = g.players[g.currentPlayerIndex];
+  if (!cp) return '<p class="text-center text-muted" style="padding:40px">No players</p>';
+  const cs = g.scores[cp.id]?.find(s=>s.hole===g.currentHole) || {hole:g.currentHole,par:0,strokes:0,scratches:0,penalties:0};
+  const stats = calcTotal(g.scores[cp.id]||[]);
+  const leader = isLeaderPlayer(cp.id);
+  const locked = !isUnlocked() && g.currentHole > FREE_HOLES;
+  const allDone = g.players.every(p => { const s = g.scores[p.id]?.find(s=>s.hole===g.currentHole); return s && s.strokes > 0; });
+  const canAdv = cs.par > 0 && cs.strokes > 0 && allDone;
+  const isLast = g.currentHole >= MAX_HOLES;
+  const isLastP = g.players.indexOf(cp) === g.players.length - 1;
+  const isFinishing = isLast && isLastP && allDone;
+  const shootersLeft = g.players.filter(p => { const s=g.scores[p.id]?.find(s=>s.hole===g.currentHole); return !s||s.strokes===0; }).length;
+  const lhm = g.settings.leftHandedMode;
+
+  if (locked) {
+    return `
+    <div class="screen">
+      <div class="flex items-center gap-3 mb-4">
+        <button class="btn btn-outline" style="width:72px;min-height:44px" onclick="prevPlayer()">${SVG.chevronLeft}</button>
+        <div class="flex-1 flex items-center justify-center gap-2" style="padding:8px 16px;border:2px solid ${cp.color};border-radius:8px">
+          ${leader?`<img src="${LEADER_ICON_URL}" style="width:20px;height:20px">`:''}<span class="text-2xl font-bold">${esc(cp.name)}</span>
+        </div>
+        <button class="btn btn-outline" style="width:72px;min-height:44px" onclick="nextPlayer()">${SVG.chevronRight}</button>
+      </div>
+      <div class="grid grid-3 gap-4 mb-4 text-center">
+        <div><div class="text-xs text-muted font-bold" style="text-transform:uppercase">Scratches</div><div class="text-2xl font-bold">${stats.sc}</div></div>
+        <div><div class="text-xs text-muted font-bold" style="text-transform:uppercase">Total Strokes</div><div class="text-2xl font-bold">${stats.ts}</div></div>
+        <div><div class="text-xs text-muted font-bold" style="text-transform:uppercase">Penalties</div><div class="text-2xl font-bold">${stats.pn}</div></div>
+      </div>
+      <div style="height:2px;background:${cp.color}" class="mb-4"></div>
+      <div class="flex justify-between items-center mb-3"><div class="text-lg font-bold">Hole ${g.currentHole}</div></div>
+      <div class="dialog-overlay" style="position:relative;inset:auto;background:none;padding:32px 0">
+        <div class="dialog-content text-center" style="max-width:360px">
+          <div style="margin-bottom:16px">${SVG.lock}</div>
+          <h2 class="text-2xl font-bold mb-2">Cards 4-18 Locked</h2>
+          <p class="text-muted mb-4">You've played the first 3 free cards. Unlock all 18 cards to continue your game.</p>
+          <button class="btn btn-primary btn-xl mb-2" onclick="window.location.href='${STRIPE_PAYMENT_LINK}'">${SVG.unlock} Unlock All 18 Cards</button>
+          <p class="text-xs text-muted">One-time purchase. Unlocks permanently on this device.</p>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  if (cs.par === 0 && !state.showDrawDialog) { state.showDrawDialog = true; }
+
+  let parSection;
+  if (cs.par === 0) {
+    parSection = `<button class="w-full mb-3" style="padding:16px;border:2px dashed var(--primary);border-radius:8px;background:none;color:var(--primary);text-align:center" onclick="state.showDrawDialog=true;render()">
+      <span class="text-lg font-bold">Tap to Set Par</span><br><span class="text-sm text-muted">Par must be set before scoring</span></button>`;
+  } else {
+    parSection = `<div class="flex items-center gap-3 mb-3" ${lhm?'style="flex-direction:row-reverse"':''}>
+      <label class="font-bold">Par:</label>
+      <div class="select-wrap"><select onchange="setPar(this.value)" style="width:100px">${PAR_OPTIONS.map(p=>`<option value="${p}" ${cs.par===p?'selected':''}>${p}</option>`).join('')}</select></div>
+      ${cs.strokes>=cs.par+5?`<button class="btn btn-outline" onclick="setMercy()">Mercy (+5)</button>`:''}
+    </div>`;
+  }
+
+  const totalScore = cs.strokes + cs.scratches + cs.penalties;
+  const callout = cs.par > 0 && cs.strokes > 0 ? getCallout(totalScore, cs.par) : '';
+  const breakdown = (cs.scratches>0||cs.penalties>0) ? `<div class="text-xs text-muted">${cs.strokes}${cs.scratches>0?' + '+cs.scratches+'S':''}${cs.scratches>0&&cs.penalties>0?' + ':''}${cs.penalties>0?cs.penalties+'P':''}</div>` : '';
+
+  let drawDialog = '';
+  if (state.showDrawDialog) drawDialog = renderDrawDialog();
+  let tableDialog = '';
+  if (state.showTableSetup && state.pendingPar !== null) tableDialog = renderTableSetupDialog();
+  let finishDialog = '';
+  if (state.showFinishConfirm) finishDialog = renderFinishDialog();
+
+  return `
+    <div class="screen">
+      <div class="flex items-center gap-3 mb-4">
+        <button class="btn btn-outline" style="width:72px;min-height:44px" onclick="prevPlayer()">${SVG.chevronLeft}</button>
+        <div class="flex-1 flex items-center justify-center gap-2" style="padding:8px 16px;border:2px solid ${cp.color};border-radius:8px">
+          ${leader?`<img src="${LEADER_ICON_URL}" style="width:20px;height:20px">`:''}<span class="text-2xl font-bold">${esc(cp.name)}</span>
+        </div>
+        <button class="btn btn-outline" style="width:72px;min-height:44px" onclick="nextPlayer()">${SVG.chevronRight}</button>
+      </div>
+      <div class="grid grid-3 gap-4 mb-4 text-center">
+        <div><div class="text-xs text-muted font-bold" style="text-transform:uppercase">Scratches</div><div class="text-2xl font-bold">${stats.sc}</div></div>
+        <div><div class="text-xs text-muted font-bold" style="text-transform:uppercase">Total Strokes</div><div class="text-2xl font-bold">${stats.ts}</div></div>
+        <div><div class="text-xs text-muted font-bold" style="text-transform:uppercase">Penalties</div><div class="text-2xl font-bold">${stats.pn}</div></div>
+      </div>
+      <div style="height:2px;background:${cp.color}" class="mb-4"></div>
+      <div class="flex justify-between items-center mb-3">
+        <div class="text-lg font-bold">Hole ${g.currentHole}</div>
+        <div class="text-sm text-muted">${shootersLeft} shooter${shootersLeft!==1?'s':''} remaining</div>
+      </div>
+      ${parSection}
+      <div class="flex gap-3 mb-4" ${lhm?'style="flex-direction:row-reverse"':''}>
+        <button class="btn btn-destructive flex-1" style="min-height:48px" onclick="addScratch()">Scratch (+1)</button>
+        <button class="btn btn-destructive flex-1" style="min-height:48px" onclick="addPenalty()">Penalty (+1)</button>
+      </div>
+      <div class="flex gap-4 items-center mb-4" ${lhm?'style="flex-direction:row-reverse"':''}>
+        <div class="flex-1 text-center">
+          <div style="font-size:80px;line-height:1" class="font-extrabold">${totalScore}</div>
+          ${breakdown}
+          <div class="text-sm font-bold mt-1" style="min-height:20px">${callout}</div>
+        </div>
+        <div class="flex flex-col gap-3" style="width:100px">
+          <button class="btn btn-primary" style="height:72px;font-size:28px" onclick="addStroke()">&#9650;</button>
+          <button class="btn btn-primary" style="height:72px;font-size:28px" onclick="subStroke()">&#9660;</button>
+        </div>
+      </div>
+      <div class="flex gap-3" ${lhm?'style="flex-direction:row-reverse"':''}>
+        <button class="btn btn-destructive flex-1" style="min-height:48px" onclick="undo()">${SVG.undo} Undo</button>
+        <div class="flex-1 flex flex-col gap-1">
+          <button class="btn btn-primary w-full ${canAdv&&cs.par>0&&cs.strokes>0?'pulse':''}" style="min-height:48px" onclick="onNextCard()" ${!canAdv?'disabled':''}>${isFinishing?'Finish Game':'Next Card'}</button>
+          ${!canAdv&&cs.par===0?'<span class="text-xs text-center" style="color:var(--destructive)">Set par to continue</span>':''}
+        </div>
+      </div>
+      <div class="flex justify-center mt-2">
+        <button class="btn btn-ghost text-sm" onclick="goHome()">${SVG.home} Home</button>
+      </div>
+    </div>${drawDialog}${tableDialog}${finishDialog}`;
+}
+
+function renderDrawDialog() {
+  return `<div class="dialog-overlay" onclick="event.target===this&&(state.showDrawDialog=false,render())">
+    <div class="dialog-content text-center">
+      <h2 class="text-3xl font-extrabold mb-2">DRAW!</h2>
+      <p class="text-muted mb-4">Select par for the next course.${state.game.currentHole>1?' (The player with the lowest score plays first)':''}</p>
+      <h3 class="font-bold mb-3">Select Par for This Hole</h3>
+      <div class="select-wrap mb-4" style="display:block"><select id="drawParSelect" style="width:100%;font-size:18px">${PAR_OPTIONS.map(p=>`<option value="${p}" ${p===3?'selected':''}>Par ${p}</option>`).join('')}</select></div>
+      <button class="btn btn-primary btn-xl" onclick="confirmDraw()">Confirm Par</button>
+    </div></div>`;
+}
+
+function renderTableSetupDialog() {
+  return `<div class="dialog-overlay">
+    <div class="dialog-content text-center">
+      <h2 class="text-2xl font-extrabold mb-2">Hole ${state.game.currentHole} - Par ${state.pendingPar}</h2>
+      <p class="text-muted mb-4">Set up the course according to the card.</p>
+      <p class="mb-4">Press the button below when the table matches the card.</p>
+      <button class="btn btn-primary btn-xl" onclick="tableReady()">Table is Ready!</button>
+    </div></div>`;
+}
+
+function renderFinishDialog() {
+  return `<div class="dialog-overlay">
+    <div class="dialog-content text-center">
+      <h2 class="text-xl font-bold mb-2">Finish Game</h2>
+      <p class="text-muted mb-4">To finalize your score(s), click continue. This action cannot be undone.</p>
+      <div class="flex gap-2">
+        <button class="btn btn-ghost flex-1" onclick="state.showFinishConfirm=false;render()">Go Back</button>
+        <button class="btn btn-primary flex-1" onclick="state.showFinishConfirm=false;nextCard()">Continue</button>
+      </div>
+    </div></div>`;
+}
+
+function renderSummary() {
+  const g = state.game;
+  const lb = getLeaderboard();
+  const leader = lb[0];
+  const allHoles = [...new Set(Object.values(g.scores).flat().map(s=>s.hole))].sort((a,b)=>a-b);
+  const totals = Object.values(g.scores).reduce((a,ps)=>{const t=calcTotal(ps);return{ts:a.ts+t.ts,sc:a.sc+t.sc};},{ts:0,sc:0});
+  const unlocked = isUnlocked();
+
+  let lbHtml = lb.map((e,i) => {
+    const stats = calcTotal(g.scores[e.player.id]||[]);
+    return `<div class="leaderboard-item ${i===0?'gold':i===1?'silver':i===2?'bronze':''} mb-2">
+      <div class="flex items-center gap-2 flex-1" style="min-width:0"><div class="color-dot" style="background:${e.player.color}"></div><span class="font-bold truncate">${esc(e.player.name)}</span></div>
+      <div class="text-center text-sm" style="flex-shrink:0"><div class="font-bold">${e.total}</div><div class="text-xs text-muted">Total</div></div>
+      <div class="text-center text-sm" style="flex-shrink:0"><div>${stats.sc}</div><div class="text-xs text-muted">Scratch</div></div>
+      <div class="text-center text-sm" style="flex-shrink:0"><div>${stats.pn}</div><div class="text-xs text-muted">Penalty</div></div>
+    </div>`;
+  }).join('');
+
+  let tableRows = lb.map((e,i) => {
+    const ps = g.scores[e.player.id]||[];
+    const cells = allHoles.map(h => {
+      if (!unlocked && h > FREE_HOLES) return `<td><div class="lock-icon">${SVG.lock}</div></td>`;
+      const hs = ps.find(s=>s.hole===h);
+      if (!hs) return '<td>-</td>';
+      const d = hs.strokes - hs.par;
+      return `<td class="${d<0?'score-under':d>0?'score-over':''}">${hs.strokes}</td>`;
+    }).join('');
+    return `<tr class="${i===0?'gold':''}"><td class="player-cell"><div class="flex items-center gap-2"><div class="color-dot" style="background:${e.player.color};width:12px;height:12px"></div>${esc(e.player.name)}</div></td>${cells}<td class="font-bold">${e.total}</td></tr>`;
+  }).join('');
+
+  let unlockBanner = '';
+  if (!unlocked && allHoles.some(h => h > FREE_HOLES)) {
+    unlockBanner = `<div class="card mb-4" style="border-style:dashed;border-color:var(--primary)">
+      <div class="flex items-center gap-3">
+        <div style="flex-shrink:0">${SVG.lock}</div>
+        <div class="flex-1"><p class="font-bold text-sm">Cards 4-18 are locked</p><p class="text-xs text-muted">Unlock all 18 cards to view full scores</p></div>
+        <button class="btn btn-primary" onclick="window.location.href='${STRIPE_PAYMENT_LINK}'">${SVG.unlock} Unlock</button>
+      </div></div>`;
+  }
+
+  return `<div class="screen">
+    <h1 class="text-3xl font-bold text-center mb-2">Session Summary</h1>
+    ${leader?`<p class="text-center text-muted mb-4">${g.isComplete?'Winner':'Leader'}: <span class="font-bold" style="color:${leader.player.color}">${esc(leader.player.name)}</span> (${leader.total} strokes)</p>`:''}
+    <div class="card mb-4"><div class="grid grid-2 gap-4 text-sm">
+      <div class="flex justify-between" style="border-bottom:1px dashed var(--border);padding-bottom:8px"><span>Total Players:</span><span class="font-bold">${g.players.length}</span></div>
+      <div class="flex justify-between" style="border-bottom:1px dashed var(--border);padding-bottom:8px"><span>Holes Played:</span><span class="font-bold">${allHoles.length}</span></div>
+      <div class="flex justify-between" style="border-bottom:1px dashed var(--border);padding-bottom:8px"><span>Total Strokes:</span><span class="font-bold">${totals.ts}</span></div>
+      <div class="flex justify-between" style="border-bottom:1px dashed var(--border);padding-bottom:8px"><span>Total Scratches:</span><span class="font-bold">${totals.sc}</span></div>
+    </div></div>
+    <div class="card mb-4"><h3 class="font-bold mb-3">Leaderboard</h3><div>${lbHtml}</div></div>
+    <div class="card mb-4"><h3 class="font-bold mb-3">Box Score</h3>
+    <div style="overflow-x:auto"><table><thead><tr><th style="text-align:left;min-width:90px">Player</th>${allHoles.map(h=>`<th>H${h}</th>`).join('')}<th>Total</th></tr></thead><tbody>${tableRows}</tbody></table></div></div>
+    ${unlockBanner}
+  </div>`;
+}
+
+function renderSaveLoad(mode) {
+  const games = getSavedGames();
+  const slots = Object.entries(games).filter(([k])=>k!=='__autosave__');
+  let items = slots.map(([name,g]) => `
+    <div class="save-item mb-2">
+      <div class="flex-1"><div class="font-bold">${esc(name)}</div><div class="text-xs text-muted">${g.players?.length||0} players, Hole ${g.currentHole||1}</div></div>
+      ${mode==='save'?'':`<button class="btn btn-primary" onclick="loadGame('${esc(name)}');state.screen='game';state.activeTab='game';render()">Load</button>`}
+      <button class="btn btn-ghost btn-icon" style="color:var(--destructive)" onclick="deleteSlot('${esc(name)}');render()">${SVG.trash}</button>
+    </div>`).join('');
+  if (slots.length===0) items = '<p class="text-muted text-center mb-4">No saved games</p>';
+
+  let saveSection = '';
+  if (mode === 'save') {
+    saveSection = `<div class="flex gap-2 mb-4">
+      <input class="input flex-1" id="saveSlotName" placeholder="Save slot name" value="Game ${new Date().toLocaleDateString()}">
+      <button class="btn btn-primary" onclick="const n=document.getElementById('saveSlotName').value.trim();if(n){saveGame(n);render()}">Save</button>
+    </div>`;
+  }
+
+  return `<div class="screen">
+    <h2 class="text-xl font-bold mb-4">${mode==='save'?'Save':'Load'} Game</h2>
+    ${saveSection}${items}
+    ${mode==='save'?`<div class="flex flex-col gap-2 mt-4">
+      <button class="btn btn-destructive w-full" onclick="saveHistory();state.game.isComplete=true;state.activeTab='summary';render()">End Game</button>
+      <button class="btn btn-outline w-full" onclick="state.game=defaultGame();state.viewOnly=false;state.screen='setup';render()">New Game</button>
+    </div>`:''}
+  </div>`;
+}
+
+function renderSaveLoadDialog() {
+  const games = getSavedGames();
+  const slots = Object.entries(games).filter(([k])=>k!=='__autosave__');
+  let items = slots.map(([name,g]) => `
+    <div class="save-item mb-2">
+      <div class="flex-1"><div class="font-bold">${esc(name)}</div><div class="text-xs text-muted">${g.players?.length||0} players, Hole ${g.currentHole||1}</div></div>
+      <button class="btn btn-primary" onclick="loadGame('${esc(name)}');state.showSaveLoad=null;state.screen='game';state.activeTab='game';render()">Load</button>
+    </div>`).join('');
+  if (slots.length===0) items = '<p class="text-muted text-center">No saved games yet</p>';
+  return `<div class="dialog-overlay" onclick="if(event.target===this){state.showSaveLoad=null;render()}">
+    <div class="dialog-content"><h2 class="text-xl font-bold mb-4">Load Game</h2>${items}
+    <button class="btn btn-ghost w-full mt-2" onclick="state.showSaveLoad=null;render()">Cancel</button></div></div>`;
+}
+
+function renderSettings() {
+  const s = state.game.settings;
+  return `<div class="screen">
+    <h2 class="text-xl font-bold mb-4">Settings</h2>
+    <div class="card mb-4">
+      <h3 class="font-bold mb-3">Display</h3>
+      <div class="flex justify-between items-center mb-3">
+        <span>Theme</span>
+        <div class="flex gap-2">
+          <button class="btn ${s.theme==='dark'?'btn-primary':'btn-outline'}" onclick="state.game.settings.theme='dark';applyTheme();render()">Dark</button>
+          <button class="btn ${s.theme==='light'?'btn-primary':'btn-outline'}" onclick="state.game.settings.theme='light';applyTheme();render()">Light</button>
+        </div>
+      </div>
+      <div class="flex justify-between items-center">
+        <span>Left-handed mode</span>
+        <button class="btn ${s.leftHandedMode?'btn-primary':'btn-outline'}" onclick="state.game.settings.leftHandedMode=!state.game.settings.leftHandedMode;render()">${s.leftHandedMode?'On':'Off'}</button>
+      </div>
+    </div>
+    <div class="card mb-4">
+      <h3 class="font-bold mb-3">Game</h3>
+      <div class="flex justify-between items-center">
+        <span>Auto-save</span>
+        <button class="btn ${s.autoSave?'btn-primary':'btn-outline'}" onclick="state.game.settings.autoSave=!state.game.settings.autoSave;render()">${s.autoSave?'On':'Off'}</button>
+      </div>
+    </div>
+    <div class="card mb-4">
+      <h3 class="font-bold mb-3">Add Player Mid-Game</h3>
+      <div class="flex gap-2">
+        <input class="input flex-1" id="midGamePlayer" placeholder="Player name" maxlength="20" onkeydown="if(event.key==='Enter')addMidGame()">
+        <button class="btn btn-primary" onclick="addMidGame()" ${state.game.players.length>=MAX_PLAYERS?'disabled':''}>Add</button>
+      </div>
+    </div>
+    <button class="btn btn-destructive w-full" onclick="goHome()">End Game & Exit</button>
+  </div>`;
+}
+
+function renderBottomNav() {
+  const t = state.activeTab;
+  const vo = state.viewOnly;
+  return `<div id="bottom-nav">
+    <button class="${t==='game'?'active':''}" onclick="if(!${vo})setTab('game')" ${vo?'style="opacity:.4"':''}>${SVG.game}<span>Game</span></button>
+    <button class="${t==='summary'?'active':''}" onclick="setTab('summary')">${SVG.chart}<span>Leaderboard</span></button>
+    <button class="${t==='save'?'active':''}" onclick="if(!${vo})setTab('save')" ${vo?'style="opacity:.4"':''}>${SVG.save}<span>Save</span></button>
+    <button class="${t==='settings'?'active':''}" onclick="setTab('settings')">${SVG.settings}<span>Settings</span></button>
+  </div>`;
+}
+
+function attachGameEvents() {}
+
+function setTab(tab) { state.activeTab = tab; render(); }
+function prevPlayer() { const g=state.game; g.currentPlayerIndex = g.currentPlayerIndex===0 ? g.players.length-1 : g.currentPlayerIndex-1; render(); }
+function nextPlayer() { const g=state.game; g.currentPlayerIndex = (g.currentPlayerIndex+1) % g.players.length; render(); }
+
+function addP() {
+  const inp = document.getElementById('newPlayerName');
+  const name = inp?.value?.trim();
+  if (name && state.game.players.length < MAX_PLAYERS) { addPlayer(name); inp.value = ''; }
+}
+function addMidGame() {
+  const inp = document.getElementById('midGamePlayer');
+  const name = inp?.value?.trim();
+  if (name && state.game.players.length < MAX_PLAYERS) { addPlayer(name); inp.value = ''; render(); }
+}
+function moveP(id, dir) {
+  const ps = state.game.players;
+  const i = ps.findIndex(p=>p.id===id);
+  const ni = dir==='up'?i-1:i+1;
+  if(ni<0||ni>=ps.length) return;
+  [ps[i],ps[ni]]=[ps[ni],ps[i]];
+  ps.forEach((p,j)=>p.order=j);
+  render();
+}
+function cycleColor(id) {
+  const p = state.game.players.find(pl=>pl.id===id);
+  if(p) { const ci = PLAYER_COLORS.indexOf(p.color); p.color = PLAYER_COLORS[(ci+1)%PLAYER_COLORS.length]; render(); }
+}
+
+function getCS() {
+  const g=state.game; const cp=g.players[g.currentPlayerIndex];
+  return g.scores[cp.id]?.find(s=>s.hole===g.currentHole) || {hole:g.currentHole,par:0,strokes:0,scratches:0,penalties:0};
+}
+function setCurScore(upd) {
+  const g=state.game; const cp=g.players[g.currentPlayerIndex];
+  updateScore(cp.id, g.currentHole, upd); render();
+}
+function addStroke() { const cs=getCS(); setCurScore({...cs, strokes:cs.strokes+1}); }
+function subStroke() { const cs=getCS(); setCurScore({...cs, strokes:Math.max(0,cs.strokes-1)}); }
+function addScratch() { const cs=getCS(); setCurScore({...cs, scratches:cs.scratches+1}); }
+function addPenalty() { const cs=getCS(); setCurScore({...cs, penalties:cs.penalties+1}); }
+function setPar(v) { const cs=getCS(); setCurScore({...cs, par:parseInt(v)}); }
+function setMercy() { const cs=getCS(); if(cs.par>0) { setCurScore({...cs, strokes:cs.par+5}); setTimeout(()=>nextCard(),300); } }
+
+function confirmDraw() {
+  const sel = document.getElementById('drawParSelect');
+  const par = parseInt(sel?.value || 3);
+  state.pendingPar = par;
+  state.drawConfirmTime = Date.now();
+  state.showDrawDialog = false;
+  if (state.game.currentHole === 1) { setParForAll(state.game.currentHole, par); state.pendingPar=null; render(); }
+  else { state.showTableSetup = true; render(); }
+}
+function tableReady() {
+  if (state.pendingPar !== null) { setParForAll(state.game.currentHole, state.pendingPar); }
+  state.pendingPar = null; state.drawConfirmTime = null; state.showTableSetup = false; render();
+}
+function onNextCard() {
+  const g=state.game;
+  const allDone = g.players.every(p=>{const s=g.scores[p.id]?.find(s=>s.hole===g.currentHole);return s&&s.strokes>0;});
+  const isLast = g.currentHole>=MAX_HOLES && g.players.indexOf(g.players[g.currentPlayerIndex])===g.players.length-1 && allDone;
+  if (isLast) { state.showFinishConfirm = true; render(); }
+  else { nextCard(); }
+}
+function goHome() {
+  state.game.isComplete = true; state.viewOnly = false; state.activeTab = 'game'; state.screen = 'splash'; state.history=[]; render();
+}
+
+function esc(s) { const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+
+init();
+</script>
+</body>
+</html>
