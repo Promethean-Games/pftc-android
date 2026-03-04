@@ -1,0 +1,115 @@
+You are a senior full-stack engineer. Refactor my existing Par for the Course scoring web app to remove the tournament product and make it local games only, while preserving the current scoring UX and autosave behavior.
+
+1) High-level goals
+
+Convert app from Tournament mode → Local Game mode only.
+
+Keep the scoring workflow exactly the same (holes/cards, strokes, navigation, totals, etc.).
+
+Remove all concepts, UI, copy, routes, data models, and logic related to:
+
+“Tournaments”
+
+“Scoring Groups”
+
+“Handicaps”
+
+Preserve:
+
+Add/remove players mid-game
+
+Ease-of-use flow (minimal taps/clicks)
+
+Auto-save + restore on refresh
+
+Save Slots (multiple saved games)
+
+2) Stripe paywall: unlock 18-card digital view
+
+Biggest update: add a paid unlock using Stripe.
+
+Default (free): users can score normally, but can only view/play the first X cards (choose X=3 unless the code already has a “sample” concept).
+
+Paid (unlocked): users can view all 18 cards digitally.
+
+The paywall must be simple and frictionless:
+
+A clear “Unlock all 18 cards” CTA in the UI
+
+After successful payment, persist “unlocked=true” for that device/browser (localStorage is acceptable; if you already have a backend, use it)
+
+If the user refreshes or returns later, unlocked status is retained
+
+3) Architecture requirements (choose the simplest path)
+
+If this is a static frontend app: implement Stripe via Stripe Checkout + serverless endpoint.
+
+Create a minimal backend using Replit (Node/Express) OR serverless function(s) if the project already has that.
+
+Backend responsibilities:
+
+Create Checkout Session for a single product/price
+
+Handle webhook to confirm payment (if feasible). If webhook is too heavy for the current stack, implement a simple post-checkout verification step (session retrieval) and explain the tradeoff in comments.
+
+Do NOT break the app for users who never pay.
+
+4) Implementation details
+
+Remove tournament-related screens/components and any navigation entries.
+
+Update copy everywhere: replace “Tournament” language with “Game” language.
+
+Data model:
+
+Replace tournament objects with a simple game object.
+
+Save Slots should store { gameState, players, scoring, settings, updatedAt }.
+
+Remove handicap fields entirely.
+
+Add a new settings section or modal:
+
+“Purchase / Unlock” area with Stripe CTA
+
+Show current status: Locked/Unlocked
+
+Gate logic:
+
+If locked, prevent navigating beyond free cards OR blur/lock cards 4–18 with a prompt.
+
+Scoring flow must remain stable—no weird resets.
+
+5) Deliverables (must provide all)
+
+Provide the full updated code for all changed files (not partial diffs).
+
+Provide a brief “What changed” list.
+
+Provide clear setup steps for Stripe keys in Replit:
+
+Environment variables needed
+
+Where to paste Price ID / Success URL / Cancel URL
+
+Confirm the app runs end-to-end:
+
+Start a local game
+
+Add/remove players mid-game
+
+Save/Load slot
+
+Auto-save restore
+
+Stripe checkout opens and unlocks content after success
+
+6) Guardrails
+
+Keep UI simple, mobile-first, minimal clicks.
+
+Avoid introducing new dependencies unless necessary.
+
+No tournament remnants in UI text, code, or storage keys (rename storage keys if needed with a migration step so existing saved slots don’t break).
+
+Now: inspect the existing repo, explain the current structure in 5–10 bullets, then implement the refactor and output updated files.
