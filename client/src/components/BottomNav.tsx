@@ -1,19 +1,18 @@
 import { Button } from "@/components/ui/button";
-import { Home, Trophy, Settings as SettingsIcon, Save, LogOut } from "lucide-react";
+import { Home, BarChart3, Settings as SettingsIcon, Save, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface BottomNavProps {
   activeTab: "game" | "summary" | "settings" | "save";
   onTabChange: (tab: "game" | "summary" | "settings" | "save") => void;
   viewOnly?: boolean;
-  isTournament?: boolean;
   onGoHome?: () => void;
 }
 
-export function BottomNav({ activeTab, onTabChange, viewOnly, isTournament, onGoHome }: BottomNavProps) {
+export function BottomNav({ activeTab, onTabChange, viewOnly, onGoHome }: BottomNavProps) {
   const allTabs = [
     { id: "game" as const, icon: Home, label: "Game" },
-    { id: "summary" as const, icon: Trophy, label: "Leaderboard" },
+    { id: "summary" as const, icon: BarChart3, label: "Leaderboard" },
     { id: "save" as const, icon: Save, label: "Save" },
     { id: "settings" as const, icon: SettingsIcon, label: "Settings" },
   ];
@@ -21,8 +20,6 @@ export function BottomNav({ activeTab, onTabChange, viewOnly, isTournament, onGo
   let tabs = allTabs;
   if (viewOnly) {
     tabs = allTabs.filter(t => t.id === "summary" || t.id === "settings");
-  } else if (isTournament) {
-    tabs = allTabs.filter(t => t.id !== "save");
   }
 
   return (

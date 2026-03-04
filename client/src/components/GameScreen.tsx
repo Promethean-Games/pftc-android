@@ -9,7 +9,8 @@ import { getScoreCallout } from "@/lib/game-utils";
 import { cn } from "@/lib/utils";
 import { DrawDialog } from "./DrawDialog";
 import { TableSetupDialog } from "./TableSetupDialog";
-import { useTournament } from "@/contexts/TournamentContext";
+import { useUnlock } from "@/contexts/UnlockContext";
+import { UnlockBanner } from "./UnlockBanner";
 
 interface GameScreenProps {
   players: Player[];
@@ -46,6 +47,9 @@ export function GameScreen({
   onRecordSetupTime,
   onHome,
 }: GameScreenProps) {
+  const { isUnlocked, freeHoles } = useUnlock();
+  const isHoleLocked = !isUnlocked && currentHole > freeHoles;
+
   const [showDrawDialog, setShowDrawDialog] = useState(false);
   const [showTableSetupDialog, setShowTableSetupDialog] = useState(false);
   const [showFinishConfirm, setShowFinishConfirm] = useState(false);
@@ -54,9 +58,7 @@ export function GameScreen({
   const [lastHole, setLastHole] = useState(currentHole);
   const isInitialMount = useRef(true);
   const lastPlayerId = useRef(currentPlayer.id);
-  const tournament = useTournament();
   
-  // Swipe gesture handling
   const touchStartX = useRef<number | null>(null);
   const touchEndX = useRef<number | null>(null);
   const minSwipeDistance = 50;
@@ -100,11 +102,9 @@ export function GameScreen({
   const [scratches, setScratches] = useState(currentScore.scratches || 0);
   const [penalties, setPenalties] = useState(currentScore.penalties || 0);
 
-  // Show DRAW dialog when hole changes
   useEffect(() => {
     if (currentHole !== lastHole) {
       setLastHole(currentHole);
-      // Check if par is already set for this hole
       const existingPar = scores[currentPlayer.id]?.find((s) => s.hole === currentHole)?.par;
       if (!existingPar || existingPar === 0) {
         setShowDrawDialog(true);
@@ -112,7 +112,6 @@ export function GameScreen({
     }
   }, [currentHole, lastHole, scores, currentPlayer.id]);
 
-  // Show DRAW dialog on initial load if no par set
   useEffect(() => {
     if (currentScore.par === 0) {
       setShowDrawDialog(true);
@@ -120,7 +119,6 @@ export function GameScreen({
   }, []);
 
   useEffect(() => {
-    // Track player changes to avoid updating score during player switch
     if (currentPlayer.id !== lastPlayerId.current) {
       lastPlayerId.current = currentPlayer.id;
       isInitialMount.current = true;
@@ -132,44 +130,12 @@ export function GameScreen({
   }, [currentPlayer.id, currentHole, currentScore]);
 
   useEffect(() => {
-    // Skip the initial mount and player switches to avoid double updates
     if (isInitialMount.current) {
       isInitialMount.current = false;
       return;
     }
     onUpdateScore({ par, strokes, scratches, penalties });
   }, [par, strokes, scratches, penalties]);
-
-  // Sync scores to tournament server when connected (only on meaningful changes)
-  const lastSyncedScore = useRef<string>("");
-  
-  useEffect(() => {
-    if (!tournament.isConnected || isInitialMount.current || par === 0) return;
-    
-    // Find matching tournament player by name (case-insensitive)
-    const tournamentPlayer = tournament.myPlayers.find(
-      tp => tp.playerName.toLowerCase().trim() === currentPlayer.name.toLowerCase().trim()
-    );
-    
-    if (!tournamentPlayer) return;
-    
-    // Create a score key to avoid duplicate syncs
-    const scoreKey = `${tournamentPlayer.id}-${currentHole}-${par}-${strokes}-${scratches}-${penalties}`;
-    if (scoreKey === lastSyncedScore.current) return;
-    
-    // Debounce: only sync when strokes > 0 (hole has been played)
-    if (strokes > 0) {
-      lastSyncedScore.current = scoreKey;
-      tournament.syncScore(
-        tournamentPlayer.id,
-        currentHole,
-        par,
-        strokes,
-        scratches,
-        penalties
-      );
-    }
-  }, [par, strokes, scratches, penalties, tournament.isConnected, currentHole, currentPlayer.name, tournament.myPlayers]);
 
   const playerStats = (scores[currentPlayer.id] || []).reduce((acc, score) => ({
     scratches: acc.scratches + score.scratches,
@@ -185,17 +151,13 @@ export function GameScreen({
   };
 
   const handleDrawPar = (selectedPar: number) => {
-    // Store the selected par and start timing
     setPendingPar(selectedPar);
     setDrawConfirmTime(Date.now());
     setShowDrawDialog(false);
-    // Show table setup dialog (except for first hole where table isn't set up yet)
     if (currentHole === 1) {
-      // First hole - apply par immediately without table setup confirmation
       onSetParForAll(selectedPar);
       setPar(selectedPar);
     } else {
-      // Subsequent holes - show table setup confirmation
       setShowTableSetupDialog(true);
     }
   };
@@ -203,24 +165,20 @@ export function GameScreen({
   const handleTableReady = () => {
     if (pendingPar !== null && drawConfirmTime !== null) {
       const setupTimeMs = Date.now() - drawConfirmTime;
-      // Record the setup time
       onRecordSetupTime({
         hole: currentHole,
         par: pendingPar,
         setupTimeMs,
         timestamp: new Date().toISOString(),
       });
-      // Apply the par
       onSetParForAll(pendingPar);
       setPar(pendingPar);
     }
-    // Reset state
     setPendingPar(null);
     setDrawConfirmTime(null);
     setShowTableSetupDialog(false);
   };
 
-  // Check if all players have non-zero scores for current hole
   const allPlayersHaveScores = players.every((player) => {
     const playerScore = scores[player.id]?.find((s) => s.hole === currentHole);
     return playerScore && playerScore.strokes > 0;
@@ -231,7 +189,6 @@ export function GameScreen({
   const isLastPlayer = players.indexOf(currentPlayer) === players.length - 1;
   const isFinishingGame = isLastHole && isLastPlayer && allPlayersHaveScores;
 
-  // Count players remaining with zero score for current hole
   const shootersRemaining = players.filter((player) => {
     const playerScore = scores[player.id]?.find((s) => s.hole === currentHole);
     return !playerScore || playerScore.strokes === 0;
@@ -246,7 +203,6 @@ export function GameScreen({
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
-      {/* Player Navigation */}
       <div className="flex items-center gap-3 mb-4">
         <Button
           size="icon"
@@ -279,7 +235,6 @@ export function GameScreen({
         </Button>
       </div>
 
-      {/* Stats Row */}
       <div className="grid grid-cols-3 gap-4 mb-4">
         <div className="text-center">
           <div className="text-xs uppercase text-muted-foreground font-semibold">Scratches</div>
@@ -297,14 +252,16 @@ export function GameScreen({
 
       <div className="h-0.5 mb-4" style={{ backgroundColor: currentPlayer.color }} />
 
-      {/* Hole & Shooters Remaining */}
       <div className="flex justify-between items-center mb-3">
         <div className="text-lg font-bold" data-testid="text-hole">Hole {currentHole}</div>
         <div className="text-sm text-muted-foreground" data-testid="text-shooters-remaining">{shooterInfo}</div>
       </div>
 
-      {/* Par Selection */}
-      {par === 0 ? (
+      {isHoleLocked ? (
+        <div className="flex-1 flex flex-col items-center justify-center py-8" data-testid="locked-hole-overlay">
+          <UnlockBanner variant="overlay" />
+        </div>
+      ) : par === 0 ? (
         <button
           className="w-full mb-3 p-4 rounded-md border-2 border-dashed border-primary text-center"
           onClick={() => setShowDrawDialog(true)}
@@ -321,7 +278,7 @@ export function GameScreen({
               <SelectValue placeholder="--" />
             </SelectTrigger>
             <SelectContent>
-              {(tournament.isConnected ? [1, 2, 3, 4] : PAR_OPTIONS).map((p) => (
+              {PAR_OPTIONS.map((p) => (
                 <SelectItem key={p} value={p.toString()}>{p}</SelectItem>
               ))}
             </SelectContent>
@@ -339,96 +296,95 @@ export function GameScreen({
         </div>
       )}
 
-      {/* Scratch & Penalty */}
-      <div className={cn("flex gap-3 mb-4", leftHandedMode && "flex-row-reverse")}>
-        <Button
-          variant="destructive"
-          className="flex-1 h-12"
-          onClick={() => setScratches(scratches + 1)}
-          data-testid="button-scratch"
-        >
-          Scratch (+1)
-        </Button>
-        {!tournament.isConnected && (
-          <Button
-            variant="destructive"
-            className="flex-1 h-12"
-            onClick={() => setPenalties(penalties + 1)}
-            data-testid="button-penalty"
-          >
-            Penalty (+1)
-          </Button>
-        )}
-      </div>
-
-      {/* Score Display & Controls */}
-      <div className={cn("flex gap-4 items-center mb-4", leftHandedMode && "flex-row-reverse")}>
-        <div className="flex-1 text-center">
-          <div className="text-8xl font-extrabold leading-none" data-testid="text-score">
-            {strokes + scratches + penalties}
+      {!isHoleLocked && (
+        <>
+          <div className={cn("flex gap-3 mb-4", leftHandedMode && "flex-row-reverse")}>
+            <Button
+              variant="destructive"
+              className="flex-1 h-12"
+              onClick={() => setScratches(scratches + 1)}
+              data-testid="button-scratch"
+            >
+              Scratch (+1)
+            </Button>
+            <Button
+              variant="destructive"
+              className="flex-1 h-12"
+              onClick={() => setPenalties(penalties + 1)}
+              data-testid="button-penalty"
+            >
+              Penalty (+1)
+            </Button>
           </div>
-          {(scratches > 0 || penalties > 0) && (
-            <div className="text-xs text-muted-foreground" data-testid="text-score-breakdown">
-              {strokes} + {scratches > 0 && `${scratches}S`}{scratches > 0 && penalties > 0 && " + "}{penalties > 0 && `${penalties}P`}
+
+          <div className={cn("flex gap-4 items-center mb-4", leftHandedMode && "flex-row-reverse")}>
+            <div className="flex-1 text-center">
+              <div className="text-8xl font-extrabold leading-none" data-testid="text-score">
+                {strokes + scratches + penalties}
+              </div>
+              {(scratches > 0 || penalties > 0) && (
+                <div className="text-xs text-muted-foreground" data-testid="text-score-breakdown">
+                  {strokes} + {scratches > 0 && `${scratches}S`}{scratches > 0 && penalties > 0 && " + "}{penalties > 0 && `${penalties}P`}
+                </div>
+              )}
+              <div className="text-sm font-bold min-h-[20px] mt-1" data-testid="text-callout">
+                {par > 0 && strokes > 0 && getScoreCallout(strokes + scratches + penalties, par)}
+              </div>
             </div>
-          )}
-          <div className="text-sm font-bold min-h-[20px] mt-1" data-testid="text-callout">
-            {par > 0 && strokes > 0 && getScoreCallout(strokes + scratches + penalties, par)}
+            <div className="flex flex-col gap-3 w-28">
+              <Button
+                className="h-20 text-3xl"
+                onClick={() => setStrokes(Math.max(0, strokes + 1))}
+                data-testid="button-score-plus"
+              >
+                ▲
+              </Button>
+              <Button
+                className="h-20 text-3xl"
+                onClick={() => setStrokes(Math.max(0, strokes - 1))}
+                data-testid="button-score-minus"
+              >
+                ▼
+              </Button>
+            </div>
           </div>
-        </div>
-        <div className="flex flex-col gap-3 w-28">
-          <Button
-            className="h-20 text-3xl"
-            onClick={() => setStrokes(Math.max(0, strokes + 1))}
-            data-testid="button-score-plus"
-          >
-            ▲
-          </Button>
-          <Button
-            className="h-20 text-3xl"
-            onClick={() => setStrokes(Math.max(0, strokes - 1))}
-            data-testid="button-score-minus"
-          >
-            ▼
-          </Button>
-        </div>
-      </div>
 
-      {/* Undo & Next Card */}
-      <div className={cn("flex gap-3", leftHandedMode && "flex-row-reverse")}>
-        <Button
-          variant="destructive"
-          className="flex-1 h-12 text-base"
-          onClick={onUndo}
-          disabled={!canUndo}
-          data-testid="button-undo"
-        >
-          <Undo2 className="w-5 h-5 mr-2" />
-          Undo
-        </Button>
-        <div className="flex-1 flex flex-col gap-1">
-          <Button
-            className={cn(
-              "w-full h-12 text-base",
-              allPlayersHaveScores && par > 0 && strokes > 0 && "animate-pulse"
-            )}
-            onClick={() => {
-              if (isFinishingGame) {
-                setShowFinishConfirm(true);
-              } else {
-                onNextCard();
-              }
-            }}
-            disabled={!canAdvance}
-            data-testid="button-next-card"
-          >
-            {isFinishingGame ? "Finish Game" : "Next Card"}
-          </Button>
-          {!canAdvance && par === 0 && (
-            <span className="text-xs text-center text-destructive" data-testid="text-par-required">Set par to continue</span>
-          )}
-        </div>
-      </div>
+          <div className={cn("flex gap-3", leftHandedMode && "flex-row-reverse")}>
+            <Button
+              variant="destructive"
+              className="flex-1 h-12 text-base"
+              onClick={onUndo}
+              disabled={!canUndo}
+              data-testid="button-undo"
+            >
+              <Undo2 className="w-5 h-5 mr-2" />
+              Undo
+            </Button>
+            <div className="flex-1 flex flex-col gap-1">
+              <Button
+                className={cn(
+                  "w-full h-12 text-base",
+                  allPlayersHaveScores && par > 0 && strokes > 0 && "animate-pulse"
+                )}
+                onClick={() => {
+                  if (isFinishingGame) {
+                    setShowFinishConfirm(true);
+                  } else {
+                    onNextCard();
+                  }
+                }}
+                disabled={!canAdvance}
+                data-testid="button-next-card"
+              >
+                {isFinishingGame ? "Finish Game" : "Next Card"}
+              </Button>
+              {!canAdvance && par === 0 && (
+                <span className="text-xs text-center text-destructive" data-testid="text-par-required">Set par to continue</span>
+              )}
+            </div>
+          </div>
+        </>
+      )}
 
       {onHome && (
         <div className="flex justify-center pt-2">
@@ -449,7 +405,6 @@ export function GameScreen({
         <DrawDialog
           onSelectPar={handleDrawPar}
           isFirstDraw={currentHole === 1}
-          isTournament={tournament.isConnected}
         />
       )}
 
@@ -466,7 +421,7 @@ export function GameScreen({
           <DialogHeader>
             <DialogTitle>Finish Game</DialogTitle>
             <DialogDescription className="pt-2">
-              To finalize and submit your score(s), click continue. This action cannot be undone. Any questions can be directed towards your Tournament Director.
+              To finalize your score(s), click continue. This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="flex gap-2 sm:gap-0">

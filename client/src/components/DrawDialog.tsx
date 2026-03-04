@@ -1,16 +1,14 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { cn } from "@/lib/utils";
 import drawImage from "@assets/draw-image.png";
 
 interface DrawDialogProps {
   onSelectPar: (par: number) => void;
   isFirstDraw?: boolean;
-  isTournament?: boolean;
 }
 
-export function DrawDialog({ onSelectPar, isFirstDraw = false, isTournament = false }: DrawDialogProps) {
+export function DrawDialog({ onSelectPar, isFirstDraw = false }: DrawDialogProps) {
   const [selectedPar, setSelectedPar] = useState<number | null>(null);
 
   const handleConfirm = () => {
@@ -59,38 +57,18 @@ export function DrawDialog({ onSelectPar, isFirstDraw = false, isTournament = fa
           <label className="text-xl font-semibold block">
             Select Par for This Hole
           </label>
-          {isTournament ? (
-            <div className="grid grid-cols-4 gap-3">
-              {[1, 2, 3, 4].map((par) => (
-                <button
-                  key={par}
-                  className={cn(
-                    "h-20 rounded-lg text-3xl font-bold border-2 transition-all",
-                    selectedPar === par
-                      ? "border-primary bg-primary text-primary-foreground"
-                      : "border-muted-foreground/30 bg-muted/50"
-                  )}
-                  onClick={() => setSelectedPar(par)}
-                  data-testid={`button-par-${par}`}
-                >
-                  {par}
-                </button>
+          <Select value={selectedPar?.toString() || ""} onValueChange={(v) => setSelectedPar(parseInt(v))}>
+            <SelectTrigger className="w-full h-14 text-xl" id="par-select-draw" data-testid="select-par-draw">
+              <SelectValue placeholder="Select Par" />
+            </SelectTrigger>
+            <SelectContent>
+              {Array.from({ length: 15 }, (_, i) => i + 1).map((par) => (
+                <SelectItem key={par} value={par.toString()}>
+                  Par {par}
+                </SelectItem>
               ))}
-            </div>
-          ) : (
-            <Select value={selectedPar?.toString() || ""} onValueChange={(v) => setSelectedPar(parseInt(v))}>
-              <SelectTrigger className="w-full h-14 text-xl" id="par-select-draw" data-testid="select-par-draw">
-                <SelectValue placeholder="Select Par" />
-              </SelectTrigger>
-              <SelectContent>
-                {Array.from({ length: 15 }, (_, i) => i + 1).map((par) => (
-                  <SelectItem key={par} value={par.toString()}>
-                    Par {par}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
+            </SelectContent>
+          </Select>
         </div>
 
         <Button

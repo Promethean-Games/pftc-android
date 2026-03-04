@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
 import { QueryClientProvider } from "@tanstack/react-query";
-import { queryClient, apiRequest } from "./lib/queryClient";
+import { queryClient } from "./lib/queryClient";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider, useTheme } from "@/components/ThemeProvider";
 import { GameProvider, useGame } from "@/contexts/GameContext";
-import { TournamentProvider, useTournament } from "@/contexts/TournamentContext";
+import { UnlockProvider } from "@/contexts/UnlockContext";
 import { SplashScreen } from "@/components/SplashScreen";
 import { PlayerSetup } from "@/components/PlayerSetup";
 import { GameScreen } from "@/components/GameScreen";
@@ -14,14 +14,12 @@ import { SettingsPanel } from "@/components/SettingsPanel";
 import { SaveLoadDialog } from "@/components/SaveLoadDialog";
 import { BottomNav } from "@/components/BottomNav";
 import { isLeader } from "@/lib/game-utils";
-import { PushPrompt } from "@/components/PushPrompt";
 
 type Screen = "splash" | "setup" | "game" | "summary";
 type ActiveTab = "game" | "summary" | "settings" | "save";
 
 function GameApp() {
   const game = useGame();
-  const tournament = useTournament();
   const { theme, setTheme } = useTheme();
   
   const [screen, setScreen] = useState<Screen>(() => {
@@ -58,7 +56,6 @@ function GameApp() {
     localStorage.setItem("appViewOnly", viewOnly ? "true" : "false");
   }, [viewOnly]);
 
-  // Sync theme with game settings
   useEffect(() => {
     setTheme(game.settings.theme);
   }, [game.settings.theme, setTheme]);
@@ -76,56 +73,6 @@ function GameApp() {
   const handleStartGame = () => {
     game.startGame();
     setScreen("game");
-  };
-
-  const handleStartTournamentGame = async () => {
-    // Fetch existing scores from server first
-    let serverScores: Record<string, Array<{ hole: number; par: number; strokes: number; scratches: number; penalties: number }>> = {};
-    try {
-      const res = await apiRequest("GET", `/api/tournaments/${tournament.roomCode}/my-scores?deviceId=${tournament.deviceId}`);
-      const data = await res.json();
-      serverScores = data.scores || {};
-    } catch (err) {
-      console.log("No existing scores to restore or error fetching:", err);
-    }
-    
-    // Reset local game and populate with tournament players
-    game.resetGame();
-    
-    // Add players and restore their scores immediately
-    tournament.myPlayers.forEach((tp, idx) => {
-      game.addPlayer(tp.playerName, idx);
-    });
-    
-    game.startGame();
-    
-    // Use a small delay to ensure state is updated, then restore scores
-    setTimeout(() => {
-      tournament.myPlayers.forEach((tp, idx) => {
-        const scores = serverScores[tp.id.toString()];
-        if (scores && game.players[idx]) {
-          const localPlayerId = game.players[idx].id;
-          for (const score of scores) {
-            game.updateScore(localPlayerId, score.hole, {
-              hole: score.hole,
-              par: score.par,
-              strokes: score.strokes,
-              scratches: score.scratches,
-              penalties: score.penalties,
-            });
-          }
-        }
-      });
-    }, 100);
-    
-    setScreen("game");
-    setActiveTab("game");
-  };
-
-  const handleViewOnly = () => {
-    setViewOnly(true);
-    setScreen("game");
-    setActiveTab("summary");
   };
 
   useEffect(() => {
@@ -167,15 +114,12 @@ function GameApp() {
   const currentPlayer = game.players[game.currentPlayerIndex];
   const playerIsLeader = currentPlayer ? isLeader(currentPlayer.id, game.players, game.scores) : false;
 
-  // Splash Screen
   if (screen === "splash") {
     return (
       <>
         <SplashScreen 
           onNewGame={handleNewGame} 
           onLoadGame={handleLoadGame}
-          onStartTournamentGame={handleStartTournamentGame}
-          onViewOnly={handleViewOnly}
         />
         {showSaveLoad === "load" && (
           <SaveLoadDialog
@@ -191,7 +135,6 @@ function GameApp() {
     );
   }
 
-  // Setup Screen
   if (screen === "setup") {
     return (
       <PlayerSetup
@@ -207,7 +150,6 @@ function GameApp() {
     );
   }
 
-  // Game/Summary/Save/Settings with Bottom Nav
   return (
     <div className="pb-16">
       {activeTab === "game" && currentPlayer && (
@@ -276,7 +218,6 @@ function GameApp() {
         activeTab={activeTab}
         onTabChange={handleTabChange}
         viewOnly={viewOnly}
-        isTournament={!!tournament.roomCode}
         onGoHome={() => {
           game.endGame();
           setViewOnly(false);
@@ -293,13 +234,12 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <ThemeProvider>
-          <TournamentProvider>
+          <UnlockProvider>
             <GameProvider>
               <GameApp />
             </GameProvider>
-          </TournamentProvider>
+          </UnlockProvider>
         </ThemeProvider>
-        <PushPrompt />
         <Toaster />
       </TooltipProvider>
     </QueryClientProvider>
