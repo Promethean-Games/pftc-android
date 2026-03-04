@@ -93,6 +93,7 @@ function GameApp() {
 
   const handleLoadSlot = (slot: string) => {
     game.loadGame(slot);
+    setViewOnly(false);
     setScreen("game");
     setActiveTab("game");
   };

@@ -632,7 +632,7 @@ function rLoadScreen(app){
         <span class="text-xs text-muted" style="margin-left:auto">${d}</span>
       </div>
       <p class="text-sm text-muted mb-2">${auto.players?.length||0} players, Hole ${auto.hole||auto.currentHole||1}</p>
-      <button class="btn btn-outline w-full" style="min-height:44px" onclick="loadGame('__autosave__');S.screen='game';S.tab='game';render()" data-testid="button-load-autosave">Load Autosave</button>
+      <button class="btn btn-outline w-full" style="min-height:44px" onclick="loadGame('__autosave__');S.viewOnly=false;S.screen='game';S.tab='game';render()" data-testid="button-load-autosave">Load Autosave</button>
     </div>`;
   }
 
@@ -647,7 +647,7 @@ function rLoadScreen(app){
         </div>
       </div>
       <p class="text-sm text-muted mb-2">${g.players?.length||0} players, Hole ${g.hole||g.currentHole||1}</p>
-      <button class="btn btn-primary w-full" style="min-height:44px" onclick="loadGame('${esc(n)}');S.screen='game';S.tab='game';render()" data-testid="button-load-${esc(n)}">Load</button>
+      <button class="btn btn-primary w-full" style="min-height:44px" onclick="loadGame('${esc(n)}');S.viewOnly=false;S.screen='game';S.tab='game';render()" data-testid="button-load-${esc(n)}">Load</button>
     </div>`;
   }).join('');
 
