@@ -38,7 +38,7 @@ const SLIDES: TutorialSlide[] = [
   },
   {
     title: "Round Order",
-    body: "On the next hole, players shoot from lowest score to highest score (ties revert to tallest-to-shortest order).",
+    body: "On the next hole, players shoot from lowest score to highest score. Ties resolve to lowest score on the previous hole, then by roster (tallest to shortest).",
   },
   {
     title: "Next Card",
@@ -54,7 +54,7 @@ const SLIDES: TutorialSlide[] = [
   },
   {
     title: "Penalty \u2014 Scratch",
-    body: "Pocketing the cue ball results in a 2-stroke penalty, but the player continues their turn with ball in hand.",
+    body: "Pocketing the cue ball results in a 1-stroke penalty, but the player continues their turn with ball in hand.",
   },
   {
     title: "Penalty Timing",
