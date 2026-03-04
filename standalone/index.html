@@ -93,22 +93,24 @@ const LOGO = "https://prometheangamescom.wordpress.com/wp-content/uploads/2025/0
 const LEADER_ICON = "https://prometheangamescom.wordpress.com/wp-content/uploads/2025/08/unnamed-file.png";
 
 const ALL_CARDS = [
-  {id:'2-01',par:2,img:'cards/2-01.png'},
-  {id:'2-02',par:2,img:'cards/2-02.png'},
-  {id:'2-03',par:2,img:'cards/2-03.png'},
-  {id:'3-01',par:3,img:'cards/3-01.png'},
-  {id:'3-02',par:3,img:'cards/3-02.png'},
-  {id:'3-03',par:3,img:'cards/3-03.png'},
-  {id:'3-04',par:3,img:'cards/3-04.png'},
-  {id:'4-01',par:4,img:'cards/4-01.png'},
-  {id:'4-02',par:4,img:'cards/4-02.png'},
-  {id:'4-03',par:4,img:'cards/4-03.png'},
-  {id:'4-04',par:4,img:'cards/4-04.png'},
-  {id:'4-05',par:4,img:'cards/4-05.png'},
-  {id:'5-01',par:5,img:'cards/5-01.png'},
-  {id:'5-02',par:5,img:'cards/5-02.png'},
-  {id:'5-03',par:5,img:'cards/5-03.png'},
-  {id:'6-01',par:6,img:'cards/6-01.png'},
+  {id:'2-01',par:2,img:'cards/2-01.png',joker:false},
+  {id:'2-02',par:2,img:'cards/2-02.png',joker:false},
+  {id:'2-03',par:2,img:'cards/2-03.png',joker:false},
+  {id:'3-01',par:3,img:'cards/3-01.png',joker:false},
+  {id:'3-02',par:3,img:'cards/3-02.png',joker:false},
+  {id:'3-03',par:3,img:'cards/3-03.png',joker:false},
+  {id:'3-04',par:3,img:'cards/3-04.png',joker:false},
+  {id:'4-01',par:4,img:'cards/4-01.png',joker:false},
+  {id:'4-02',par:4,img:'cards/4-02.png',joker:false},
+  {id:'4-03',par:4,img:'cards/4-03.png',joker:false},
+  {id:'4-04',par:4,img:'cards/4-04.png',joker:false},
+  {id:'4-05',par:4,img:'cards/4-05.png',joker:false},
+  {id:'5-01',par:5,img:'cards/5-01.png',joker:false},
+  {id:'5-02',par:5,img:'cards/5-02.png',joker:false},
+  {id:'5-03',par:5,img:'cards/5-03.png',joker:false},
+  {id:'6-01',par:6,img:'cards/6-01.png',joker:false},
+  {id:'joker-1',par:null,img:'cards/joker.png',joker:true},
+  {id:'joker-2',par:null,img:'cards/joker.png',joker:true},
 ];
 const CARD_BACK = 'cards/back.png';
 
@@ -128,7 +130,28 @@ const I = {
   up: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m18 15-6-6-6 6"/></svg>',
   down: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>',
   eye: '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>',
+  book: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>',
+  chevLsm: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>',
+  chevRsm: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6 6"/></svg>',
 };
+
+const TUTORIAL_SLIDES = [
+  {t:"Draw a Course Card",b:"The tallest player draws a card to determine the ball layout. If a Joker is drawn, the player may create a custom layout or replay a previous card."},
+  {t:"Set Up the Table",b:"Arrange the balls on the table exactly as shown on the card. Layouts often align with table diamonds, cushions, other balls, or pocket edges."},
+  {t:"Determine Par",b:"Par equals the total number of balls used on that card."},
+  {t:"Tee Off",b:"Players shoot in order from tallest to shortest on the first hole. Each player begins with ball in hand."},
+  {t:"Objective",b:"Pocket all striped balls first, then all solid balls, using the fewest strokes possible."},
+  {t:"No Called Shots",b:"Players do not need to call balls or pockets."},
+  {t:"Stroke Counting",b:"Every shot attempt counts as one stroke, whether successful or not."},
+  {t:"Round Order",b:"On the next hole, players shoot from lowest score to highest score. Ties resolve to lowest score on the previous hole, then by roster (tallest to shortest)."},
+  {t:"Next Card",b:"The first player to tee off draws the next card or may delegate the draw (which also transfers Joker layout control)."},
+  {t:"Penalty \u2014 Wrong Ball Contact",b:"Hitting or disturbing solids before all stripes are pocketed results in a 1-stroke penalty per shot."},
+  {t:"Penalty \u2014 Balls Leaving the Table",b:"Any ball knocked off the table counts as pocketed and adds 1 penalty stroke per ball."},
+  {t:"Penalty \u2014 Scratch",b:"Pocketing the cue ball results in a 1-stroke penalty, but the player continues their turn with ball in hand."},
+  {t:"Penalty Timing",b:"Fouls are assessed after all balls stop moving and penalties can stack."},
+  {t:"Ending a Bad Hole",b:"If a player reaches 5 strokes over par, they may stop and record Par + 5."},
+  {t:"Winning the Game",b:"After all cards are played, the player with the lowest total strokes wins."},
+];
 
 let S = {
   screen: 'splash',
@@ -141,6 +164,9 @@ let S = {
   showFinish: false,
   showSaveLoad: null,
   showCardView: false,
+  showTutorial: false,
+  tutorialIdx: 0,
+  jokerPar: null,
 };
 
 function defGame() {
@@ -285,8 +311,34 @@ function rSplash(app){
       <div class="flex flex-col gap-3 w-full" style="max-width:280px">
         <button class="btn btn-primary btn-xl" data-testid="button-new-game" onclick="S.game=defGame();S.game.deck=shuffleDeck();S.viewOnly=false;S.screen='setup';render()">New Game</button>
         <button class="btn btn-outline btn-xl" data-testid="button-load-game" onclick="S.showSaveLoad='load';render()">Load Game</button>
+        <button class="btn btn-ghost btn-xl" data-testid="button-how-to-play" onclick="S.showTutorial=true;S.tutorialIdx=0;render()">${I.book} How to Play</button>
       </div>
-    </div>${ld}`;
+    </div>${ld}${S.showTutorial?rTutorial():''}`;
+}
+
+function rTutorial(){
+  const s=TUTORIAL_SLIDES[S.tutorialIdx];
+  const total=TUTORIAL_SLIDES.length;
+  const dots=TUTORIAL_SLIDES.map((_,i)=>`<div style="width:${i===S.tutorialIdx?'20px':'8px'};height:8px;border-radius:4px;background:${i===S.tutorialIdx?'var(--primary)':'var(--border)'};transition:all .2s"></div>`).join('');
+  return`<div class="dialog-overlay" onclick="if(event.target===this){S.showTutorial=false;render()}" data-testid="tutorial-overlay">
+    <div class="dialog-content" style="max-width:360px">
+      <div class="flex justify-between items-center mb-4 gap-2">
+        <h2 class="text-lg font-bold">How to Play</h2>
+        <button class="btn btn-ghost btn-icon" onclick="S.showTutorial=false;render()" data-testid="button-close-tutorial">${I.x}</button>
+      </div>
+      <div class="text-center" style="min-height:140px">
+        <div class="text-xs text-muted mb-2" style="text-transform:uppercase">Rule ${S.tutorialIdx+1} of ${total}</div>
+        <h3 class="text-xl font-bold mb-3">${s.t}</h3>
+        <p class="text-muted" style="font-size:14px;line-height:1.5">${s.b}</p>
+      </div>
+      <div class="flex items-center justify-center gap-1 mb-4 mt-4" style="flex-wrap:wrap">${dots}</div>
+      <div class="flex gap-2">
+        <button class="btn btn-outline flex-1" onclick="S.tutorialIdx=Math.max(0,S.tutorialIdx-1);render()" ${S.tutorialIdx===0?'disabled':''} data-testid="button-tutorial-prev">${I.chevLsm} Previous</button>
+        ${S.tutorialIdx<total-1?
+          `<button class="btn btn-primary flex-1" onclick="S.tutorialIdx++;render()" data-testid="button-tutorial-next">Next ${I.chevRsm}</button>`:
+          `<button class="btn btn-primary flex-1" onclick="S.showTutorial=false;render()" data-testid="button-tutorial-done">Got it!</button>`}
+      </div>
+    </div></div>`;
 }
 
 function rSetup(app){
@@ -347,6 +399,7 @@ function rGame(){
   let drawOvl='';
   if(S.drawPhase==='back')drawOvl=rDrawBack();
   else if(S.drawPhase==='reveal')drawOvl=rDrawReveal();
+  else if(S.drawPhase==='joker-select')drawOvl=rJokerSelect();
 
   let finDlg='';if(S.showFinish)finDlg=rFinishDlg();
   let cardViewDlg='';if(S.showCardView&&dc)cardViewDlg=rCardViewDlg(dc);
@@ -385,9 +438,6 @@ function rGame(){
       <button class="btn btn-destructive flex-1" style="min-height:48px" onclick="undo()" data-testid="button-undo">${I.undo} Undo</button>
       <button class="btn btn-primary flex-1 ${canAdv&&cs.par>0&&cs.strokes>0?'pulse':''}" style="min-height:48px" onclick="onNext()" ${!canAdv?'disabled':''} data-testid="button-next-card">${fin?'Finish Game':'Next Card'}</button>
     </div>
-    <div class="flex justify-center mt-2">
-      <button class="btn btn-ghost text-sm" onclick="goHome()" data-testid="button-home">${I.home} Home</button>
-    </div>
   </div>${drawOvl}${finDlg}${cardViewDlg}`;
 }
 
@@ -410,7 +460,8 @@ function rDrawBack(){
   return`<div class="dialog-overlay" data-testid="draw-dialog-back">
     <div class="dialog-content text-center">
       <h2 class="text-2xl font-extrabold mb-2">DRAW!</h2>
-      <p class="text-muted mb-4">${S.game.hole>1?'Lowest score draws next.':''}Tap the card to reveal the course.</p>
+      ${S.game.hole===1?'<p class="text-muted mb-2">The tallest player tees off first.</p>':''}
+      <p class="text-muted mb-4">Tap the card to draw</p>
       <div class="card-flip-container" onclick="flipCard()" data-testid="button-flip-card">
         <div class="card-flip-inner" id="flipInner">
           <div class="card-flip-front"><img src="${CARD_BACK}" alt="Card Back"></div>
@@ -424,13 +475,45 @@ function rDrawBack(){
 function rDrawReveal(){
   const c=S.drawnCard;
   if(!c)return'';
+  if(c.joker){
+    return`<div class="dialog-overlay" data-testid="draw-dialog-reveal">
+      <div class="dialog-content text-center">
+        <h2 class="text-xl font-bold mb-1">Card ${S.game.hole}</h2>
+        <p class="text-2xl font-extrabold mb-3" style="color:var(--primary)" data-testid="text-drawn-par">JOKER!</p>
+        <img src="${c.img}" alt="Joker Card" class="card-img mb-4" data-testid="img-drawn-card">
+        <p class="text-muted text-sm mb-3">You drew a Joker! Choose your own par and create a custom layout.</p>
+        <button class="btn btn-primary btn-xl" onclick="S.drawPhase='joker-select';render()" data-testid="button-choose-par">Choose Par</button>
+      </div></div>`;
+  }
   return`<div class="dialog-overlay" data-testid="draw-dialog-reveal">
     <div class="dialog-content text-center">
       <h2 class="text-xl font-bold mb-1">Card ${S.game.hole}</h2>
       <p class="text-2xl font-extrabold mb-3" style="color:var(--primary)" data-testid="text-drawn-par">Par ${c.par}</p>
       <img src="${c.img}" alt="Par ${c.par} Course" class="card-img mb-4" data-testid="img-drawn-card">
-      <p class="text-muted text-sm mb-4">Set up the table to match this card.</p>
-      <button class="btn btn-primary btn-xl" onclick="confirmDraw()" data-testid="button-table-ready">Table is Ready!</button>
+      <p class="text-muted text-sm mb-4">Set up your table to match the course below.</p>
+      <button class="btn btn-primary btn-xl" onclick="confirmDraw()" data-testid="button-continue-draw">Click to Continue</button>
+    </div></div>`;
+}
+
+function rJokerSelect(){
+  const c=S.drawnCard;
+  if(!c)return'';
+  const jp=S.jokerPar;
+  const parOpts=[2,3,4,5,6].map(p=>`<option value="${p}" ${p===jp?'selected':''}>${p}</option>`).join('');
+  const hasSelection=jp!==null;
+  return`<div class="dialog-overlay" data-testid="joker-select-dialog">
+    <div class="dialog-content text-center">
+      <h2 class="text-3xl font-bold mb-3" data-testid="text-joker-select-title">JOKER!</h2>
+      <img src="${c.img}" alt="Joker" class="card-img mb-4" data-testid="img-joker-select">
+      <p class="text-muted text-sm mb-3">Select a par for this hole.</p>
+      <div class="flex items-center justify-center gap-3 mb-4">
+        <span class="font-bold">Par:</span>
+        <div class="select-wrap"><select onchange="S.jokerPar=parseInt(this.value);render()" data-testid="select-joker-par">
+          <option value="" ${!hasSelection?'selected':''} disabled>Select par</option>
+          ${parOpts}
+        </select></div>
+      </div>
+      <button class="btn btn-primary btn-xl" onclick="confirmJokerDraw()" ${!hasSelection?'disabled':''} data-testid="button-confirm-joker-par">Confirm Par${hasSelection?' '+jp:''}</button>
     </div></div>`;
 }
 
@@ -448,13 +531,14 @@ function rFinishDlg(){
 }
 
 function rCardViewDlg(dc){
+  const label=dc.joker?`Card ${S.game.hole} - Joker (Par ${dc.par})`:`Card ${S.game.hole} - Par ${dc.par}`;
   return`<div class="dialog-overlay" onclick="if(event.target===this){S.showCardView=false;render()}" data-testid="card-view-dialog">
     <div class="dialog-content text-center">
       <div class="flex justify-between items-center mb-3">
-        <h2 class="text-lg font-bold">Card ${S.game.hole} - Par ${dc.par}</h2>
+        <h2 class="text-lg font-bold">${label}</h2>
         <button class="btn btn-ghost btn-icon" onclick="S.showCardView=false;render()" data-testid="button-close-card-view">${I.x}</button>
       </div>
-      <img src="${dc.img}" alt="Par ${dc.par} Course" class="card-img" data-testid="img-card-view">
+      <img src="${dc.img}" alt="${dc.joker?'Joker':'Par '+dc.par} Course" class="card-img" data-testid="img-card-view">
     </div></div>`;
 }
 
@@ -583,6 +667,7 @@ function rSettings(){
         <button class="btn btn-primary" onclick="addMid()" ${S.game.players.length>=MAX_PLAYERS?'disabled':''} data-testid="button-add-mid">Add</button>
       </div>
     </div>
+    <button class="btn btn-outline w-full mb-3" onclick="goHome()" data-testid="button-home">${I.home} Home</button>
     <button class="btn btn-destructive w-full" onclick="goHome()" data-testid="button-exit">End Game & Exit</button>
   </div>`;
 }
@@ -659,6 +744,15 @@ function confirmDraw(){
     setParAll(S.game.hole,S.drawnCard.par);
   }
   S.drawPhase=null;S.drawnCard=null;render();
+}
+
+function confirmJokerDraw(){
+  if(S.drawnCard){
+    const par=S.jokerPar||3;
+    S.game.drawnCards[S.game.hole]={...S.drawnCard,par};
+    setParAll(S.game.hole,par);
+  }
+  S.drawPhase=null;S.drawnCard=null;S.jokerPar=null;render();
 }
 
 function onNext(){
