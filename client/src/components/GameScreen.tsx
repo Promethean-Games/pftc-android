@@ -195,7 +195,7 @@ export function GameScreen({
             backgroundRepeat: "no-repeat",
             backgroundPosition: "center center",
             backgroundSize: "60%",
-            opacity: 0.04,
+            opacity: 0.12,
           }}
           data-testid="joker-background"
         />

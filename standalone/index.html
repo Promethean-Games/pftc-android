@@ -407,7 +407,7 @@ function rGame(){
 
   const isJokerHole=dc&&dc.joker;
   return`<div class="screen" style="position:relative" data-testid="game-screen">
-    ${isJokerHole?`<div style="position:absolute;inset:0;pointer-events:none;z-index:0;background:url('cards/joker-bg.png') no-repeat center center;background-size:60%;opacity:0.04" data-testid="joker-background"></div>`:''}
+    ${isJokerHole?`<div style="position:absolute;inset:0;pointer-events:none;z-index:0;background:url('cards/joker-bg.png') no-repeat center center;background-size:60%;opacity:0.12" data-testid="joker-background"></div>`:''}
     ${rPlayerHeader(cp,ldr,st)}
     <div style="height:2px;background:${cp.color}" class="mb-4"></div>
     <div class="flex justify-between items-center mb-3 gap-2">
