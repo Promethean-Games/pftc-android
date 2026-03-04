@@ -5,7 +5,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { UserPlus, LogOut } from "lucide-react";
+import { UserPlus, LogOut, Lock, Unlock } from "lucide-react";
 import type { Settings, Player } from "@shared/schema";
 
 interface SettingsPanelProps {
@@ -132,6 +132,35 @@ export function SettingsPanel({ settings, players, onUpdateSettings, onAddPlayer
               </div>
             </Card>
           )}
+
+          <Card className="p-4">
+            <h3 className="font-semibold mb-3 flex items-center gap-2">
+              {localStorage.getItem("pftc_unlocked") === "true" ? <Unlock className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
+              Cards Unlock
+            </h3>
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <div className="text-sm font-medium">
+                  {localStorage.getItem("pftc_unlocked") === "true" ? "All 18 cards unlocked" : "Cards 4-18 locked"}
+                </div>
+                <div className="text-xs text-muted-foreground">Toggle for testing</div>
+              </div>
+              <Button
+                variant={localStorage.getItem("pftc_unlocked") === "true" ? "destructive" : "default"}
+                onClick={() => {
+                  if (localStorage.getItem("pftc_unlocked") === "true") {
+                    localStorage.removeItem("pftc_unlocked");
+                  } else {
+                    localStorage.setItem("pftc_unlocked", "true");
+                  }
+                  window.location.reload();
+                }}
+                data-testid="button-toggle-unlock"
+              >
+                {localStorage.getItem("pftc_unlocked") === "true" ? "Lock" : "Unlock"}
+              </Button>
+            </div>
+          </Card>
 
           <Card className="p-4">
             <h3 className="font-semibold mb-3">About</h3>
