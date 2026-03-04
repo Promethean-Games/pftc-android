@@ -11,6 +11,8 @@ import { DrawDialog } from "./DrawDialog";
 import { TableSetupDialog } from "./TableSetupDialog";
 import { useUnlock } from "@/contexts/UnlockContext";
 import { UnlockBanner } from "./UnlockBanner";
+import { useGame } from "@/contexts/GameContext";
+import type { CourseCard } from "@/lib/card-deck";
 
 interface GameScreenProps {
   players: Player[];
@@ -48,12 +50,14 @@ export function GameScreen({
   onHome,
 }: GameScreenProps) {
   const { isUnlocked, freeHoles } = useUnlock();
+  const { drawCard, getDrawnCard } = useGame();
   const isHoleLocked = !isUnlocked && currentHole > freeHoles;
 
   const [showDrawDialog, setShowDrawDialog] = useState(false);
   const [showTableSetupDialog, setShowTableSetupDialog] = useState(false);
   const [showFinishConfirm, setShowFinishConfirm] = useState(false);
   const [pendingPar, setPendingPar] = useState<number | null>(null);
+  const [pendingCard, setPendingCard] = useState<CourseCard | null>(null);
   const [drawConfirmTime, setDrawConfirmTime] = useState<number | null>(null);
   const [lastHole, setLastHole] = useState(currentHole);
   const isInitialMount = useRef(true);
@@ -152,8 +156,9 @@ export function GameScreen({
     }
   };
 
-  const handleDrawPar = (selectedPar: number) => {
+  const handleDrawConfirm = (selectedPar: number, card: CourseCard) => {
     setPendingPar(selectedPar);
+    setPendingCard(card);
     setDrawConfirmTime(Date.now());
     setShowDrawDialog(false);
     if (currentHole === 1) {
@@ -162,6 +167,10 @@ export function GameScreen({
     } else {
       setShowTableSetupDialog(true);
     }
+  };
+
+  const handleDraw = () => {
+    return drawCard(currentHole);
   };
 
   const handleTableReady = () => {
@@ -177,6 +186,7 @@ export function GameScreen({
       setPar(pendingPar);
     }
     setPendingPar(null);
+    setPendingCard(null);
     setDrawConfirmTime(null);
     setShowTableSetupDialog(false);
   };
@@ -197,6 +207,8 @@ export function GameScreen({
   }).length;
   
   const shooterInfo = `${shootersRemaining} shooter${shootersRemaining !== 1 ? "s" : ""} remaining`;
+
+  const currentCard = getDrawnCard(currentHole);
 
   return (
     <div 
@@ -254,7 +266,7 @@ export function GameScreen({
 
       <div className="h-0.5 mb-4" style={{ backgroundColor: currentPlayer.color }} />
 
-      <div className="flex justify-between items-center mb-3">
+      <div className="flex justify-between items-center mb-3 gap-2">
         <div className="text-lg font-bold" data-testid="text-hole">Hole {currentHole}</div>
         <div className="text-sm text-muted-foreground" data-testid="text-shooters-remaining">{shooterInfo}</div>
       </div>
@@ -269,8 +281,8 @@ export function GameScreen({
           onClick={() => setShowDrawDialog(true)}
           data-testid="button-set-par-banner"
         >
-          <span className="text-lg font-bold text-primary">Tap to Set Par</span>
-          <span className="block text-sm text-muted-foreground mt-1">Par must be set before scoring</span>
+          <span className="text-lg font-bold text-primary">Tap to Draw a Card</span>
+          <span className="block text-sm text-muted-foreground mt-1">Draw a card to set par for this hole</span>
         </button>
       ) : (
         <div className={cn("flex items-center gap-3 mb-3", leftHandedMode && "flex-row-reverse")}>
@@ -381,7 +393,7 @@ export function GameScreen({
                 {isFinishingGame ? "Finish Game" : "Next Card"}
               </Button>
               {!canAdvance && par === 0 && (
-                <span className="text-xs text-center text-destructive" data-testid="text-par-required">Set par to continue</span>
+                <span className="text-xs text-center text-destructive" data-testid="text-par-required">Draw a card to continue</span>
               )}
             </div>
           </div>
@@ -405,7 +417,9 @@ export function GameScreen({
 
       {showDrawDialog && !isHoleLocked && (
         <DrawDialog
-          onSelectPar={handleDrawPar}
+          onConfirm={handleDrawConfirm}
+          drawnCard={getDrawnCard(currentHole)}
+          onDraw={handleDraw}
           isFirstDraw={currentHole === 1}
         />
       )}
@@ -414,6 +428,7 @@ export function GameScreen({
         <TableSetupDialog
           hole={currentHole}
           par={pendingPar}
+          card={pendingCard}
           onConfirm={handleTableReady}
         />
       )}

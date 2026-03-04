@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
 import type { Player, HoleScore, GameSession, Settings, SetupTime } from "@shared/schema";
 import { PLAYER_COLORS, MAX_HOLES } from "@/lib/constants";
+import { shuffleDeck, getCardById, type CourseCard } from "@/lib/card-deck";
 
 interface GameState {
   players: Player[];
@@ -9,6 +10,8 @@ interface GameState {
   scores: Record<string, HoleScore[]>;
   isComplete: boolean;
   settings: Settings;
+  deckIds: string[];
+  drawnCardIds: Record<number, string>;
 }
 
 interface GameContextValue extends GameState {
@@ -34,6 +37,8 @@ interface GameContextValue extends GameState {
   setParForAllPlayers: (hole: number, par: number) => void;
   recordSetupTime: (setupTime: SetupTime) => void;
   getSetupTimes: () => SetupTime[];
+  drawCard: (hole: number) => CourseCard | null;
+  getDrawnCard: (hole: number) => CourseCard | null;
 }
 
 const GameContext = createContext<GameContextValue | null>(null);
@@ -44,28 +49,39 @@ export function useGame() {
   return context;
 }
 
+function createDefaultState(): GameState {
+  return {
+    players: [],
+    currentHole: 1,
+    currentPlayerIndex: 0,
+    scores: {},
+    isComplete: false,
+    settings: {
+      theme: "dark",
+      leftHandedMode: false,
+      autoSave: true,
+    },
+    deckIds: [],
+    drawnCardIds: {},
+  };
+}
+
 export function GameProvider({ children }: { children: ReactNode }) {
   const [gameState, setGameState] = useState<GameState>(() => {
     const saved = localStorage.getItem("currentGame");
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        return {
+          ...createDefaultState(),
+          ...parsed,
+          deckIds: parsed.deckIds || [],
+          drawnCardIds: parsed.drawnCardIds || {},
+        };
       } catch {
-        // Fallback to default
       }
     }
-    return {
-      players: [],
-      currentHole: 1,
-      currentPlayerIndex: 0,
-      scores: {},
-      isComplete: false,
-      settings: {
-        theme: "dark",
-        leftHandedMode: false,
-        autoSave: true,
-      },
-    };
+    return createDefaultState();
   });
 
   const [history, setHistory] = useState<GameState[]>([]);
@@ -73,7 +89,6 @@ export function GameProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (gameState.settings.autoSave && gameState.players.length > 0) {
       localStorage.setItem("currentGame", JSON.stringify(gameState));
-      // Also save to the autosave slot in savedGames for the load dialog
       const games = JSON.parse(localStorage.getItem("savedGames") || "{}");
       games["__autosave__"] = {
         id: "autosave",
@@ -102,14 +117,12 @@ export function GameProvider({ children }: { children: ReactNode }) {
       let newPlayers: Player[];
       
       if (position !== undefined && position >= 0 && position < prev.players.length) {
-        // Insert at specific position
         newPlayers = [
           ...prev.players.slice(0, position),
           newPlayer,
           ...prev.players.slice(position),
         ].map((p, i) => ({ ...p, order: i }));
       } else {
-        // Add at end
         newPlayers = [...prev.players, newPlayer];
       }
       
@@ -177,12 +190,45 @@ export function GameProvider({ children }: { children: ReactNode }) {
   };
 
   const startGame = () => {
+    const newDeck = shuffleDeck();
     setGameState((prev) => ({
       ...prev,
       currentHole: 1,
       currentPlayerIndex: 0,
       isComplete: false,
+      deckIds: newDeck.map((c) => c.id),
+      drawnCardIds: {},
     }));
+  };
+
+  const drawCard = (hole: number): CourseCard | null => {
+    const existingId = gameState.drawnCardIds[hole];
+    if (existingId) {
+      return getCardById(existingId) || null;
+    }
+
+    let deck = [...(gameState.deckIds || [])];
+    if (deck.length === 0) {
+      deck = shuffleDeck().map((c) => c.id);
+    }
+
+    const drawnId = deck[0];
+    const remaining = deck.slice(1);
+    const card = getCardById(drawnId);
+
+    setGameState((prev) => ({
+      ...prev,
+      deckIds: remaining,
+      drawnCardIds: { ...prev.drawnCardIds, [hole]: drawnId },
+    }));
+
+    return card || null;
+  };
+
+  const getDrawnCard = (hole: number): CourseCard | null => {
+    const id = gameState.drawnCardIds[hole];
+    if (!id) return null;
+    return getCardById(id) || null;
   };
 
   const updateScore = (playerId: string, hole: number, scoreUpdate: Partial<HoleScore>) => {
@@ -292,11 +338,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
   const resetGame = () => {
     setGameState({
-      players: [],
-      currentHole: 1,
-      currentPlayerIndex: 0,
-      scores: {},
-      isComplete: false,
+      ...createDefaultState(),
       settings: gameState.settings,
     });
     setHistory([]);
@@ -317,12 +359,15 @@ export function GameProvider({ children }: { children: ReactNode }) {
     const games = JSON.parse(localStorage.getItem("savedGames") || "{}");
     if (games[slot]) {
       setGameState({
+        ...createDefaultState(),
         players: games[slot].players,
         currentHole: games[slot].currentHole,
         currentPlayerIndex: games[slot].currentPlayerIndex,
         scores: games[slot].scores,
         isComplete: games[slot].isComplete,
         settings: games[slot].settings || gameState.settings,
+        deckIds: games[slot].deckIds || [],
+        drawnCardIds: games[slot].drawnCardIds || {},
       });
     }
   };
@@ -424,6 +469,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
         setParForAllPlayers,
         recordSetupTime,
         getSetupTimes,
+        drawCard,
+        getDrawnCard,
       }}
     >
       {children}
