@@ -136,21 +136,19 @@ const I = {
 };
 
 const TUTORIAL_SLIDES = [
-  {t:"Draw a Course Card",b:"The tallest player draws a card to determine the ball layout. If a Joker is drawn, the player may create a custom layout or replay a previous card."},
-  {t:"Set Up the Table",b:"Arrange the balls on the table exactly as shown on the card. Layouts often align with table diamonds, cushions, other balls, or pocket edges."},
-  {t:"Determine Par",b:"Par equals the total number of balls used on that card."},
-  {t:"Tee Off",b:"Players shoot in order from tallest to shortest on the first hole. Each player begins with ball in hand."},
-  {t:"Objective",b:"Pocket all striped balls first, then all solid balls, using the fewest strokes possible."},
+  {t:"Par for the Course",b:"Par for the Course turns the pool table into a golf course. Each card creates a new layout (\u201Chole\u201D). Players try to clear the table\u2014stripes first, then solids\u2014in fewer strokes than the hole\u2019s par."},
+  {t:"Draw a Course Card",b:"The tallest player draws a card to determine the ball layout. A Joker allows that player to design a custom layout or replay a previous card."},
+  {t:"Set Up the Balls",b:"Arrange the balls exactly as shown on the card, typically aligned with table diamonds, cushions, pockets, or other balls."},
+  {t:"Determine Par",b:"Par = total number of balls in the layout."},
+  {t:"Tee Off",b:"Players shoot tallest to shortest on the first hole. Each player starts with ball in hand."},
+  {t:"Clear the Table",b:"Stripes must be pocketed first. Solids come after all stripes are gone. Every shot attempt counts as one stroke."},
   {t:"No Called Shots",b:"Players do not need to call balls or pockets."},
-  {t:"Stroke Counting",b:"Every shot attempt counts as one stroke, whether successful or not."},
-  {t:"Round Order",b:"On the next hole, players shoot from lowest score to highest score. Ties resolve to lowest score on the previous hole, then by roster (tallest to shortest)."},
-  {t:"Next Card",b:"The first player to tee off draws the next card or may delegate the draw (which also transfers Joker layout control)."},
-  {t:"Penalty \u2014 Wrong Ball Contact",b:"Hitting or disturbing solids before all stripes are pocketed results in a 1-stroke penalty per shot."},
-  {t:"Penalty \u2014 Balls Leaving the Table",b:"Any ball knocked off the table counts as pocketed and adds 1 penalty stroke per ball."},
-  {t:"Penalty \u2014 Scratch",b:"Pocketing the cue ball results in a 1-stroke penalty, but the player continues their turn with ball in hand."},
-  {t:"Penalty Timing",b:"Fouls are assessed after all balls stop moving and penalties can stack."},
-  {t:"Ending a Bad Hole",b:"If a player reaches 5 strokes over par, they may stop and record Par + 5."},
-  {t:"Winning the Game",b:"After all cards are played, the player with the lowest total strokes wins."},
+  {t:"Penalty \u2014 Wrong Ball Order",b:"Contacting or disturbing solids before stripes are cleared: +1 stroke."},
+  {t:"Penalty \u2014 Ball Off the Table",b:"Counts as pocketed and adds +1 stroke per ball."},
+  {t:"Penalty \u2014 Scratch",b:"Pocketing the cue ball costs +1 stroke, but the player continues with ball in hand."},
+  {t:"Multiple Fouls Stack",b:"Penalties apply after all balls stop moving."},
+  {t:"Mercy Rule",b:"If a player reaches 5 strokes over par, they may stop the hole and record Par + 5."},
+  {t:"Winning",b:"After all holes are played, the player with the fewest total strokes wins."},
 ];
 
 let S = {
