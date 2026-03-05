@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Par for the Course - Mini Golf Scoring</title>
-<meta name="description" content="Mobile-first mini-golf scoring app. Track strokes, scratches, and penalties for up to 8 players across 18 holes.">
-<meta property="og:title" content="Par for the Course - Mini Golf Scoring">
-<meta property="og:description" content="Track scores for up to 8 players across 18 holes of mini golf.">
+<title>Par for the Course - Billiards Training Game</title>
+<meta name="description" content="A unique billiards training game. Track strokes, scratches, and penalties for up to 8 players across 18 cards.">
+<meta property="og:title" content="Par for the Course - Billiards Training Game">
+<meta property="og:description" content="A unique billiards training card game for up to 8 players across 18 cards.">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{--bg:#0a0a0a;--bg2:#171717;--card:#1c1c1c;--card-border:#2a2a2a;--fg:#fafafa;--fg2:#a1a1aa;--fg3:#71717a;--primary:#22c55e;--primary-fg:#fff;--destructive:#ef4444;--destructive-fg:#fff;--border:#27272a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
@@ -304,7 +304,7 @@ function rSplash(app){
     <div class="screen flex flex-col items-center justify-center" style="min-height:100dvh;gap:24px" data-testid="splash-screen">
       <img src="${LOGO}" alt="Logo" style="width:120px;height:120px;border-radius:16px" data-testid="img-logo">
       <h1 class="text-2xl font-bold" data-testid="text-title">Par for the Course</h1>
-      <p class="text-muted text-sm">Mini Golf Scoring</p>
+      <p class="text-muted text-sm">Billiards Training Game</p>
       <div class="flex flex-col gap-3 w-full" style="max-width:280px">
         <button class="btn btn-primary btn-xl" data-testid="button-new-game" onclick="S.game=defGame();S.game.deck=shuffleDeck();S.viewOnly=false;S.screen='setup';render()">New Game</button>
         <button class="btn btn-outline btn-xl" data-testid="button-load-game" onclick="S.screen='load';render()">Load Game</button>
