@@ -80,12 +80,22 @@ The server only handles two Stripe endpoints for the paywall. Development uses V
     - Fine-Tune Angle: slider ±5° with 0.1° steps
     - English (Spin): circular cue ball face diagram with crosshairs, 0.25-tip snap grid (diagram click snaps to nearest 0.25), cue tip circle overlay, and red dashed miscue limit ring; sliders allow fine-tuning at 0.05 steps (-1.5 to +1.5 tips); H: negative = left, positive = right; V: negative = follow/topspin (top of ball), positive = draw/backspin (bottom of ball)
     - Table Physics: segmented controls for Table Speed (Slow/Medium/Fast), Equipment (Dirty/Average/Clean), Rails (Soft/Medium/Firm)
-  - Physics engine: `client/src/lib/billiards-physics.ts` — pure TypeScript module based on Dr. Dave Alciatore's published research
+  - Cut angle display: shows cut angle in hundredths of degrees for first object ball collision, with ball-hit summary (Full/3/4/1/2/1/4 ball); fullness = 1 - sin(cutAngle)
+  - Settings sidebar: slide-out panel from right side (280px), toggled by gear icon button; replaces bottom accordion for better mobile UX
+  - Physics engine: `client/src/lib/billiards-physics.ts` — pure TypeScript module based on Dr. Dave Alciatore's published research (Colorado State University)
     - Ball-ball collisions: 2D elastic with throw (friction at contact point)
-    - Ball-rail collisions: reflection with restitution + running/reverse English effects
+    - Ball-rail collisions: reflection with restitution + running/reverse English effects (spin transfer 0.15, decay 0.7)
     - Cue ball squirt: side English offsets initial direction opposite the spin side (squirt coeff 0.006)
-    - Cue ball curve: side spin induces gradual lateral acceleration (curve coeff 0.0004)
-    - Friction: separate rolling (0.010–0.022) and sliding (0.18–0.28) coefficients per table speed
+    - Cue ball swerve: side spin component perpendicular to velocity induces gradual lateral curve (swerve coeff 0.00012)
+    - Friction model (Dr. Dave-based): two-phase sliding-to-rolling transition
+      - Spin tracked as 2D vector; natural roll = spin aligned with velocity at same magnitude
+      - Sliding phase: when relative spin (spin - natural roll) exceeds 5% of speed, sliding friction decelerates ball and spin converges toward natural roll
+      - Rolling phase: once spin matches natural roll, only rolling friction applies (much lower deceleration)
+      - Top spin (negative englishY): spin > natural roll → ball transitions to roll faster, travels further
+      - Draw/backspin (positive englishY): spin opposes natural roll → extended sliding phase, ball decelerates then reverses
+      - Side spin: stored as perpendicular component, does NOT reduce forward momentum; only produces swerve
+    - Rolling friction: slow/medium/fast = 0.014/0.010/0.007
+    - Sliding friction: slow/medium/fast = 0.24/0.20/0.16
     - Rail restitution: soft/medium/firm = 0.6/0.75/0.9
     - Throw factor: dirty/average/clean = 0.06/0.035/0.015
   - Implemented in both React (`CueingEmulator.tsx`) and standalone HTML

@@ -58,15 +58,15 @@ const POCKETS: Vec2[] = [
 ];
 
 const ROLLING_FRICTION: Record<string, number> = {
-  slow: 0.022,
-  medium: 0.016,
-  fast: 0.010,
+  slow: 0.014,
+  medium: 0.010,
+  fast: 0.007,
 };
 
 const SLIDING_FRICTION: Record<string, number> = {
-  slow: 0.28,
-  medium: 0.22,
-  fast: 0.18,
+  slow: 0.24,
+  medium: 0.20,
+  fast: 0.16,
 };
 
 const RAIL_RESTITUTION: Record<string, number> = {
@@ -82,13 +82,13 @@ const THROW_FACTOR: Record<string, number> = {
 };
 
 const SQUIRT_COEFFICIENT = 0.006;
-const CURVE_COEFFICIENT = 0.0004;
+const SWERVE_COEFFICIENT = 0.00012;
 const SPEED_SCALE = 8;
 const DT = 0.002;
 const MAX_STEPS = 30000;
 const VELOCITY_THRESHOLD = 0.05;
-const BALL_MASS = 1;
 const BALL_BALL_RESTITUTION = 0.95;
+const G = 386.4;
 
 function vecAdd(a: Vec2, b: Vec2): Vec2 {
   return { x: a.x + b.x, y: a.y + b.y };
@@ -177,68 +177,97 @@ function resolveRailCollision(
   if (ball.pos.x - BALL_RADIUS < 0) {
     ball.pos.x = BALL_RADIUS;
     ball.vel.x = Math.abs(ball.vel.x) * restitution;
-    const spinEffect = ball.spin.y * 0.3;
+    const spinEffect = ball.spin.y * 0.15;
     ball.vel.y += spinEffect;
-    ball.spin.y *= 0.6;
+    ball.spin.y *= 0.7;
   }
   if (ball.pos.x + BALL_RADIUS > TABLE_WIDTH) {
     ball.pos.x = TABLE_WIDTH - BALL_RADIUS;
     ball.vel.x = -Math.abs(ball.vel.x) * restitution;
-    const spinEffect = -ball.spin.y * 0.3;
+    const spinEffect = -ball.spin.y * 0.15;
     ball.vel.y += spinEffect;
-    ball.spin.y *= 0.6;
+    ball.spin.y *= 0.7;
   }
   if (ball.pos.y - BALL_RADIUS < 0) {
     ball.pos.y = BALL_RADIUS;
     ball.vel.y = Math.abs(ball.vel.y) * restitution;
-    const spinEffect = ball.spin.x * 0.3;
+    const spinEffect = ball.spin.x * 0.15;
     ball.vel.x += spinEffect;
-    ball.spin.x *= 0.6;
+    ball.spin.x *= 0.7;
   }
   if (ball.pos.y + BALL_RADIUS > TABLE_HEIGHT) {
     ball.pos.y = TABLE_HEIGHT - BALL_RADIUS;
     ball.vel.y = -Math.abs(ball.vel.y) * restitution;
-    const spinEffect = -ball.spin.x * 0.3;
+    const spinEffect = -ball.spin.x * 0.15;
     ball.vel.x += spinEffect;
-    ball.spin.x *= 0.6;
+    ball.spin.x *= 0.7;
   }
 }
 
 function applyFriction(ball: Ball, rollingFriction: number, slidingFriction: number, dt: number): void {
   const speed = vecLen(ball.vel);
-  if (speed < VELOCITY_THRESHOLD) {
+  if (speed < VELOCITY_THRESHOLD * 0.5 && vecLen(ball.spin) < VELOCITY_THRESHOLD * 0.5) {
     ball.vel = { x: 0, y: 0 };
     ball.spin = { x: 0, y: 0 };
     return;
   }
 
-  const spinMag = vecLen(ball.spin);
-  const isSliding = spinMag > speed * 0.1;
+  if (speed < 1e-10) {
+    ball.spin = vecScale(ball.spin, Math.max(0, 1 - slidingFriction * 3 * dt));
+    return;
+  }
 
-  const friction = isSliding ? slidingFriction : rollingFriction;
-  const decel = friction * 386.4 * dt;
+  const velDir = vecNorm(ball.vel);
 
-  const dir = vecNorm(ball.vel);
-  const newSpeed = Math.max(0, speed - decel);
-  ball.vel = vecScale(dir, newSpeed);
+  const naturalRollSpin = {
+    x: velDir.x * speed,
+    y: velDir.y * speed,
+  };
 
-  const spinDecay = 1 - friction * 2 * dt;
-  ball.spin = vecScale(ball.spin, Math.max(0, spinDecay));
+  const relSpin = vecSub(ball.spin, naturalRollSpin);
+  const relSpinMag = vecLen(relSpin);
+
+  if (relSpinMag > speed * 0.05) {
+    const slideDecel = slidingFriction * G * dt;
+    const slideDir = vecNorm(relSpin);
+    const slideForceX = -slideDir.x * slideDecel * 0.4;
+    const slideForceY = -slideDir.y * slideDecel * 0.4;
+
+    ball.vel.x += slideForceX;
+    ball.vel.y += slideForceY;
+
+    const spinDecayRate = slidingFriction * 5 * dt;
+    ball.spin = vecAdd(
+      naturalRollSpin,
+      vecScale(relSpin, Math.max(0, 1 - spinDecayRate))
+    );
+  } else {
+    ball.spin = { ...naturalRollSpin };
+
+    const rollDecel = rollingFriction * G * dt;
+    const newSpeed = Math.max(0, speed - rollDecel);
+    ball.vel = vecScale(velDir, newSpeed);
+    ball.spin = vecScale(velDir, newSpeed);
+  }
 }
 
-function applyCurvature(ball: Ball, dt: number): void {
+function applySwerve(ball: Ball, dt: number): void {
   if (ball.type !== "cue") return;
-  const spinMag = vecLen(ball.spin);
-  if (spinMag < 0.01) return;
 
   const speed = vecLen(ball.vel);
   if (speed < VELOCITY_THRESHOLD) return;
 
   const velDir = vecNorm(ball.vel);
-  const perpDir = vecPerp(velDir);
+  const naturalRollSpin = vecScale(velDir, speed);
+  const relSpin = vecSub(ball.spin, naturalRollSpin);
 
-  const lateralForce = ball.spin.x * CURVE_COEFFICIENT * speed;
-  ball.vel = vecAdd(ball.vel, vecScale(perpDir, lateralForce * dt * 100));
+  const sideComponent = relSpin.x * velDir.y - relSpin.y * velDir.x;
+
+  if (Math.abs(sideComponent) < 0.01) return;
+
+  const perpDir = vecPerp(velDir);
+  const swerveForce = sideComponent * SWERVE_COEFFICIENT;
+  ball.vel = vecAdd(ball.vel, vecScale(perpDir, swerveForce * dt * 100));
 }
 
 export function simulateShot(
@@ -267,14 +296,27 @@ export function simulateShot(
   const finalAngle = totalAngle + squirtAngle;
 
   const initialSpeed = shotParams.speed * SPEED_SCALE;
+
   cueBall.vel = {
     x: Math.cos(finalAngle) * initialSpeed,
     y: Math.sin(finalAngle) * initialSpeed,
   };
 
+  const velDir = vecNorm(cueBall.vel);
+  const naturalRollX = velDir.x * initialSpeed;
+  const naturalRollY = velDir.y * initialSpeed;
+
+  const sideSpinMag = shotParams.englishX * initialSpeed * 0.25;
+
+  const perpX = -velDir.y;
+  const perpY = velDir.x;
+
+  const topDrawFactor = -shotParams.englishY;
+  const rollFactor = topDrawFactor * 0.6;
+
   cueBall.spin = {
-    x: shotParams.englishX * initialSpeed * 0.3,
-    y: shotParams.englishY * initialSpeed * 0.3,
+    x: naturalRollX * (1 + rollFactor) + perpX * sideSpinMag,
+    y: naturalRollY * (1 + rollFactor) + perpY * sideSpinMag,
   };
 
   const rollingFriction = ROLLING_FRICTION[tableConfig.tableSpeed];
@@ -314,7 +356,7 @@ export function simulateShot(
     for (const ball of simBalls) {
       if (ball.pocketed) continue;
       applyFriction(ball, rollingFriction, slidingFriction, DT);
-      applyCurvature(ball, DT);
+      applySwerve(ball, DT);
     }
 
     for (const ball of simBalls) {
