@@ -603,7 +603,10 @@ function rTimeAnalytics(g){
     const ps=g.scores[p.id]||[];
     const tot=ps.reduce((a,s)=>a+s.strokes+s.scratches+s.penalties,0);
     const spm=t>0?(tot/(t/60000)).toFixed(1):'--';
-    return`<div class="flex justify-between gap-2" style="border-bottom:1px dashed var(--border);padding-bottom:8px"><span class="flex items-center gap-1"><div class="color-dot" style="background:${p.color};width:10px;height:10px"></div>${esc(p.name)} Rate:</span><span class="font-bold">${spm} strokes/min</span></div>`;
+    const sps=t>0&&tot>0?((t/1000)/tot).toFixed(2):'--';
+    return`<div style="padding:8px;border:1px dashed var(--border);border-radius:8px;margin-bottom:8px">
+      <div class="flex items-center gap-2 mb-1"><div class="color-dot" style="background:${p.color};width:10px;height:10px"></div><span class="font-bold">${esc(p.name)}</span></div>
+      <div class="flex justify-between gap-4 text-xs text-muted"><span>${sps} sec/stroke</span><span>${spm} strokes/min</span></div></div>`;
   }).join('');
 
   return`<div class="card mb-4"><h3 class="font-bold mb-3">Time Summary</h3>

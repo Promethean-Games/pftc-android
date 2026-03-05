@@ -100,12 +100,14 @@ export function GameAnalytics({ players, scores, turnTimes, gameStartTime, gameE
     }
 
     const playerScorePerMinute: Record<string, number> = {};
+    const playerSecondsPerStroke: Record<string, number> = {};
     for (const p of players) {
       const totalTime = playerTimeMap[p.id] || 0;
       const playerHoleScores = scores[p.id] || [];
       const totalStrokes = playerHoleScores.reduce((sum, s) => sum + s.strokes + s.scratches + s.penalties, 0);
-      if (totalTime > 0) {
+      if (totalTime > 0 && totalStrokes > 0) {
         playerScorePerMinute[p.id] = totalStrokes / (totalTime / 60000);
+        playerSecondsPerStroke[p.id] = (totalTime / 1000) / totalStrokes;
       }
     }
 
@@ -148,6 +150,7 @@ export function GameAnalytics({ players, scores, turnTimes, gameStartTime, gameE
       groupSlowest,
       playerAvgTurn,
       playerScorePerMinute,
+      playerSecondsPerStroke,
       consistencyScores,
       streakData,
     };
@@ -310,14 +313,18 @@ export function GameAnalytics({ players, scores, turnTimes, gameStartTime, gameE
           )}
           {players.map(p => {
             const spm = analytics.playerScorePerMinute[p.id];
-            if (!spm) return null;
+            const sps = analytics.playerSecondsPerStroke[p.id];
+            if (!spm || !sps) return null;
             return (
-              <div key={p.id} className="flex items-center justify-between p-2 rounded-lg border border-dashed">
-                <span className="flex items-center gap-2">
+              <div key={p.id} className="p-2 rounded-lg border border-dashed">
+                <div className="flex items-center gap-2 mb-1">
                   <div className="w-3 h-3 rounded-full" style={{ backgroundColor: p.color }} />
-                  {p.name} Scoring Rate:
-                </span>
-                <span className="font-semibold">{spm.toFixed(1)} strokes/min</span>
+                  <span className="font-semibold">{p.name}</span>
+                </div>
+                <div className="flex justify-between gap-4 text-xs text-muted-foreground">
+                  <span>{sps.toFixed(2)} sec/stroke</span>
+                  <span>{spm.toFixed(1)} strokes/min</span>
+                </div>
               </div>
             );
           })}
