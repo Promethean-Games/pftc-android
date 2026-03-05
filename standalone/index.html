@@ -9,7 +9,7 @@
 <meta property="og:description" content="A unique billiards training card game for up to 8 players across 18 cards.">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{--bg:#0a0a0a;--bg2:#171717;--card:#1c1c1c;--card-border:#2a2a2a;--fg:#fafafa;--fg2:#a1a1aa;--fg3:#71717a;--primary:#22c55e;--primary-fg:#fff;--destructive:#ef4444;--destructive-fg:#fff;--border:#27272a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
+:root{--bg:#0a0a0a;--bg2:#171717;--card:#1c1c1c;--card-border:#2a2a2a;--fg:#fafafa;--fg2:#a1a1aa;--fg3:#71717a;--primary:#22c55e;--primary-fg:#fff;--destructive:#d11111;--destructive-fg:#fff;--border:#27272a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
 body{background:var(--bg);color:var(--fg);min-height:100dvh;-webkit-tap-highlight-color:transparent;overflow-x:hidden}
 .light{--bg:#fff;--bg2:#f4f4f5;--card:#fff;--card-border:#e4e4e7;--fg:#09090b;--fg2:#71717a;--fg3:#a1a1aa;--border:#e4e4e7}
 button{font-family:inherit;cursor:pointer;border:none;outline:none;-webkit-appearance:none}
@@ -55,7 +55,7 @@ th,td{padding:6px 8px;text-align:center;border-bottom:1px solid var(--border)}
 th{font-weight:600;color:var(--fg2);font-size:11px;text-transform:uppercase}
 td.player-cell{text-align:left;font-weight:600}
 .score-under{color:#22c55e;font-weight:600}
-.score-over{color:#ef4444}
+.score-over{color:#d11111}
 .leaderboard-item{display:flex;align-items:center;gap:8px;padding:12px;border-radius:8px;border:1px solid var(--border)}
 .leaderboard-item.gold{border-color:#eab308;border-width:2px;background:rgba(234,179,8,.05)}
 .leaderboard-item.silver{border-color:#9ca3af;border-width:2px;background:rgba(156,163,175,.05)}
@@ -85,7 +85,7 @@ td.player-cell{text-align:left;font-weight:600}
 <div id="app"></div>
 <script>
 const STRIPE_LINK = "https://buy.stripe.com/7sYeVc82N7czdPqaQ20Jq00";
-const COLORS = ["#ef4444","#3b82f6","#22c55e","#f59e0b","#a855f7","#ec4899","#14b8a6","#f97316"];
+const COLORS = ["#d11111","#3b82f6","#22c55e","#f59e0b","#a855f7","#ec4899","#14b8a6","#f97316"];
 const MAX_HOLES = 18;
 const MAX_PLAYERS = 8;
 const FREE_HOLES = 3;
@@ -388,7 +388,7 @@ function rGame(){
     return`<div class="screen" data-testid="game-locked">
       ${rPlayerHeader(cp,ldr,st)}
       <div style="height:2px;background:${cp.color}" class="mb-4"></div>
-      <div class="flex justify-between items-center mb-3"><div class="text-lg font-bold">Card ${g.hole}</div></div>
+      <div class="flex justify-between items-center mb-3"><div class="text-lg font-bold">Hole ${g.hole}</div></div>
       <div style="padding:32px 0" class="text-center">
         <div style="margin-bottom:16px">${I.lock}</div>
         <h2 class="text-2xl font-bold mb-2">Cards 4-18 Locked</h2>
@@ -418,7 +418,7 @@ function rGame(){
     ${rPlayerHeader(cp,ldr,st)}
     <div style="height:2px;background:${cp.color}" class="mb-4"></div>
     <div class="flex justify-between items-center mb-3 gap-2">
-      <div class="text-lg font-bold" data-testid="text-hole-number">Card ${g.hole}</div>
+      <div class="text-lg font-bold" data-testid="text-hole-number">Hole ${g.hole}</div>
       ${dc?`<button class="btn btn-ghost text-sm" onclick="S.showCardView=true;render()" data-testid="button-view-card">${I.eye} View Card</button>`:''}
       <div class="text-sm text-muted" data-testid="text-shooters-left">${rem} shooter${rem!==1?'s':''} left</div>
     </div>
@@ -484,7 +484,7 @@ function rDrawReveal(){
   if(c.joker){
     return`<div class="dialog-overlay" data-testid="draw-dialog-reveal">
       <div class="dialog-content text-center">
-        <h2 class="text-xl font-bold mb-1">Card ${S.game.hole}</h2>
+        <h2 class="text-xl font-bold mb-1">Hole ${S.game.hole}</h2>
         <p class="text-2xl font-extrabold mb-3" style="color:var(--primary)" data-testid="text-drawn-par">JOKER!</p>
         <img src="${c.img}" alt="Joker Card" class="card-img mb-4" data-testid="img-drawn-card">
         <p class="text-muted text-sm mb-3">You drew a Joker! Choose your own par and create a custom layout.</p>
@@ -493,7 +493,7 @@ function rDrawReveal(){
   }
   return`<div class="dialog-overlay" data-testid="draw-dialog-reveal">
     <div class="dialog-content text-center">
-      <h2 class="text-xl font-bold mb-1">Card ${S.game.hole}</h2>
+      <h2 class="text-xl font-bold mb-1">Hole ${S.game.hole}</h2>
       <p class="text-2xl font-extrabold mb-3" style="color:var(--primary)" data-testid="text-drawn-par">Par ${c.par}</p>
       <img src="${c.img}" alt="Par ${c.par} Course" class="card-img mb-4" data-testid="img-drawn-card">
       <p class="text-muted text-sm mb-4">Set up your table to match the course below.</p>
@@ -537,14 +537,14 @@ function rFinishDlg(){
 }
 
 function rCardViewDlg(dc){
-  const label=dc.joker?`Card ${S.game.hole} - Joker (Par ${dc.par})`:`Card ${S.game.hole} - Par ${dc.par}`;
-  return`<div class="dialog-overlay" onclick="if(event.target===this){S.showCardView=false;render()}" data-testid="card-view-dialog">
-    <div class="dialog-content text-center">
-      <div class="flex justify-between items-center mb-3">
-        <h2 class="text-lg font-bold">${label}</h2>
-        <button class="btn btn-ghost btn-icon" onclick="S.showCardView=false;render()" data-testid="button-close-card-view">${I.x}</button>
-      </div>
-      <img src="${dc.img}" alt="${dc.joker?'Joker':'Par '+dc.par} Course" class="card-img" data-testid="img-card-view">
+  const label=dc.joker?`Hole ${S.game.hole} - Joker (Par ${dc.par})`:`Hole ${S.game.hole} - Par ${dc.par}`;
+  return`<div style="position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;flex-direction:column" data-testid="card-view-dialog">
+    <div class="flex justify-between items-center" style="padding:12px 16px;border-bottom:1px solid var(--border)">
+      <h2 class="text-lg font-bold">${label}</h2>
+      <button class="btn btn-ghost btn-icon" onclick="S.showCardView=false;render()" data-testid="button-close-card-view">${I.x}</button>
+    </div>
+    <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:16px;overflow:hidden">
+      <img src="${dc.img}" alt="${dc.joker?'Joker':'Par '+dc.par} Course" style="max-width:100%;max-height:100%;object-fit:contain;border-radius:12px" data-testid="img-card-view">
     </div></div>`;
 }
 
@@ -584,8 +584,8 @@ function rTimeAnalytics(g){
     return`<div style="padding:8px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px">
       <div class="flex items-center gap-2 mb-1"><div class="color-dot" style="background:${p.color};width:10px;height:10px"></div><span class="font-bold">${esc(p.name)}</span></div>
       <div class="grid grid-3 gap-2 text-xs text-muted">
-        <div>Fastest: Card ${fast.h} (${fmtDur(fast.t)})</div>
-        <div>Slowest: Card ${slow.h} (${fmtDur(slow.t)})</div>
+        <div>Fastest: Hole ${fast.h} (${fmtDur(fast.t)})</div>
+        <div>Slowest: Hole ${slow.h} (${fmtDur(slow.t)})</div>
         <div>Avg: ${fmtDur(avg)}</div>
       </div></div>`;
   }).join('');
@@ -617,8 +617,8 @@ function rTimeAnalytics(g){
     </div></div>
   <div class="card mb-4"><h3 class="font-bold mb-3">Speed Records</h3>
     <div class="text-sm" style="margin-bottom:12px">
-      <div class="flex justify-between gap-2" style="padding:8px;border:1px dashed var(--border);border-radius:8px;margin-bottom:8px"><span>Fastest Card (Group):</span><span class="font-bold">Card ${gFast.h} (${fmtDur(gFast.t)})</span></div>
-      <div class="flex justify-between gap-2" style="padding:8px;border:1px dashed var(--border);border-radius:8px;margin-bottom:8px"><span>Slowest Card (Group):</span><span class="font-bold">Card ${gSlow.h} (${fmtDur(gSlow.t)})</span></div>
+      <div class="flex justify-between gap-2" style="padding:8px;border:1px dashed var(--border);border-radius:8px;margin-bottom:8px"><span>Fastest Hole (Group):</span><span class="font-bold">Hole ${gFast.h} (${fmtDur(gFast.t)})</span></div>
+      <div class="flex justify-between gap-2" style="padding:8px;border:1px dashed var(--border);border-radius:8px;margin-bottom:8px"><span>Slowest Hole (Group):</span><span class="font-bold">Hole ${gSlow.h} (${fmtDur(gSlow.t)})</span></div>
     </div>${speedRows}</div>
   <div class="card mb-4"><h3 class="font-bold mb-3">Performance Insights</h3>
     <div class="text-sm">
@@ -639,7 +639,7 @@ function rSummary(){
     const ppar=(g.scores[e.p.id]||[]).reduce((a,sc)=>a+(sc.par||0),0);
     const vp=e.t-ppar;
     const vpStr=vp===0?'E':vp>0?'+'+vp:vp;
-    const vpCls=vp<0?'color:#22c55e':vp>0?'color:#ef4444':'';
+    const vpCls=vp<0?'color:#22c55e':vp>0?'color:#d11111':'';
     return`<div class="leaderboard-item ${i===0?'gold':i===1?'silver':i===2?'bronze':''} mb-2" data-testid="leaderboard-item-${i}">
       <div class="flex items-center gap-2 flex-1" style="min-width:0"><div class="color-dot" style="background:${e.p.color}"></div><span class="font-bold truncate">${esc(e.p.name)}</span></div>
       <div class="text-center text-sm" style="flex-shrink:0"><div class="font-bold">${e.t}</div><div class="text-xs text-muted">Total</div></div>
