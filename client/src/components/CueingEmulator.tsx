@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { X, Plus, Trash2, RotateCcw, Crosshair } from "lucide-react";
+import { X, Plus, Trash2, RotateCcw, Crosshair, Grid3x3, Move } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import {
@@ -56,6 +56,9 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
   const [angleFine, setAngleFine] = useState(0);
   const [englishX, setEnglishX] = useState(0);
   const [englishY, setEnglishY] = useState(0);
+
+  const [snapToGrid, setSnapToGrid] = useState(true);
+  const [moveCueBall, setMoveCueBall] = useState(false);
 
   const [tableConfig, setTableConfig] = useState<TableConfig>({
     tableSpeed: "medium",
@@ -151,6 +154,30 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
 
     ctx.fillStyle = "#1a7a3a";
     ctx.fillRect(offsetX, offsetY, tw, th);
+
+    if (snapToGrid) {
+      ctx.strokeStyle = "rgba(45, 138, 74, 0.25)";
+      ctx.lineWidth = 0.5;
+      ctx.setLineDash([]);
+      const gridStepX = TABLE_DIMENSIONS.width / 8;
+      const gridStepY = TABLE_DIMENSIONS.height / 4;
+      for (let i = 1; i < 8; i++) {
+        const p1 = tableToCanvas(i * gridStepX, 0);
+        const p2 = tableToCanvas(i * gridStepX, TABLE_DIMENSIONS.height);
+        ctx.beginPath();
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
+        ctx.stroke();
+      }
+      for (let j = 1; j < 4; j++) {
+        const p1 = tableToCanvas(0, j * gridStepY);
+        const p2 = tableToCanvas(TABLE_DIMENSIONS.width, j * gridStepY);
+        ctx.beginPath();
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
+        ctx.stroke();
+      }
+    }
 
     ctx.strokeStyle = "#2d8a4a";
     ctx.lineWidth = 0.5;
@@ -304,6 +331,7 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
     getScale,
     tableToCanvas,
     canvasSize,
+    snapToGrid,
   ]);
 
   useEffect(() => {
@@ -352,7 +380,7 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
     const hitBall = findBallAt(pos.x, pos.y);
 
     if (hitBall) {
-      if (hitBall.type === "cue") {
+      if (hitBall.type === "cue" && !moveCueBall) {
         setIsAiming(true);
         aimStartRef.current = pos;
         setSelectedBallId("cue");
@@ -389,13 +417,18 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
 
     if (dragRef.current) {
       const tp = canvasToTable(pos.x, pos.y);
+      let rawX = tp.x + dragRef.current.offsetX;
+      let rawY = tp.y + dragRef.current.offsetY;
+      const snapped = snapPos(rawX, rawY);
+      rawX = snapped.x;
+      rawY = snapped.y;
       const newX = Math.max(
         TABLE_DIMENSIONS.ballRadius,
-        Math.min(TABLE_DIMENSIONS.width - TABLE_DIMENSIONS.ballRadius, tp.x + dragRef.current.offsetX)
+        Math.min(TABLE_DIMENSIONS.width - TABLE_DIMENSIONS.ballRadius, rawX)
       );
       const newY = Math.max(
         TABLE_DIMENSIONS.ballRadius,
-        Math.min(TABLE_DIMENSIONS.height - TABLE_DIMENSIONS.ballRadius, tp.y + dragRef.current.offsetY)
+        Math.min(TABLE_DIMENSIONS.height - TABLE_DIMENSIONS.ballRadius, rawY)
       );
       setBalls((prev) =>
         prev.map((b) =>
@@ -452,6 +485,17 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
       setPreShotBalls(null);
     }
     setHasAimLine(false);
+  };
+
+  const GRID_X = TABLE_DIMENSIONS.width / 8;
+  const GRID_Y = TABLE_DIMENSIONS.height / 4;
+
+  const snapPos = (x: number, y: number): { x: number; y: number } => {
+    if (!snapToGrid) return { x, y };
+    return {
+      x: Math.round(x / GRID_X) * GRID_X,
+      y: Math.round(y / GRID_Y) * GRID_Y,
+    };
   };
 
   const snapEnglish = (val: number): number => {
@@ -527,6 +571,26 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
               Remove
             </Button>
           )}
+          <Button
+            size="sm"
+            variant={snapToGrid ? "default" : "outline"}
+            onClick={() => setSnapToGrid((v) => !v)}
+            className="toggle-elevate"
+            data-testid="button-snap-grid"
+          >
+            <Grid3x3 className="w-3 h-3 mr-1" />
+            Snap
+          </Button>
+          <Button
+            size="sm"
+            variant={moveCueBall ? "default" : "outline"}
+            onClick={() => setMoveCueBall((v) => !v)}
+            className="toggle-elevate"
+            data-testid="button-move-cue"
+          >
+            <Move className="w-3 h-3 mr-1" />
+            Move Cue
+          </Button>
         </div>
         <div className="flex items-center gap-2">
           <Button

@@ -150,6 +150,8 @@ const I = {
   plus: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>',
   target: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>',
   chevD: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>',
+  grid: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M3 15h18"/><path d="M9 3v18"/><path d="M15 3v18"/></svg>',
+  move: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20"/><path d="m15 19-3 3-3-3"/><path d="m19 15 3-3-3-3"/><path d="M2 12h20"/><path d="m5 9-3 3 3 3"/><path d="m9 5 3-3 3 3"/></svg>',
 };
 
 const TUTORIAL_SLIDES = [
@@ -591,6 +593,7 @@ const EMU={
   aimAngle:0,hasAimLine:false,isAiming:false,aimStart:null,dragBall:null,
   shotSpeed:5,angleFine:0,englishX:0,englishY:0,
   tableSpeed:'medium',equipment:'average',rails:'medium',
+  snapToGrid:true,moveCueBall:false,
   TW:100,TH:50,BR:1.125,PR:2.25,
   POCKETS:[{x:0,y:0},{x:50,y:0},{x:100,y:0},{x:0,y:50},{x:50,y:50},{x:100,y:50}],
   ROLL_F:{slow:0.022,medium:0.016,fast:0.010},
@@ -610,7 +613,13 @@ function initEmulator(){
   EMU.aimAngle=0;EMU.hasAimLine=false;EMU.isAiming=false;
   EMU.shotSpeed=5;EMU.angleFine=0;EMU.englishX=0;EMU.englishY=0;
   EMU.tableSpeed='medium';EMU.equipment='average';EMU.rails='medium';
+  EMU.snapToGrid=true;EMU.moveCueBall=false;
   EMU.expandedSections={};
+}
+function emuSnapPos(x,y){
+  if(!EMU.snapToGrid)return{x,y};
+  const gx=EMU.TW/8,gy=EMU.TH/4;
+  return{x:Math.round(x/gx)*gx,y:Math.round(y/gy)*gy};
 }
 
 function emuSimulate(){
@@ -705,6 +714,12 @@ function drawEmulatorCanvas(){
   ctx.clearRect(0,0,c.width,c.height);
   ctx.fillStyle='#5a3825';ctx.fillRect(ox-rw,oy-rw,tw+rw*2,th+rw*2);
   ctx.fillStyle='#1a7a3a';ctx.fillRect(ox,oy,tw,th);
+  if(EMU.snapToGrid){
+    ctx.strokeStyle='rgba(45,138,74,0.25)';ctx.lineWidth=0.5;ctx.setLineDash([]);
+    const gx=EMU.TW/8,gy=EMU.TH/4;
+    for(let i=1;i<8;i++){const p1=t2c(i*gx,0),p2=t2c(i*gx,EMU.TH);ctx.beginPath();ctx.moveTo(p1.x,p1.y);ctx.lineTo(p2.x,p2.y);ctx.stroke();}
+    for(let j=1;j<4;j++){const p1=t2c(0,j*gy),p2=t2c(EMU.TW,j*gy);ctx.beginPath();ctx.moveTo(p1.x,p1.y);ctx.lineTo(p2.x,p2.y);ctx.stroke();}
+  }
   ctx.strokeStyle='#2d8a4a';ctx.lineWidth=0.5;ctx.setLineDash([4,4]);
   const hs=t2c(EMU.TW*0.25,0);const hs2=t2c(EMU.TW*0.25,EMU.TH);
   ctx.beginPath();ctx.moveTo(hs.x,hs.y);ctx.lineTo(hs2.x,hs2.y);ctx.stroke();ctx.setLineDash([]);
@@ -759,7 +774,7 @@ function emuPointerDown(e){
   e.preventDefault();const p=emuCanvasPos(e);if(!p)return;
   const hit=emuFindBall(p.tx,p.ty);
   if(hit){
-    if(hit.type==='cue'){EMU.isAiming=true;EMU.aimStart=p;EMU.selectedId='cue';}
+    if(hit.type==='cue'&&!EMU.moveCueBall){EMU.isAiming=true;EMU.aimStart=p;EMU.selectedId='cue';}
     else{EMU.selectedId=hit.id;EMU.dragBall={id:hit.id,ox:hit.pos.x-p.tx,oy:hit.pos.y-p.ty};}
   }else{EMU.selectedId=null;}
   drawEmulatorCanvas();
@@ -775,8 +790,10 @@ function emuPointerMove(e){
     }
   }
   if(EMU.dragBall){
-    const nx=Math.max(EMU.BR,Math.min(EMU.TW-EMU.BR,p.tx+EMU.dragBall.ox));
-    const ny=Math.max(EMU.BR,Math.min(EMU.TH-EMU.BR,p.ty+EMU.dragBall.oy));
+    let rx=p.tx+EMU.dragBall.ox;let ry=p.ty+EMU.dragBall.oy;
+    const sn=emuSnapPos(rx,ry);rx=sn.x;ry=sn.y;
+    const nx=Math.max(EMU.BR,Math.min(EMU.TW-EMU.BR,rx));
+    const ny=Math.max(EMU.BR,Math.min(EMU.TH-EMU.BR,ry));
     const b=EMU.balls.find(bl=>bl.id===EMU.dragBall.id);if(b){b.pos.x=nx;b.pos.y=ny;}
   }
   drawEmulatorCanvas();
@@ -835,6 +852,8 @@ function rEmulator(){
         <button class="btn btn-outline" style="font-size:12px;min-height:32px" onclick="emuAddBall('solid')" data-testid="button-add-solid">${I.plus} Solid</button>
         <button class="btn btn-outline" style="font-size:12px;min-height:32px" onclick="emuAddBall('stripe')" data-testid="button-add-stripe">${I.plus} Stripe</button>
         ${selNotCue?`<button class="btn btn-outline" style="font-size:12px;min-height:32px" onclick="emuRemoveSelected()" data-testid="button-remove-ball">${I.trash} Remove</button>`:''}
+        <button class="btn ${EMU.snapToGrid?'btn-primary':'btn-outline'}" style="font-size:12px;min-height:32px" onclick="EMU.snapToGrid=!EMU.snapToGrid;render();setTimeout(drawEmulatorCanvas,50)" data-testid="button-snap-grid">${I.grid} Snap</button>
+        <button class="btn ${EMU.moveCueBall?'btn-primary':'btn-outline'}" style="font-size:12px;min-height:32px" onclick="EMU.moveCueBall=!EMU.moveCueBall;render();setTimeout(drawEmulatorCanvas,50)" data-testid="button-move-cue">${I.move} Move Cue</button>
       </div>
       <div style="display:flex;align-items:center;gap:4px">
         <button class="btn btn-primary" style="font-size:12px;min-height:32px" onclick="emuShoot()" ${EMU.hasAimLine?'':'disabled'} data-testid="button-shoot">${I.target||'⊕'} Shoot</button>
