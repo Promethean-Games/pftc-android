@@ -66,8 +66,10 @@ The server only handles two Stripe endpoints for the paywall. Development uses V
 - **Cueing Emulator**: Canvas-based billiards shot simulator accessible from the wrench icon dropdown on the splash screen
   - Top-down 9-foot pool table rendered on HTML5 Canvas with green felt, wood rails, 6 pockets, and diamond sights
   - Ball management: add/remove solid (yellow) and stripe (white with green band) balls; drag to reposition; tap to select
-  - Snap-to-grid: enabled by default, snaps dragged balls to diamond grid intersections (12.5" × 12.5" grid from 8×4 divisions); subtle grid lines drawn on table when active; toggle button in toolbar
+  - Snap-to-grid: enabled by default, snaps dragged balls to nearest grid line (X or Y independently) with 5px buffer; diamond grid from 8×4 divisions (12.5" spacing); subtle grid lines drawn on table when active; toggle button in toolbar
   - Move Cue Ball mode: toggle button switches cue ball between aim mode (drag to set shot direction) and move mode (drag to reposition); default is aim mode
+  - Undo stack: each shot pushes pre-shot state onto a history stack; Undo button pops the last state, allowing backtracking all the way to the initial layout
+  - Rail width: dynamically sized to encapsulate pocket circles (pocketRadius * scale + 4px, min 16px)
   - Aiming: drag from cue ball to set direction; thin aim line extends from cue ball
   - Real-time trajectory preview: trajectories update live as aim angle, speed, english, or physics settings change
   - Trajectories terminate at pockets (no trajectory extends beyond a pocket)

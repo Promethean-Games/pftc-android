@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { X, Plus, Trash2, RotateCcw, Crosshair, Grid3x3, Move } from "lucide-react";
+import { X, Plus, Trash2, Undo2, Crosshair, Grid3x3, Move } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import {
@@ -45,7 +45,7 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
   const [balls, setBalls] = useState<Ball[]>(() => [
     createBall("cue", "cue", 25, 25),
   ]);
-  const [preShotBalls, setPreShotBalls] = useState<Ball[] | null>(null);
+  const [shotHistory, setShotHistory] = useState<Ball[][]>([]);
   const [selectedBallId, setSelectedBallId] = useState<string | null>(null);
 
   const [aimAngle, setAimAngle] = useState<number>(0);
@@ -91,9 +91,9 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
 
   const getScale = useCallback(() => {
     if (canvasSize.width === 0) return { scale: 1, offsetX: 0, offsetY: 0 };
-    const pad = 10;
-    const availW = canvasSize.width - pad * 2;
-    const availH = canvasSize.height - pad * 2;
+    const railMargin = 40;
+    const availW = canvasSize.width - railMargin * 2;
+    const availH = canvasSize.height - railMargin * 2;
     const scaleX = availW / TABLE_DIMENSIONS.width;
     const scaleY = availH / TABLE_DIMENSIONS.height;
     const scale = Math.min(scaleX, scaleY);
@@ -147,7 +147,7 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
     const tw = TABLE_DIMENSIONS.width * scale;
     const th = TABLE_DIMENSIONS.height * scale;
 
-    const railW = 16;
+    const railW = Math.max(16, TABLE_DIMENSIONS.pocketRadius * scale + 4);
 
     ctx.fillStyle = "#5a3825";
     ctx.fillRect(offsetX - railW, offsetY - railW, tw + railW * 2, th + railW * 2);
@@ -463,7 +463,7 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
     const cueBall = balls.find((b) => b.type === "cue" && !b.pocketed);
     if (!cueBall || !hasAimLine) return;
 
-    setPreShotBalls(balls.map((b) => ({ ...b, pos: { ...b.pos }, vel: { ...b.vel }, spin: { ...b.spin } })));
+    setShotHistory((prev) => [...prev, balls.map((b) => ({ ...b, pos: { ...b.pos }, vel: { ...b.vel }, spin: { ...b.spin } }))]);
 
     const params: ShotParams = {
       speed: shotSpeed,
@@ -479,23 +479,27 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
     setSelectedBallId(null);
   };
 
-  const handleReset = () => {
-    if (preShotBalls) {
-      setBalls(preShotBalls);
-      setPreShotBalls(null);
-    }
+  const handleUndo = () => {
+    if (shotHistory.length === 0) return;
+    const prev = shotHistory[shotHistory.length - 1];
+    setBalls(prev);
+    setShotHistory((h) => h.slice(0, -1));
     setHasAimLine(false);
   };
 
   const GRID_X = TABLE_DIMENSIONS.width / 8;
   const GRID_Y = TABLE_DIMENSIONS.height / 4;
+  const SNAP_BUFFER_PX = 5;
 
   const snapPos = (x: number, y: number): { x: number; y: number } => {
     if (!snapToGrid) return { x, y };
-    return {
-      x: Math.round(x / GRID_X) * GRID_X,
-      y: Math.round(y / GRID_Y) * GRID_Y,
-    };
+    const { scale } = getScale();
+    const bufferTable = SNAP_BUFFER_PX / scale;
+    const nearestX = Math.round(x / GRID_X) * GRID_X;
+    const nearestY = Math.round(y / GRID_Y) * GRID_Y;
+    const snappedX = Math.abs(x - nearestX) <= bufferTable ? nearestX : x;
+    const snappedY = Math.abs(y - nearestY) <= bufferTable ? nearestY : y;
+    return { x: snappedX, y: snappedY };
   };
 
   const snapEnglish = (val: number): number => {
@@ -603,15 +607,15 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
             <Crosshair className="w-3 h-3 mr-1" />
             Shoot
           </Button>
-          {preShotBalls && (
+          {shotHistory.length > 0 && (
             <Button
               size="sm"
               variant="outline"
-              onClick={handleReset}
-              data-testid="button-reset"
+              onClick={handleUndo}
+              data-testid="button-undo"
             >
-              <RotateCcw className="w-3 h-3 mr-1" />
-              Reset
+              <Undo2 className="w-3 h-3 mr-1" />
+              Undo
             </Button>
           )}
           <Button

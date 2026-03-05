@@ -593,7 +593,7 @@ const EMU={
   aimAngle:0,hasAimLine:false,isAiming:false,aimStart:null,dragBall:null,
   shotSpeed:5,angleFine:0,englishX:0,englishY:0,
   tableSpeed:'medium',equipment:'average',rails:'medium',
-  snapToGrid:true,moveCueBall:false,
+  snapToGrid:true,moveCueBall:false,shotHistory:[],
   TW:100,TH:50,BR:1.125,PR:2.25,
   POCKETS:[{x:0,y:0},{x:50,y:0},{x:100,y:0},{x:0,y:50},{x:50,y:50},{x:100,y:50}],
   ROLL_F:{slow:0.022,medium:0.016,fast:0.010},
@@ -613,13 +613,15 @@ function initEmulator(){
   EMU.aimAngle=0;EMU.hasAimLine=false;EMU.isAiming=false;
   EMU.shotSpeed=5;EMU.angleFine=0;EMU.englishX=0;EMU.englishY=0;
   EMU.tableSpeed='medium';EMU.equipment='average';EMU.rails='medium';
-  EMU.snapToGrid=true;EMU.moveCueBall=false;
+  EMU.snapToGrid=true;EMU.moveCueBall=false;EMU.shotHistory=[];
   EMU.expandedSections={};
 }
 function emuSnapPos(x,y){
   if(!EMU.snapToGrid)return{x,y};
   const gx=EMU.TW/8,gy=EMU.TH/4;
-  return{x:Math.round(x/gx)*gx,y:Math.round(y/gy)*gy};
+  const sc=EMU._sc||1;const buf=5/sc;
+  const nx=Math.round(x/gx)*gx,ny=Math.round(y/gy)*gy;
+  return{x:Math.abs(x-nx)<=buf?nx:x,y:Math.abs(y-ny)<=buf?ny:y};
 }
 
 function emuSimulate(){
@@ -704,13 +706,13 @@ function drawEmulatorCanvas(){
   const rect=c.parentElement.getBoundingClientRect();
   c.width=rect.width*dpr;c.height=rect.height*dpr;
   c.style.width=rect.width+'px';c.style.height=rect.height+'px';
-  const pad=10;const scX=(c.width-pad*2)/EMU.TW;const scY=(c.height-pad*2)/EMU.TH;
+  const pad=40;const scX=(c.width-pad*2)/EMU.TW;const scY=(c.height-pad*2)/EMU.TH;
   const sc=Math.min(scX,scY);const tw=EMU.TW*sc;const th=EMU.TH*sc;
   const ox=(c.width-tw)/2;const oy=(c.height-th)/2;
   EMU._sc=sc;EMU._ox=ox;EMU._oy=oy;EMU._cw=c.width;EMU._ch=c.height;
   function t2c(tx,ty){return{x:ox+tx*sc,y:oy+ty*sc};}
   if(EMU.hasAimLine&&!EMU._shooting){const r=emuSimulate();EMU.trajectories=r.trajectories;}
-  const rw=16;
+  const rw=Math.max(16,EMU.PR*sc+4);
   ctx.clearRect(0,0,c.width,c.height);
   ctx.fillStyle='#5a3825';ctx.fillRect(ox-rw,oy-rw,tw+rw*2,th+rw*2);
   ctx.fillStyle='#1a7a3a';ctx.fillRect(ox,oy,tw,th);
@@ -809,14 +811,15 @@ function emuRemoveSelected(){
 }
 function emuShoot(){
   if(!EMU.hasAimLine)return;
-  EMU.preShotBalls=EMU.balls.map(b=>({...b,pos:{...b.pos},vel:{...b.vel},spin:{...b.spin}}));
+  EMU.shotHistory.push(EMU.balls.map(b=>({...b,pos:{...b.pos},vel:{...b.vel},spin:{...b.spin}})));
   EMU._shooting=true;
   const r=emuSimulate();EMU.trajectories=r.trajectories;EMU.balls=r.finalBalls;EMU.hasAimLine=false;EMU.selectedId=null;
   EMU._shooting=false;
   drawEmulatorCanvas();
 }
-function emuReset(){
-  if(EMU.preShotBalls){EMU.balls=EMU.preShotBalls;EMU.preShotBalls=null;}
+function emuUndo(){
+  if(EMU.shotHistory.length===0)return;
+  EMU.balls=EMU.shotHistory.pop();
   EMU.trajectories=[];EMU.hasAimLine=false;drawEmulatorCanvas();
 }
 function emuSnapEng(v){return Math.round(v*4)/4;}
@@ -857,7 +860,7 @@ function rEmulator(){
       </div>
       <div style="display:flex;align-items:center;gap:4px">
         <button class="btn btn-primary" style="font-size:12px;min-height:32px" onclick="emuShoot()" ${EMU.hasAimLine?'':'disabled'} data-testid="button-shoot">${I.target||'⊕'} Shoot</button>
-        ${EMU.preShotBalls?`<button class="btn btn-outline" style="font-size:12px;min-height:32px" onclick="emuReset()" data-testid="button-reset">↺ Reset</button>`:''}
+        ${EMU.shotHistory.length>0?`<button class="btn btn-outline" style="font-size:12px;min-height:32px" onclick="emuUndo();render();setTimeout(drawEmulatorCanvas,50)" data-testid="button-undo">${I.rotateCcw} Undo</button>`:''}
         <button class="btn btn-ghost btn-icon" onclick="S.showEmulator=false;render()" data-testid="button-close-emulator">${I.x}</button>
       </div>
     </div>
