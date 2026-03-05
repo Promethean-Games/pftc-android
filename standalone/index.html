@@ -688,11 +688,10 @@ function emuSimulate(){
       const relX=b.spin.x-nrSpinX,relY=b.spin.y-nrSpinY;
       const relM=Math.sqrt(relX*relX+relY*relY);
       if(relM>sp*0.05){
-        const slDec=sFric*GG*DT;
-        const velDec=Math.min(slDec,sp*0.5);
-        const newSp=Math.max(0,sp-velDec);
+        const slDec=(5/7)*sFric*GG*DT;
+        const newSp=Math.max(0,sp-slDec);
         b.vel={x:vDir.x*newSp,y:vDir.y*newSp};
-        const spinCR=sFric*8*DT;
+        const spinCR=sFric*100*DT;
         const nrNew={x:vDir.x*newSp,y:vDir.y*newSp};
         const factor=Math.max(0,1-spinCR);
         b.spin={x:nrNew.x+relX*factor,y:nrNew.y+relY*factor};

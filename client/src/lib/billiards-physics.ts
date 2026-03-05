@@ -244,18 +244,15 @@ function applyFriction(ball: Ball, rollingFriction: number, slidingFriction: num
   const relSpinMag = vecLen(relSpin);
 
   if (relSpinMag > speed * 0.05) {
-    const slideDecel = slidingFriction * G * dt;
-
-    const velDecel = Math.min(slideDecel, speed * 0.5);
-    const newSpeed = Math.max(0, speed - velDecel);
+    const slideDecel = (5 / 7) * slidingFriction * G * dt;
+    const newSpeed = Math.max(0, speed - slideDecel);
     ball.vel = vecScale(velDir, newSpeed);
 
-    const spinConvergeRate = slidingFriction * 8 * dt;
+    const spinConvergeRate = slidingFriction * 100 * dt;
     const newNaturalRoll = vecScale(velDir, newSpeed);
-    const newRelSpin = vecSub(ball.spin, naturalRollSpin);
     ball.spin = vecAdd(
       newNaturalRoll,
-      vecScale(newRelSpin, Math.max(0, 1 - spinConvergeRate))
+      vecScale(relSpin, Math.max(0, 1 - spinConvergeRate))
     );
   } else {
     ball.spin = { ...naturalRollSpin };
