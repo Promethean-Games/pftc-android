@@ -822,7 +822,7 @@ function emuUndo(){
   EMU.balls=EMU.shotHistory.pop();
   EMU.trajectories=[];EMU.hasAimLine=false;drawEmulatorCanvas();
 }
-function emuSnapEng(v){return Math.round(v/0.5)*0.5;}
+function emuSnapEng(v){return Math.round(v/0.25)*0.25;}
 function emuEngClick(e){
   const el=e.currentTarget;const rect=el.getBoundingClientRect();
   const x=((e.clientX-rect.left)/rect.width)*3-1.5;
@@ -891,7 +891,7 @@ function rEmulator(){
               <circle cx="60" cy="60" r="58" fill="none" stroke="#ef4444" stroke-width="1" stroke-dasharray="4 3" opacity="0.5"/>
               <line x1="60" y1="2" x2="60" y2="118" stroke="rgba(0,0,0,0.15)" stroke-width="0.5"/>
               <line x1="2" y1="60" x2="118" y2="60" stroke="rgba(0,0,0,0.15)" stroke-width="0.5"/>
-              ${[-1.5,-1,-0.5,0,0.5,1,1.5].map(vx=>[-1.5,-1,-0.5,0,0.5,1,1.5].map(vy=>`<circle cx="${60+(vx/1.5)*58}" cy="${60+(vy/1.5)*58}" r="1.5" fill="rgba(0,0,0,0.12)"/>`).join('')).join('')}
+              ${[-1.5,-1.25,-1,-0.75,-0.5,-0.25,0,0.25,0.5,0.75,1,1.25,1.5].map(vx=>[-1.5,-1.25,-1,-0.75,-0.5,-0.25,0,0.25,0.5,0.75,1,1.25,1.5].map(vy=>`<circle cx="${60+(vx/1.5)*58}" cy="${60+(vy/1.5)*58}" r="1.5" fill="rgba(0,0,0,0.12)"/>`).join('')).join('')}
               <circle cx="${engCx}" cy="${engCy}" r="${engTipR}" fill="rgba(59,130,246,0.25)" stroke="#3b82f6" stroke-width="1.5"/>
               <circle cx="${engCx}" cy="${engCy}" r="3" fill="#3b82f6"/>
             </svg>
@@ -900,12 +900,12 @@ function rEmulator(){
           <div style="flex:1;min-width:0">
             <div style="margin-bottom:8px">
               <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted-fg);margin-bottom:2px"><span>-1.5</span><span>0</span><span>+1.5</span></div>
-              <input type="range" min="-1.5" max="1.5" step="0.5" value="${EMU.englishX}" oninput="EMU.englishX=+this.value;drawEmulatorCanvas()" style="width:100%" data-testid="slider-english-x">
+              <input type="range" min="-1.5" max="1.5" step="0.05" value="${EMU.englishX}" oninput="EMU.englishX=+this.value;drawEmulatorCanvas()" style="width:100%" data-testid="slider-english-x">
               <span style="font-size:11px;color:var(--muted-fg)">Horizontal (side spin)</span>
             </div>
             <div style="margin-bottom:8px">
               <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted-fg);margin-bottom:2px"><span>-1.5</span><span>0</span><span>+1.5</span></div>
-              <input type="range" min="-1.5" max="1.5" step="0.5" value="${EMU.englishY}" oninput="EMU.englishY=+this.value;drawEmulatorCanvas()" style="width:100%" data-testid="slider-english-y">
+              <input type="range" min="-1.5" max="1.5" step="0.05" value="${EMU.englishY}" oninput="EMU.englishY=+this.value;drawEmulatorCanvas()" style="width:100%" data-testid="slider-english-y">
               <span style="font-size:11px;color:var(--muted-fg)">Vertical (top/draw)</span>
             </div>
             <button class="btn btn-ghost" style="font-size:12px" onclick="EMU.englishX=0;EMU.englishY=0;drawEmulatorCanvas();render()" data-testid="button-reset-english">Center</button>

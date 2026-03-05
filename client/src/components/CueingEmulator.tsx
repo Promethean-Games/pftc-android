@@ -504,10 +504,10 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
 
   const ENG_MIN = -1.5;
   const ENG_MAX = 1.5;
-  const ENG_STEP = 0.5;
+  const ENG_SNAP = 0.25;
 
   const snapEnglish = (val: number): number => {
-    return Math.round(val / ENG_STEP) * ENG_STEP;
+    return Math.round(val / ENG_SNAP) * ENG_SNAP;
   };
 
   const handleEnglishDiagramClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -719,8 +719,8 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
                       <circle cx="60" cy="60" r="58" fill="none" stroke="#ef4444" strokeWidth="1" strokeDasharray="4 3" opacity="0.5" />
                       <line x1="60" y1="2" x2="60" y2="118" stroke="rgba(0,0,0,0.15)" strokeWidth="0.5" />
                       <line x1="2" y1="60" x2="118" y2="60" stroke="rgba(0,0,0,0.15)" strokeWidth="0.5" />
-                      {[-1.5, -1, -0.5, 0, 0.5, 1, 1.5].map((vx) =>
-                        [-1.5, -1, -0.5, 0, 0.5, 1, 1.5].map((vy) => {
+                      {[-1.5, -1.25, -1, -0.75, -0.5, -0.25, 0, 0.25, 0.5, 0.75, 1, 1.25, 1.5].map((vx) =>
+                        [-1.5, -1.25, -1, -0.75, -0.5, -0.25, 0, 0.25, 0.5, 0.75, 1, 1.25, 1.5].map((vy) => {
                           const px = 60 + (vx / 1.5) * 58;
                           const py = 60 + (vy / 1.5) * 58;
                           return (
@@ -764,7 +764,7 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
                         value={[englishX]}
                         min={-1.5}
                         max={1.5}
-                        step={0.5}
+                        step={0.05}
                         onValueChange={([v]) => setEnglishX(v)}
                         data-testid="slider-english-x"
                       />
@@ -780,7 +780,7 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
                         value={[englishY]}
                         min={-1.5}
                         max={1.5}
-                        step={0.5}
+                        step={0.05}
                         onValueChange={([v]) => setEnglishY(v)}
                         data-testid="slider-english-y"
                       />

@@ -78,7 +78,7 @@ The server only handles two Stripe endpoints for the paywall. Development uses V
   - Settings via accordion panels:
     - Shot Speed: slider 1–10 (maps to initial cue ball velocity)
     - Fine-Tune Angle: slider ±5° with 0.1° steps
-    - English (Spin): circular cue ball face diagram with crosshairs, 0.5-tip snap grid, cue tip circle overlay, and red dashed miscue limit ring; synced horizontal/vertical sliders (-1.5 to +1.5 tips); H: negative = left, positive = right; V: negative = follow/topspin (top of ball), positive = draw/backspin (bottom of ball)
+    - English (Spin): circular cue ball face diagram with crosshairs, 0.25-tip snap grid (diagram click snaps to nearest 0.25), cue tip circle overlay, and red dashed miscue limit ring; sliders allow fine-tuning at 0.05 steps (-1.5 to +1.5 tips); H: negative = left, positive = right; V: negative = follow/topspin (top of ball), positive = draw/backspin (bottom of ball)
     - Table Physics: segmented controls for Table Speed (Slow/Medium/Fast), Equipment (Dirty/Average/Clean), Rails (Soft/Medium/Firm)
   - Physics engine: `client/src/lib/billiards-physics.ts` — pure TypeScript module based on Dr. Dave Alciatore's published research
     - Ball-ball collisions: 2D elastic with throw (friction at contact point)
