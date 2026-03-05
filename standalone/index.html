@@ -186,6 +186,7 @@ let S = {
   showToolsMenu: false,
   showLeveler: false,
   showEmulator: false,
+  showEmulatorWarning: false,
   showLevelerTutorial: false,
   levelerTutorialIdx: 0,
 };
@@ -358,7 +359,7 @@ function rSplash(app){
         <div style="position:relative">
           <button class="btn btn-ghost btn-icon" onclick="S.showToolsMenu=!S.showToolsMenu;render()" data-testid="button-tools-menu">${I.wrench}</button>
           ${S.showToolsMenu?`<div class="tools-dropdown" data-testid="tools-dropdown">
-            <button onclick="S.showToolsMenu=false;S.showEmulator=true;initEmulator();render();setTimeout(drawEmulatorCanvas,50)" data-testid="button-cueing-emulator">${I.target||I.game} Cueing Emulator</button>
+            <button onclick="S.showToolsMenu=false;S.showEmulatorWarning=true;render()" data-testid="button-cueing-emulator">${I.target||I.game} Cueing Emulator</button>
             <button onclick="S.showToolsMenu=false;S.showLeveler=true;initLeveler();render()" data-testid="button-table-leveler">${I.game} Table Leveler</button>
           </div>`:''}
         </div>
@@ -369,7 +370,16 @@ function rSplash(app){
         <button class="btn btn-outline btn-xl" data-testid="button-load-game" onclick="S.screen='load';render()">Load Game</button>
         <button class="btn btn-ghost btn-xl" data-testid="button-how-to-play" onclick="S.showTutorial=true;S.tutorialIdx=0;render()">${I.book} How to Play</button>
       </div>
-    </div>${S.showTutorial?rTutorial():''}${S.showLeveler?rLeveler():''}${S.showEmulator?rEmulator():''}`;
+    </div>${S.showEmulatorWarning?`<div style="position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5)" data-testid="dialog-emulator-warning">
+      <div style="background:var(--bg,#1a1a2e);border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:32px;max-width:400px;width:90%;text-align:center">
+        <h1 style="font-size:1.5rem;font-weight:bold;margin:0 0 12px" data-testid="text-coming-soon">Coming Soon!</h1>
+        <h3 style="font-size:0.95rem;color:rgba(255,255,255,0.6);margin:0 0 24px;font-weight:normal;line-height:1.5" data-testid="text-warning-message">This feature is not fully developed and may not function properly or at all. Updates are published automatically on a regular basis.</h3>
+        <div style="display:flex;gap:12px;justify-content:center">
+          <button class="btn btn-ghost" onclick="S.showEmulatorWarning=false;render()" data-testid="button-go-back" style="min-width:100px">Go Back</button>
+          <button class="btn" onclick="S.showEmulatorWarning=false;S.showEmulator=true;initEmulator();render();setTimeout(drawEmulatorCanvas,50)" data-testid="button-continue-anyways" style="min-width:100px">Continue Anyways</button>
+        </div>
+      </div>
+    </div>`:''}${S.showTutorial?rTutorial():''}${S.showLeveler?rLeveler():''}${S.showEmulator?rEmulator():''}`;
   if(S.showToolsMenu){setTimeout(()=>document.addEventListener('click',closeToolsMenu,{once:true}),0);}
   if(S.showEmulator){setTimeout(drawEmulatorCanvas,50);}
 }
