@@ -717,7 +717,7 @@ function drawEmulatorCanvas(){
   ctx.fillStyle='#5a3825';ctx.fillRect(ox-rw,oy-rw,tw+rw*2,th+rw*2);
   ctx.fillStyle='#1a7a3a';ctx.fillRect(ox,oy,tw,th);
   if(EMU.snapToGrid){
-    ctx.strokeStyle='rgba(45,138,74,0.25)';ctx.lineWidth=0.5;ctx.setLineDash([]);
+    ctx.strokeStyle='rgba(0,0,0,0.25)';ctx.lineWidth=1;ctx.setLineDash([]);
     const gx=EMU.TW/8,gy=EMU.TH/4;
     for(let i=1;i<8;i++){const p1=t2c(i*gx,0),p2=t2c(i*gx,EMU.TH);ctx.beginPath();ctx.moveTo(p1.x,p1.y);ctx.lineTo(p2.x,p2.y);ctx.stroke();}
     for(let j=1;j<4;j++){const p1=t2c(0,j*gy),p2=t2c(EMU.TW,j*gy);ctx.beginPath();ctx.moveTo(p1.x,p1.y);ctx.lineTo(p2.x,p2.y);ctx.stroke();}

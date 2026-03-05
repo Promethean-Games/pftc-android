@@ -156,8 +156,8 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
     ctx.fillRect(offsetX, offsetY, tw, th);
 
     if (snapToGrid) {
-      ctx.strokeStyle = "rgba(45, 138, 74, 0.25)";
-      ctx.lineWidth = 0.5;
+      ctx.strokeStyle = "rgba(0, 0, 0, 0.25)";
+      ctx.lineWidth = 1;
       ctx.setLineDash([]);
       const gridStepX = TABLE_DIMENSIONS.width / 8;
       const gridStepY = TABLE_DIMENSIONS.height / 4;
