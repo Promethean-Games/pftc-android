@@ -139,6 +139,32 @@ const COURSE_PRESETS: CoursePreset[] = [
   ]},
 ];
 
+function findCueBallPosition(presetBalls: PresetBall[]): { x: number; y: number } {
+  const defaultPos = { x: 25, y: 25 };
+  const ballRadius = 1.125;
+  const minDist = ballRadius * 3;
+  const occupied = (cx: number, cy: number) =>
+    presetBalls.some(
+      (b) => Math.abs(b.x - cx) < minDist && Math.abs(b.y - cy) < minDist
+    );
+  if (!occupied(defaultPos.x, defaultPos.y)) return defaultPos;
+  const gridX = [12.5, 25, 37.5, 50, 62.5, 75, 87.5];
+  const gridY = [12.5, 25, 37.5];
+  let best = defaultPos;
+  let bestDist = Infinity;
+  for (const gx of gridX) {
+    for (const gy of gridY) {
+      if (occupied(gx, gy)) continue;
+      const d = Math.hypot(gx - defaultPos.x, gy - defaultPos.y);
+      if (d < bestDist) {
+        bestDist = d;
+        best = { x: gx, y: gy };
+      }
+    }
+  }
+  return best;
+}
+
 function generateId(): string {
   return Math.random().toString(36).substring(2, 9);
 }
@@ -1078,8 +1104,9 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
                                 className="text-xs"
                                 data-testid={`button-preset-${preset.id}`}
                                 onClick={() => {
+                                  const cuePos = findCueBallPosition(preset.balls);
                                   const newBalls: Ball[] = [
-                                    createBall("cue", "cue", 25, 25),
+                                    createBall("cue", "cue", cuePos.x, cuePos.y),
                                     ...preset.balls.map((pb, i) =>
                                       createBall(
                                         `${preset.id}-${pb.type}-${i}`,

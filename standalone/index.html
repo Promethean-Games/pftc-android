@@ -636,10 +636,21 @@ const COURSE_PRESETS=[
   {id:"6-01",par:6,balls:[{t:"stripe",x:2,y:2},{t:"stripe",x:2,y:48},{t:"stripe",x:50,y:2},{t:"stripe",x:50,y:48},{t:"stripe",x:98,y:2},{t:"stripe",x:98,y:48}]},
 ];
 
+function findCuePos(presetBalls){
+  const dx=25,dy=25,br=1.125,md=br*3;
+  const occ=(cx,cy)=>presetBalls.some(b=>Math.abs(b.x-cx)<md&&Math.abs(b.y-cy)<md);
+  if(!occ(dx,dy))return{x:dx,y:dy};
+  const gx=[12.5,25,37.5,50,62.5,75,87.5],gy=[12.5,25,37.5];
+  let best={x:dx,y:dy},bd=Infinity;
+  for(const x of gx)for(const y of gy){if(occ(x,y))continue;const d=Math.hypot(x-dx,y-dy);if(d<bd){bd=d;best={x,y};}}
+  return best;
+}
+
 function loadCoursePreset(id){
   const preset=COURSE_PRESETS.find(p=>p.id===id);
   if(!preset)return;
-  EMU.balls=[emuBall('cue','cue',25,25),...preset.balls.map((b,i)=>emuBall(id+'-'+b.t+'-'+i,b.t,b.x,b.y))];
+  const cp=findCuePos(preset.balls);
+  EMU.balls=[emuBall('cue','cue',cp.x,cp.y),...preset.balls.map((b,i)=>emuBall(id+'-'+b.t+'-'+i,b.t,b.x,b.y))];
   EMU.selectedId=null;EMU.trajectories=[];EMU.hasAimLine=false;EMU.shotHistory=[];EMU.preShotBalls=null;
   render();setTimeout(drawEmulatorCanvas,50);
 }
