@@ -502,16 +502,20 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
     return { x: snappedX, y: snappedY };
   };
 
+  const ENG_MIN = -1.5;
+  const ENG_MAX = 1.5;
+  const ENG_STEP = 0.5;
+
   const snapEnglish = (val: number): number => {
-    return Math.round(val * 4) / 4;
+    return Math.round(val / ENG_STEP) * ENG_STEP;
   };
 
   const handleEnglishDiagramClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width) * 2;
-    const y = ((e.clientY - rect.top) / rect.height) * 2;
-    setEnglishX(snapEnglish(Math.max(0, Math.min(2, x))));
-    setEnglishY(snapEnglish(Math.max(0, Math.min(2, y))));
+    const x = ((e.clientX - rect.left) / rect.width) * 3 - 1.5;
+    const y = ((e.clientY - rect.top) / rect.height) * 3 - 1.5;
+    setEnglishX(snapEnglish(Math.max(ENG_MIN, Math.min(ENG_MAX, x))));
+    setEnglishY(snapEnglish(Math.max(ENG_MIN, Math.min(ENG_MAX, y))));
   };
 
   const ToggleGroup = ({
@@ -699,110 +703,88 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
 
           <AccordionItem value="english">
             <AccordionTrigger className="text-sm py-2">
-              English: H {englishX.toFixed(2)}, V {englishY.toFixed(2)} tips
+              English: H {englishX > 0 ? "+" : ""}{englishX.toFixed(1)}, V {englishY > 0 ? "+" : ""}{englishY.toFixed(1)} tips
             </AccordionTrigger>
             <AccordionContent>
               <div className="pb-3">
                 <div className="flex gap-4 items-start">
                   <div
-                    className="relative flex-shrink-0 cursor-pointer border border-border rounded-md overflow-hidden"
+                    className="relative flex-shrink-0 cursor-pointer"
                     style={{ width: 120, height: 120 }}
                     onClick={handleEnglishDiagramClick}
                     data-testid="english-diagram"
                   >
-                    <div
-                      className="absolute bg-white border border-gray-300"
-                      style={{
-                        width: 116,
-                        height: 116,
-                        top: 2,
-                        left: 2,
-                      }}
-                    />
-                    {Array.from({ length: 9 }).map((_, i) => {
-                      const valX = i * 0.25;
-                      return Array.from({ length: 9 }).map((_, j) => {
-                        const valY = j * 0.25;
-                        if (valX > 2 || valY > 2) return null;
-                        const px = (valX / 2) * 116 + 2;
-                        const py = (valY / 2) * 116 + 2;
-                        return (
-                          <div
-                            key={`${i}-${j}`}
-                            className="absolute rounded-full"
-                            style={{
-                              width: 3,
-                              height: 3,
-                              left: px - 1.5,
-                              top: py - 1.5,
-                              backgroundColor: "rgba(0,0,0,0.15)",
-                            }}
-                          />
-                        );
-                      });
-                    })}
-                    <div
-                      className="absolute rounded-full bg-blue-500"
-                      style={{
-                        width: 10,
-                        height: 10,
-                        left: (englishX / 2) * 116 + 2 - 5,
-                        top: (englishY / 2) * 116 + 2 - 5,
-                        boxShadow: "0 0 4px rgba(59,130,246,0.8)",
-                      }}
-                      data-testid="english-dot"
-                    />
-                    <div
-                      className="absolute"
-                      style={{
-                        width: 116,
-                        height: 1,
-                        left: 2,
-                        top: 2,
-                        backgroundColor: "rgba(0,0,0,0.1)",
-                      }}
-                    />
-                    <div
-                      className="absolute"
-                      style={{
-                        width: 1,
-                        height: 116,
-                        left: 2,
-                        top: 2,
-                        backgroundColor: "rgba(0,0,0,0.1)",
-                      }}
-                    />
+                    <svg width="120" height="120" viewBox="0 0 120 120">
+                      <circle cx="60" cy="60" r="58" fill="white" stroke="#ccc" strokeWidth="1" />
+                      <circle cx="60" cy="60" r="58" fill="none" stroke="#ef4444" strokeWidth="1" strokeDasharray="4 3" opacity="0.5" />
+                      <line x1="60" y1="2" x2="60" y2="118" stroke="rgba(0,0,0,0.15)" strokeWidth="0.5" />
+                      <line x1="2" y1="60" x2="118" y2="60" stroke="rgba(0,0,0,0.15)" strokeWidth="0.5" />
+                      {[-1.5, -1, -0.5, 0, 0.5, 1, 1.5].map((vx) =>
+                        [-1.5, -1, -0.5, 0, 0.5, 1, 1.5].map((vy) => {
+                          const px = 60 + (vx / 1.5) * 58;
+                          const py = 60 + (vy / 1.5) * 58;
+                          return (
+                            <circle
+                              key={`${vx}-${vy}`}
+                              cx={px}
+                              cy={py}
+                              r={1.5}
+                              fill="rgba(0,0,0,0.12)"
+                            />
+                          );
+                        })
+                      )}
+                      <circle
+                        cx={60 + (englishX / 1.5) * 58}
+                        cy={60 + (englishY / 1.5) * 58}
+                        r={Math.max(6, 58 / 3)}
+                        fill="rgba(59,130,246,0.25)"
+                        stroke="#3b82f6"
+                        strokeWidth="1.5"
+                        data-testid="english-tip-circle"
+                      />
+                      <circle
+                        cx={60 + (englishX / 1.5) * 58}
+                        cy={60 + (englishY / 1.5) * 58}
+                        r={3}
+                        fill="#3b82f6"
+                        data-testid="english-dot"
+                      />
+                    </svg>
+                    <span className="absolute text-muted-foreground" style={{ fontSize: 8, bottom: -2, right: 0, opacity: 0.6 }}>miscue limit</span>
                   </div>
                   <div className="flex-1 space-y-3 min-w-0">
                     <div>
                       <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                        <span>-1.5</span>
                         <span>0</span>
-                        <span>2 tips</span>
+                        <span>+1.5</span>
                       </div>
                       <Slider
                         value={[englishX]}
-                        min={0}
-                        max={2}
-                        step={0.25}
+                        min={-1.5}
+                        max={1.5}
+                        step={0.5}
                         onValueChange={([v]) => setEnglishX(v)}
                         data-testid="slider-english-x"
                       />
-                      <span className="text-xs text-muted-foreground">Horizontal</span>
+                      <span className="text-xs text-muted-foreground">Horizontal (side spin)</span>
                     </div>
                     <div>
                       <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                        <span>-1.5</span>
                         <span>0</span>
-                        <span>2 tips</span>
+                        <span>+1.5</span>
                       </div>
                       <Slider
                         value={[englishY]}
-                        min={0}
-                        max={2}
-                        step={0.25}
+                        min={-1.5}
+                        max={1.5}
+                        step={0.5}
                         onValueChange={([v]) => setEnglishY(v)}
                         data-testid="slider-english-y"
                       />
-                      <span className="text-xs text-muted-foreground">Vertical</span>
+                      <span className="text-xs text-muted-foreground">Vertical (top/draw)</span>
                     </div>
                     <Button
                       size="sm"
