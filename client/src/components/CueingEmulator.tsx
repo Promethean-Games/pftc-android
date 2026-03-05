@@ -90,6 +90,53 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
     return result.trajectories;
   }, [hasAimLine, balls, aimAngle, angleFine, shotSpeed, englishX, englishY, tableConfig]);
 
+  const cutAngleInfo = useMemo<{ angle: number; label: string } | null>(() => {
+    if (!hasAimLine) return null;
+    const cueBall = balls.find((b) => b.type === "cue" && !b.pocketed);
+    if (!cueBall) return null;
+    const totalAngle = aimAngle + (angleFine * Math.PI) / 180;
+    const dirX = Math.cos(totalAngle);
+    const dirY = Math.sin(totalAngle);
+    const br2 = TABLE_DIMENSIONS.ballRadius * 2;
+
+    let closestDist = Infinity;
+    let closestBall: Ball | null = null;
+
+    for (const b of balls) {
+      if (b.type === "cue" || b.pocketed) continue;
+      const dx = b.pos.x - cueBall.pos.x;
+      const dy = b.pos.y - cueBall.pos.y;
+      const proj = dx * dirX + dy * dirY;
+      if (proj <= 0) continue;
+      const perpX = dx - proj * dirX;
+      const perpY = dy - proj * dirY;
+      const perpDist = Math.sqrt(perpX * perpX + perpY * perpY);
+      if (perpDist < br2 && proj < closestDist) {
+        closestDist = proj;
+        closestBall = b;
+      }
+    }
+
+    if (!closestBall) return null;
+
+    const dx = closestBall.pos.x - cueBall.pos.x;
+    const dy = closestBall.pos.y - cueBall.pos.y;
+    const centerAngle = Math.atan2(dy, dx);
+    let cutAngle = Math.abs(totalAngle - centerAngle);
+    if (cutAngle > Math.PI) cutAngle = 2 * Math.PI - cutAngle;
+    const cutDeg = (cutAngle * 180) / Math.PI;
+    const fullness = 1 - Math.sin(cutAngle);
+
+    let label: string;
+    if (fullness >= 0.875) label = "Full ball";
+    else if (fullness >= 0.625) label = "3/4 ball";
+    else if (fullness >= 0.375) label = "1/2 ball";
+    else if (fullness >= 0.125) label = "1/4 ball";
+    else label = "Thin cut";
+
+    return { angle: Math.round(cutDeg * 100) / 100, label };
+  }, [hasAimLine, balls, aimAngle, angleFine]);
+
   const getScale = useCallback(() => {
     if (canvasSize.width === 0) return { scale: 1, offsetX: 0, offsetY: 0 };
     const railMargin = 40;
@@ -641,6 +688,14 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
           </Button>
         </div>
       </div>
+
+      {cutAngleInfo && (
+        <div className="flex items-center gap-3 px-3 py-1 border-b bg-muted/50 text-sm" data-testid="cut-angle-info">
+          <span className="text-muted-foreground">Cut Angle:</span>
+          <span className="font-mono font-bold" data-testid="text-cut-angle">{cutAngleInfo.angle.toFixed(2)}°</span>
+          <span className="text-muted-foreground">({cutAngleInfo.label})</span>
+        </div>
+      )}
 
       <div className="flex-1 min-h-0 relative overflow-hidden">
         <div

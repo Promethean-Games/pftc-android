@@ -833,6 +833,39 @@ function emuEngClick(e){
 }
 function emuToggleSection(s){EMU.expandedSections[s]=!EMU.expandedSections[s];render();}
 
+function emuGetCutAngle(){
+  if(!EMU.hasAimLine)return null;
+  const cue=EMU.balls.find(b=>b.type==='cue'&&!b.pocketed);
+  if(!cue)return null;
+  const totalAngle=EMU.aimAngle+(EMU.angleFine*Math.PI)/180;
+  const dirX=Math.cos(totalAngle),dirY=Math.sin(totalAngle);
+  const br2=EMU.BR*2;
+  let closestDist=Infinity,closestBall=null;
+  for(const b of EMU.balls){
+    if(b.type==='cue'||b.pocketed)continue;
+    const dx=b.pos.x-cue.pos.x,dy=b.pos.y-cue.pos.y;
+    const proj=dx*dirX+dy*dirY;
+    if(proj<=0)continue;
+    const px=dx-proj*dirX,py=dy-proj*dirY;
+    const pd=Math.sqrt(px*px+py*py);
+    if(pd<br2&&proj<closestDist){closestDist=proj;closestBall=b;}
+  }
+  if(!closestBall)return null;
+  const dx=closestBall.pos.x-cue.pos.x,dy=closestBall.pos.y-cue.pos.y;
+  const centerAngle=Math.atan2(dy,dx);
+  let cutAngle=Math.abs(totalAngle-centerAngle);
+  if(cutAngle>Math.PI)cutAngle=2*Math.PI-cutAngle;
+  const cutDeg=(cutAngle*180)/Math.PI;
+  const fullness=1-Math.sin(cutAngle);
+  let label;
+  if(fullness>=0.875)label='Full ball';
+  else if(fullness>=0.625)label='3/4 ball';
+  else if(fullness>=0.375)label='1/2 ball';
+  else if(fullness>=0.125)label='1/4 ball';
+  else label='Thin cut';
+  return{angle:Math.round(cutDeg*100)/100,label};
+}
+
 function rEmulator(){
   const selNotCue=EMU.selectedId&&EMU.selectedId!=='cue';
   const accStyle='cursor:pointer;padding:8px 0;border-bottom:1px solid var(--border);display:flex;justify-between;align-items:center;gap:4px;font-size:14px;font-weight:600';
@@ -866,6 +899,7 @@ function rEmulator(){
         <button class="btn btn-ghost btn-icon" onclick="S.showEmulator=false;render()" data-testid="button-close-emulator">${I.x}</button>
       </div>
     </div>
+    ${(()=>{const ci=emuGetCutAngle();return ci?`<div style="display:flex;align-items:center;gap:12px;padding:4px 12px;border-bottom:1px solid var(--border);background:var(--muted);font-size:14px" data-testid="cut-angle-info"><span style="color:var(--muted-fg)">Cut Angle:</span><span style="font-family:monospace;font-weight:bold" data-testid="text-cut-angle">${ci.angle.toFixed(2)}\u00B0</span><span style="color:var(--muted-fg)">(${ci.label})</span></div>`:''})()}
     <div style="flex:1;min-height:0;position:relative;overflow:hidden">
       <div style="position:absolute;inset:0;background:#1a1a2e;touch-action:none" id="emu-canvas-wrap">
         <canvas id="emu-canvas" style="width:100%;height:100%;display:block"
