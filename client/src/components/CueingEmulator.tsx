@@ -144,8 +144,10 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
     const tw = TABLE_DIMENSIONS.width * scale;
     const th = TABLE_DIMENSIONS.height * scale;
 
+    const railW = 16;
+
     ctx.fillStyle = "#5a3825";
-    ctx.fillRect(offsetX - 8, offsetY - 8, tw + 16, th + 16);
+    ctx.fillRect(offsetX - railW, offsetY - railW, tw + railW * 2, th + railW * 2);
 
     ctx.fillStyle = "#1a7a3a";
     ctx.fillRect(offsetX, offsetY, tw, th);
@@ -171,20 +173,20 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
       ctx.fill();
     }
 
-    const diamondPositions = [0.25, 0.5, 0.75];
     ctx.fillStyle = "#d4a853";
-    for (const frac of diamondPositions) {
+    const longRailFracs = [1/8, 2/8, 3/8, 5/8, 6/8, 7/8];
+    for (const frac of longRailFracs) {
       const topD = tableToCanvas(TABLE_DIMENSIONS.width * frac, 0);
       const botD = tableToCanvas(TABLE_DIMENSIONS.width * frac, TABLE_DIMENSIONS.height);
-      drawDiamond(ctx, topD.x, offsetY - 4, 3);
-      drawDiamond(ctx, botD.x, offsetY + th + 4, 3);
+      drawDiamond(ctx, topD.x, offsetY - railW / 2, 3);
+      drawDiamond(ctx, botD.x, offsetY + th + railW / 2, 3);
     }
-    const sideDiamondPositions = [0.25, 0.5, 0.75];
-    for (const frac of sideDiamondPositions) {
+    const shortRailFracs = [0.25, 0.5, 0.75];
+    for (const frac of shortRailFracs) {
       const leftD = tableToCanvas(0, TABLE_DIMENSIONS.height * frac);
       const rightD = tableToCanvas(TABLE_DIMENSIONS.width, TABLE_DIMENSIONS.height * frac);
-      drawDiamond(ctx, offsetX - 4, leftD.y, 3);
-      drawDiamond(ctx, offsetX + tw + 4, rightD.y, 3);
+      drawDiamond(ctx, offsetX - railW / 2, leftD.y, 3);
+      drawDiamond(ctx, offsetX + tw + railW / 2, rightD.y, 3);
     }
 
     for (const traj of previewTrajectories) {

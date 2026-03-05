@@ -701,16 +701,17 @@ function drawEmulatorCanvas(){
   EMU._sc=sc;EMU._ox=ox;EMU._oy=oy;EMU._cw=c.width;EMU._ch=c.height;
   function t2c(tx,ty){return{x:ox+tx*sc,y:oy+ty*sc};}
   if(EMU.hasAimLine&&!EMU._shooting){const r=emuSimulate();EMU.trajectories=r.trajectories;}
+  const rw=16;
   ctx.clearRect(0,0,c.width,c.height);
-  ctx.fillStyle='#5a3825';ctx.fillRect(ox-8,oy-8,tw+16,th+16);
+  ctx.fillStyle='#5a3825';ctx.fillRect(ox-rw,oy-rw,tw+rw*2,th+rw*2);
   ctx.fillStyle='#1a7a3a';ctx.fillRect(ox,oy,tw,th);
   ctx.strokeStyle='#2d8a4a';ctx.lineWidth=0.5;ctx.setLineDash([4,4]);
   const hs=t2c(EMU.TW*0.25,0);const hs2=t2c(EMU.TW*0.25,EMU.TH);
   ctx.beginPath();ctx.moveTo(hs.x,hs.y);ctx.lineTo(hs2.x,hs2.y);ctx.stroke();ctx.setLineDash([]);
   for(const p of EMU.POCKETS){const pp=t2c(p.x,p.y);ctx.beginPath();ctx.arc(pp.x,pp.y,EMU.PR*sc,0,Math.PI*2);ctx.fillStyle='#111';ctx.fill();}
   ctx.fillStyle='#d4a853';
-  [0.25,0.5,0.75].forEach(f=>{const tp=t2c(EMU.TW*f,0);ddm(ctx,tp.x,oy-4,3);const bp=t2c(EMU.TW*f,EMU.TH);ddm(ctx,bp.x,oy+th+4,3);});
-  [0.25,0.5,0.75].forEach(f=>{const lp=t2c(0,EMU.TH*f);ddm(ctx,ox-4,lp.y,3);const rp=t2c(EMU.TW,EMU.TH*f);ddm(ctx,ox+tw+4,rp.y,3);});
+  [1/8,2/8,3/8,5/8,6/8,7/8].forEach(f=>{const tp=t2c(EMU.TW*f,0);ddm(ctx,tp.x,oy-rw/2,3);const bp=t2c(EMU.TW*f,EMU.TH);ddm(ctx,bp.x,oy+th+rw/2,3);});
+  [0.25,0.5,0.75].forEach(f=>{const lp=t2c(0,EMU.TH*f);ddm(ctx,ox-rw/2,lp.y,3);const rp=t2c(EMU.TW,EMU.TH*f);ddm(ctx,ox+tw+rw/2,rp.y,3);});
   const tColors={cue:'#60a5fa',solid:'#eab308',stripe:'#22c55e'};
   for(const tr of EMU.trajectories){
     if(tr.points.length<2)continue;
