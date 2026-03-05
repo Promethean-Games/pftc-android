@@ -617,6 +617,33 @@ const EMU={
 function emuId(){return'eb'+(EMU.idCounter++);}
 function emuBall(id,type,x,y){return{id,type,pos:{x,y},vel:{x:0,y:0},spin:{x:0,y:0},pocketed:false};}
 
+const COURSE_PRESETS=[
+  {id:"2-01",par:2,balls:[{t:"stripe",x:50,y:2},{t:"stripe",x:50,y:48}]},
+  {id:"2-02",par:2,balls:[{t:"stripe",x:12.5,y:37.5},{t:"stripe",x:87.5,y:12.5}]},
+  {id:"2-03",par:2,balls:[{t:"stripe",x:87.5,y:37.5},{t:"stripe",x:62.5,y:12.5}]},
+  {id:"3-01",par:3,balls:[{t:"stripe",x:37.5,y:25},{t:"solid",x:87.5,y:12.5}]},
+  {id:"3-02",par:3,balls:[{t:"stripe",x:25,y:25},{t:"solid",x:50,y:25},{t:"stripe",x:75,y:25}]},
+  {id:"3-03",par:3,balls:[{t:"stripe",x:50,y:12.5},{t:"solid",x:50,y:25},{t:"stripe",x:50,y:37.5}]},
+  {id:"3-04",par:3,balls:[{t:"solid",x:75,y:25},{t:"stripe",x:87.5,y:2}]},
+  {id:"4-01",par:4,balls:[{t:"stripe",x:25,y:25},{t:"solid",x:50,y:12.5},{t:"solid",x:50,y:37.5},{t:"stripe",x:75,y:25}]},
+  {id:"4-02",par:4,balls:[{t:"solid",x:37.5,y:25},{t:"stripe",x:50,y:25},{t:"stripe",x:62.5,y:25},{t:"stripe",x:75,y:25}]},
+  {id:"4-03",par:4,balls:[{t:"stripe",x:25,y:25},{t:"stripe",x:62.5,y:12.5},{t:"solid",x:87.5,y:37.5}]},
+  {id:"4-04",par:4,balls:[{t:"stripe",x:37.5,y:37.5},{t:"stripe",x:50,y:25},{t:"stripe",x:75,y:12.5},{t:"solid",x:75,y:25}]},
+  {id:"4-05",par:4,balls:[{t:"solid",x:50,y:12.5},{t:"stripe",x:50,y:25},{t:"solid",x:50,y:37.5},{t:"stripe",x:62.5,y:12.5}]},
+  {id:"5-01",par:5,balls:[{t:"solid",x:62.5,y:12.5},{t:"solid",x:62.5,y:37.5},{t:"stripe",x:75,y:25},{t:"solid",x:87.5,y:12.5}]},
+  {id:"5-02",par:5,balls:[{t:"solid",x:12.5,y:25},{t:"stripe",x:25,y:12.5},{t:"solid",x:25,y:25},{t:"stripe",x:25,y:37.5},{t:"solid",x:37.5,y:25}]},
+  {id:"5-03",par:5,balls:[{t:"stripe",x:25,y:12.5},{t:"stripe",x:25,y:37.5},{t:"solid",x:50,y:25},{t:"stripe",x:75,y:12.5},{t:"stripe",x:75,y:37.5}]},
+  {id:"6-01",par:6,balls:[{t:"stripe",x:2,y:2},{t:"stripe",x:2,y:48},{t:"stripe",x:50,y:2},{t:"stripe",x:50,y:48},{t:"stripe",x:98,y:2},{t:"stripe",x:98,y:48}]},
+];
+
+function loadCoursePreset(id){
+  const preset=COURSE_PRESETS.find(p=>p.id===id);
+  if(!preset)return;
+  EMU.balls=[emuBall('cue','cue',25,25),...preset.balls.map((b,i)=>emuBall(id+'-'+b.t+'-'+i,b.t,b.x,b.y))];
+  EMU.selectedId=null;EMU.trajectories=[];EMU.hasAimLine=false;EMU.shotHistory=[];EMU.preShotBalls=null;
+  render();setTimeout(drawEmulatorCanvas,50);
+}
+
 function initEmulator(){
   EMU.balls=[emuBall('cue','cue',25,25)];
   EMU.preShotBalls=null;EMU.selectedId=null;EMU.trajectories=[];
@@ -998,6 +1025,14 @@ function rEmulator(){
             <div style="margin-bottom:8px"><span style="font-size:11px;color:var(--muted-fg);display:block;margin-bottom:4px">Table Speed</span><div class="flex gap-1">${toggleBtn('tableSpeed','slow','Slow')}${toggleBtn('tableSpeed','medium','Medium')}${toggleBtn('tableSpeed','fast','Fast')}</div></div>
             <div style="margin-bottom:8px"><span style="font-size:11px;color:var(--muted-fg);display:block;margin-bottom:4px">Equipment</span><div class="flex gap-1">${toggleBtn('equipment','dirty','Dirty')}${toggleBtn('equipment','average','Average')}${toggleBtn('equipment','clean','Clean')}</div></div>
             <div style="margin-bottom:8px"><span style="font-size:11px;color:var(--muted-fg);display:block;margin-bottom:4px">Rails</span><div class="flex gap-1">${toggleBtn('rails','soft','Soft')}${toggleBtn('rails','medium','Medium')}${toggleBtn('rails','firm','Firm')}</div></div>
+          </div>`:''}
+          ${secHead('presets','Course Layouts')}
+          ${EMU.expandedSections.presets?`<div style="${accContent};max-height:200px;overflow-y:auto">
+            ${[2,3,4,5,6].map(par=>{
+              const grp=COURSE_PRESETS.filter(p=>p.par===par);
+              if(!grp.length)return'';
+              return`<div><span style="font-size:11px;color:var(--muted-fg);display:block;margin:8px 0 4px">Par ${par}</span><div class="flex gap-1" style="flex-wrap:wrap">${grp.map(p=>`<button class="btn btn-ghost" style="font-size:11px;padding:2px 8px" data-testid="button-preset-${p.id}" onclick="loadCoursePreset('${p.id}')">${p.id}</button>`).join('')}</div></div>`;
+            }).join('')}
           </div>`:''}
         </div>
       </div>

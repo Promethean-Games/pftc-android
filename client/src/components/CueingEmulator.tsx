@@ -34,6 +34,109 @@ const BALL_FILL: Record<string, string> = {
   stripe: "#ffffff",
 };
 
+interface PresetBall {
+  type: "solid" | "stripe";
+  x: number;
+  y: number;
+}
+
+interface CoursePreset {
+  id: string;
+  label: string;
+  par: number;
+  balls: PresetBall[];
+}
+
+const COURSE_PRESETS: CoursePreset[] = [
+  { id: "2-01", label: "2-01", par: 2, balls: [
+    { type: "stripe", x: 50, y: 2 },
+    { type: "stripe", x: 50, y: 48 },
+  ]},
+  { id: "2-02", label: "2-02", par: 2, balls: [
+    { type: "stripe", x: 12.5, y: 37.5 },
+    { type: "stripe", x: 87.5, y: 12.5 },
+  ]},
+  { id: "2-03", label: "2-03", par: 2, balls: [
+    { type: "stripe", x: 87.5, y: 37.5 },
+    { type: "stripe", x: 62.5, y: 12.5 },
+  ]},
+  { id: "3-01", label: "3-01", par: 3, balls: [
+    { type: "stripe", x: 37.5, y: 25 },
+    { type: "solid", x: 87.5, y: 12.5 },
+  ]},
+  { id: "3-02", label: "3-02", par: 3, balls: [
+    { type: "stripe", x: 25, y: 25 },
+    { type: "solid", x: 50, y: 25 },
+    { type: "stripe", x: 75, y: 25 },
+  ]},
+  { id: "3-03", label: "3-03", par: 3, balls: [
+    { type: "stripe", x: 50, y: 12.5 },
+    { type: "solid", x: 50, y: 25 },
+    { type: "stripe", x: 50, y: 37.5 },
+  ]},
+  { id: "3-04", label: "3-04", par: 3, balls: [
+    { type: "solid", x: 75, y: 25 },
+    { type: "stripe", x: 87.5, y: 2 },
+  ]},
+  { id: "4-01", label: "4-01", par: 4, balls: [
+    { type: "stripe", x: 25, y: 25 },
+    { type: "solid", x: 50, y: 12.5 },
+    { type: "solid", x: 50, y: 37.5 },
+    { type: "stripe", x: 75, y: 25 },
+  ]},
+  { id: "4-02", label: "4-02", par: 4, balls: [
+    { type: "solid", x: 37.5, y: 25 },
+    { type: "stripe", x: 50, y: 25 },
+    { type: "stripe", x: 62.5, y: 25 },
+    { type: "stripe", x: 75, y: 25 },
+  ]},
+  { id: "4-03", label: "4-03", par: 4, balls: [
+    { type: "stripe", x: 25, y: 25 },
+    { type: "stripe", x: 62.5, y: 12.5 },
+    { type: "solid", x: 87.5, y: 37.5 },
+  ]},
+  { id: "4-04", label: "4-04", par: 4, balls: [
+    { type: "stripe", x: 37.5, y: 37.5 },
+    { type: "stripe", x: 50, y: 25 },
+    { type: "stripe", x: 75, y: 12.5 },
+    { type: "solid", x: 75, y: 25 },
+  ]},
+  { id: "4-05", label: "4-05", par: 4, balls: [
+    { type: "solid", x: 50, y: 12.5 },
+    { type: "stripe", x: 50, y: 25 },
+    { type: "solid", x: 50, y: 37.5 },
+    { type: "stripe", x: 62.5, y: 12.5 },
+  ]},
+  { id: "5-01", label: "5-01", par: 5, balls: [
+    { type: "solid", x: 62.5, y: 12.5 },
+    { type: "solid", x: 62.5, y: 37.5 },
+    { type: "stripe", x: 75, y: 25 },
+    { type: "solid", x: 87.5, y: 12.5 },
+  ]},
+  { id: "5-02", label: "5-02", par: 5, balls: [
+    { type: "solid", x: 12.5, y: 25 },
+    { type: "stripe", x: 25, y: 12.5 },
+    { type: "solid", x: 25, y: 25 },
+    { type: "stripe", x: 25, y: 37.5 },
+    { type: "solid", x: 37.5, y: 25 },
+  ]},
+  { id: "5-03", label: "5-03", par: 5, balls: [
+    { type: "stripe", x: 25, y: 12.5 },
+    { type: "stripe", x: 25, y: 37.5 },
+    { type: "solid", x: 50, y: 25 },
+    { type: "stripe", x: 75, y: 12.5 },
+    { type: "stripe", x: 75, y: 37.5 },
+  ]},
+  { id: "6-01", label: "6-01", par: 6, balls: [
+    { type: "stripe", x: 2, y: 2 },
+    { type: "stripe", x: 2, y: 48 },
+    { type: "stripe", x: 50, y: 2 },
+    { type: "stripe", x: 50, y: 48 },
+    { type: "stripe", x: 98, y: 2 },
+    { type: "stripe", x: 98, y: 48 },
+  ]},
+];
+
 function generateId(): string {
   return Math.random().toString(36).substring(2, 9);
 }
@@ -946,6 +1049,57 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
                         }
                       />
                     </div>
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="presets">
+                <AccordionTrigger className="text-sm py-2" data-testid="accordion-course-layouts">
+                  Course Layouts
+                </AccordionTrigger>
+                <AccordionContent>
+                  <div className="space-y-1 pb-3 max-h-48 overflow-y-auto">
+                    {[2, 3, 4, 5, 6].map((par) => {
+                      const group = COURSE_PRESETS.filter((p) => p.par === par);
+                      if (group.length === 0) return null;
+                      return (
+                        <div key={par}>
+                          <span className="text-xs text-muted-foreground block mb-1 mt-2">
+                            Par {par}
+                          </span>
+                          <div className="flex flex-wrap gap-1">
+                            {group.map((preset) => (
+                              <Button
+                                key={preset.id}
+                                size="sm"
+                                variant="outline"
+                                className="text-xs"
+                                data-testid={`button-preset-${preset.id}`}
+                                onClick={() => {
+                                  const newBalls: Ball[] = [
+                                    createBall("cue", "cue", 25, 25),
+                                    ...preset.balls.map((pb, i) =>
+                                      createBall(
+                                        `${preset.id}-${pb.type}-${i}`,
+                                        pb.type,
+                                        pb.x,
+                                        pb.y
+                                      )
+                                    ),
+                                  ];
+                                  setBalls(newBalls);
+                                  setShotHistory([]);
+                                  setSelectedBallId(null);
+                                  setHasAimLine(false);
+                                }}
+                              >
+                                {preset.label}
+                              </Button>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </AccordionContent>
               </AccordionItem>
