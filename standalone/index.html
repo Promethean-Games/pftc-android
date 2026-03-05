@@ -370,7 +370,7 @@ function rSplash(app){
         <button class="btn btn-ghost btn-xl" data-testid="button-how-to-play" onclick="S.showTutorial=true;S.tutorialIdx=0;render()">${I.book} How to Play</button>
       </div>
     </div>${S.showTutorial?rTutorial():''}${S.showLeveler?rLeveler():''}${S.showEmulator?rEmulator():''}`;
-  if(S.showToolsMenu){document.addEventListener('click',closeToolsMenu,{once:true});}
+  if(S.showToolsMenu){setTimeout(()=>document.addEventListener('click',closeToolsMenu,{once:true}),0);}
   if(S.showEmulator){setTimeout(drawEmulatorCanvas,50);}
 }
 
@@ -1008,7 +1008,7 @@ function rGame(){
 
   const isJokerHole=dc&&dc.joker;
   return`<div class="screen" style="position:relative" data-testid="game-screen">
-    ${isJokerHole?`<div style="position:absolute;inset:0;pointer-events:none;z-index:0;background:url('cards/joker-bg.png') no-repeat center center;background-size:60%;opacity:0.12" data-testid="joker-background"></div>`:''}
+    ${isJokerHole?`<div style="position:absolute;inset:0;pointer-events:none;z-index:-1;background:url('cards/joker-bg.png') no-repeat center center;background-size:60%;opacity:0.12" data-testid="joker-background"></div>`:''}
     ${rPlayerHeader(cp,ldr,st)}
     <div style="height:2px;background:${cp.color}" class="mb-4"></div>
     <div class="flex justify-between items-center mb-3 gap-2">
