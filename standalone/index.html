@@ -671,10 +671,12 @@ function emuSimulate(){
     }}
     for(const b of balls){
       if(b.pocketed)continue;
-      if(b.pos.x-EMU.BR<0){b.pos.x=EMU.BR;b.vel.x=Math.abs(b.vel.x)*railR;b.vel.y+=b.spin.y*0.15;b.spin.y*=0.7;}
-      if(b.pos.x+EMU.BR>EMU.TW){b.pos.x=EMU.TW-EMU.BR;b.vel.x=-Math.abs(b.vel.x)*railR;b.vel.y+=-b.spin.y*0.15;b.spin.y*=0.7;}
-      if(b.pos.y-EMU.BR<0){b.pos.y=EMU.BR;b.vel.y=Math.abs(b.vel.y)*railR;b.vel.x+=b.spin.x*0.15;b.spin.x*=0.7;}
-      if(b.pos.y+EMU.BR>EMU.TH){b.pos.y=EMU.TH-EMU.BR;b.vel.y=-Math.abs(b.vel.y)*railR;b.vel.x+=-b.spin.x*0.15;b.spin.x*=0.7;}
+      let railHit=false;
+      if(b.pos.x-EMU.BR<0){b.pos.x=EMU.BR;b.vel.x=Math.abs(b.vel.x)*railR;b.vel.y+=b.spin.y*0.15;b.spin.y*=0.7;railHit=true;}
+      if(b.pos.x+EMU.BR>EMU.TW){b.pos.x=EMU.TW-EMU.BR;b.vel.x=-Math.abs(b.vel.x)*railR;b.vel.y+=-b.spin.y*0.15;b.spin.y*=0.7;railHit=true;}
+      if(b.pos.y-EMU.BR<0){b.pos.y=EMU.BR;b.vel.y=Math.abs(b.vel.y)*railR;b.vel.x+=b.spin.x*0.15;b.spin.x*=0.7;railHit=true;}
+      if(b.pos.y+EMU.BR>EMU.TH){b.pos.y=EMU.TH-EMU.BR;b.vel.y=-Math.abs(b.vel.y)*railR;b.vel.x+=-b.spin.x*0.15;b.spin.x*=0.7;railHit=true;}
+      if(railHit){const rsp=vLen(b.vel);if(rsp>1e-10){const rd=vNorm(b.vel);const rp={x:-rd.y,y:rd.x};const sc=b.spin.x*rp.x+b.spin.y*rp.y;b.spin={x:rd.x*rsp+rp.x*sc,y:rd.y*rsp+rp.y*sc};}}
     }
     for(const b of balls){
       if(b.pocketed)continue;
@@ -687,15 +689,13 @@ function emuSimulate(){
       const relM=Math.sqrt(relX*relX+relY*relY);
       if(relM>sp*0.05){
         const slDec=sFric*GG*DT;
-        const slDir=relM>1e-10?{x:relX/relM,y:relY/relM}:{x:0,y:0};
-        b.vel.x+=-slDir.x*slDec*0.4;
-        b.vel.y+=-slDir.y*slDec*0.4;
-        const spinDR=sFric*5*DT;
-        const sp2=vLen(b.vel);const vd2=vNorm(b.vel);
-        const nr2x=vd2.x*sp2,nr2y=vd2.y*sp2;
-        const rel2x=b.spin.x-nrSpinX,rel2y=b.spin.y-nrSpinY;
-        const factor=Math.max(0,1-spinDR);
-        b.spin={x:nr2x+rel2x*factor,y:nr2y+rel2y*factor};
+        const velDec=Math.min(slDec,sp*0.5);
+        const newSp=Math.max(0,sp-velDec);
+        b.vel={x:vDir.x*newSp,y:vDir.y*newSp};
+        const spinCR=sFric*8*DT;
+        const nrNew={x:vDir.x*newSp,y:vDir.y*newSp};
+        const factor=Math.max(0,1-spinCR);
+        b.spin={x:nrNew.x+relX*factor,y:nrNew.y+relY*factor};
       }else{
         b.spin={x:vDir.x*sp,y:vDir.y*sp};
         const rDec=rFric*GG*DT;

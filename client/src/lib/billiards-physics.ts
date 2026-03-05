@@ -174,12 +174,15 @@ function resolveRailCollision(
   ball: Ball,
   restitution: number
 ): void {
+  let hit = false;
+
   if (ball.pos.x - BALL_RADIUS < 0) {
     ball.pos.x = BALL_RADIUS;
     ball.vel.x = Math.abs(ball.vel.x) * restitution;
     const spinEffect = ball.spin.y * 0.15;
     ball.vel.y += spinEffect;
     ball.spin.y *= 0.7;
+    hit = true;
   }
   if (ball.pos.x + BALL_RADIUS > TABLE_WIDTH) {
     ball.pos.x = TABLE_WIDTH - BALL_RADIUS;
@@ -187,6 +190,7 @@ function resolveRailCollision(
     const spinEffect = -ball.spin.y * 0.15;
     ball.vel.y += spinEffect;
     ball.spin.y *= 0.7;
+    hit = true;
   }
   if (ball.pos.y - BALL_RADIUS < 0) {
     ball.pos.y = BALL_RADIUS;
@@ -194,6 +198,7 @@ function resolveRailCollision(
     const spinEffect = ball.spin.x * 0.15;
     ball.vel.x += spinEffect;
     ball.spin.x *= 0.7;
+    hit = true;
   }
   if (ball.pos.y + BALL_RADIUS > TABLE_HEIGHT) {
     ball.pos.y = TABLE_HEIGHT - BALL_RADIUS;
@@ -201,6 +206,17 @@ function resolveRailCollision(
     const spinEffect = -ball.spin.x * 0.15;
     ball.vel.x += spinEffect;
     ball.spin.x *= 0.7;
+    hit = true;
+  }
+
+  if (hit) {
+    const speed = vecLen(ball.vel);
+    if (speed > 1e-10) {
+      const newDir = vecNorm(ball.vel);
+      const perpDir = vecPerp(newDir);
+      const sideComponent = vecDot(ball.spin, perpDir);
+      ball.spin = vecAdd(vecScale(newDir, speed), vecScale(perpDir, sideComponent));
+    }
   }
 }
 
@@ -229,17 +245,17 @@ function applyFriction(ball: Ball, rollingFriction: number, slidingFriction: num
 
   if (relSpinMag > speed * 0.05) {
     const slideDecel = slidingFriction * G * dt;
-    const slideDir = vecNorm(relSpin);
-    const slideForceX = -slideDir.x * slideDecel * 0.4;
-    const slideForceY = -slideDir.y * slideDecel * 0.4;
 
-    ball.vel.x += slideForceX;
-    ball.vel.y += slideForceY;
+    const velDecel = Math.min(slideDecel, speed * 0.5);
+    const newSpeed = Math.max(0, speed - velDecel);
+    ball.vel = vecScale(velDir, newSpeed);
 
-    const spinDecayRate = slidingFriction * 5 * dt;
+    const spinConvergeRate = slidingFriction * 8 * dt;
+    const newNaturalRoll = vecScale(velDir, newSpeed);
+    const newRelSpin = vecSub(ball.spin, naturalRollSpin);
     ball.spin = vecAdd(
-      naturalRollSpin,
-      vecScale(relSpin, Math.max(0, 1 - spinDecayRate))
+      newNaturalRoll,
+      vecScale(newRelSpin, Math.max(0, 1 - spinConvergeRate))
     );
   } else {
     ball.spin = { ...naturalRollSpin };
