@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { X, Plus, Trash2, Undo2, Crosshair, Grid3x3, Move } from "lucide-react";
+import { X, Plus, Trash2, Undo2, Crosshair, Grid3x3, Move, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import {
@@ -59,6 +59,7 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
 
   const [snapToGrid, setSnapToGrid] = useState(true);
   const [moveCueBall, setMoveCueBall] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
 
   const [tableConfig, setTableConfig] = useState<TableConfig>({
     tableSpeed: "medium",
@@ -624,6 +625,14 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
           )}
           <Button
             size="icon"
+            variant={showSettings ? "default" : "ghost"}
+            onClick={() => setShowSettings((v) => !v)}
+            data-testid="button-toggle-settings"
+          >
+            <Settings />
+          </Button>
+          <Button
+            size="icon"
             variant="ghost"
             onClick={onClose}
             data-testid="button-close-emulator"
@@ -633,127 +642,145 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
         </div>
       </div>
 
-      <div
-        ref={containerRef}
-        className="flex-1 min-h-0 bg-[#1a1a2e] dark:bg-[#0a0a1a] relative"
-        style={{ touchAction: "none" }}
-      >
-        <canvas
-          ref={canvasRef}
-          width={canvasSize.width}
-          height={canvasSize.height}
-          style={{ width: "100%", height: "100%" }}
-          onMouseDown={handlePointerDown}
-          onMouseMove={handlePointerMove}
-          onMouseUp={handlePointerUp}
-          onMouseLeave={handlePointerUp}
-          onTouchStart={handlePointerDown}
-          onTouchMove={handlePointerMove}
-          onTouchEnd={handlePointerUp}
-          data-testid="canvas-table"
-        />
-      </div>
+      <div className="flex-1 min-h-0 relative overflow-hidden">
+        <div
+          ref={containerRef}
+          className="absolute inset-0 bg-[#1a1a2e] dark:bg-[#0a0a1a]"
+          style={{ touchAction: "none" }}
+        >
+          <canvas
+            ref={canvasRef}
+            width={canvasSize.width}
+            height={canvasSize.height}
+            style={{ width: "100%", height: "100%" }}
+            onMouseDown={handlePointerDown}
+            onMouseMove={handlePointerMove}
+            onMouseUp={handlePointerUp}
+            onMouseLeave={handlePointerUp}
+            onTouchStart={handlePointerDown}
+            onTouchMove={handlePointerMove}
+            onTouchEnd={handlePointerUp}
+            data-testid="canvas-table"
+          />
+        </div>
 
-      <div className="border-t overflow-y-auto" style={{ maxHeight: "40vh" }}>
-        <Accordion type="multiple" className="px-3">
-          <AccordionItem value="speed">
-            <AccordionTrigger className="text-sm py-2">
-              Shot Speed: {shotSpeed}
-            </AccordionTrigger>
-            <AccordionContent>
-              <div className="pb-3">
-                <div className="flex justify-between text-xs text-muted-foreground mb-1">
-                  <span>Soft</span>
-                  <span>Power</span>
-                </div>
-                <Slider
-                  value={[shotSpeed]}
-                  min={1}
-                  max={10}
-                  step={1}
-                  onValueChange={([v]) => setShotSpeed(v)}
-                  data-testid="slider-speed"
-                />
-              </div>
-            </AccordionContent>
-          </AccordionItem>
-
-          <AccordionItem value="angle">
-            <AccordionTrigger className="text-sm py-2">
-              Fine-Tune Angle: {angleFine > 0 ? "+" : ""}
-              {angleFine.toFixed(1)}°
-            </AccordionTrigger>
-            <AccordionContent>
-              <div className="pb-3">
-                <div className="flex justify-between text-xs text-muted-foreground mb-1">
-                  <span>-5°</span>
-                  <span>+5°</span>
-                </div>
-                <Slider
-                  value={[angleFine]}
-                  min={-5}
-                  max={5}
-                  step={0.1}
-                  onValueChange={([v]) => setAngleFine(Math.round(v * 10) / 10)}
-                  data-testid="slider-angle"
-                />
-              </div>
-            </AccordionContent>
-          </AccordionItem>
-
-          <AccordionItem value="english">
-            <AccordionTrigger className="text-sm py-2">
-              English: H {englishX > 0 ? "+" : ""}{englishX.toFixed(1)}, V {englishY > 0 ? "+" : ""}{englishY.toFixed(1)} tips
-            </AccordionTrigger>
-            <AccordionContent>
-              <div className="pb-3">
-                <div className="flex gap-4 items-start">
-                  <div
-                    className="relative flex-shrink-0 cursor-pointer"
-                    style={{ width: 120, height: 120 }}
-                    onClick={handleEnglishDiagramClick}
-                    data-testid="english-diagram"
-                  >
-                    <svg width="120" height="120" viewBox="0 0 120 120">
-                      <circle cx="60" cy="60" r="58" fill="white" stroke="#ccc" strokeWidth="1" />
-                      <circle cx="60" cy="60" r="58" fill="none" stroke="#ef4444" strokeWidth="1" strokeDasharray="4 3" opacity="0.5" />
-                      <line x1="60" y1="2" x2="60" y2="118" stroke="rgba(0,0,0,0.15)" strokeWidth="0.5" />
-                      <line x1="2" y1="60" x2="118" y2="60" stroke="rgba(0,0,0,0.15)" strokeWidth="0.5" />
-                      {[-1.5, -1.25, -1, -0.75, -0.5, -0.25, 0, 0.25, 0.5, 0.75, 1, 1.25, 1.5].map((vx) =>
-                        [-1.5, -1.25, -1, -0.75, -0.5, -0.25, 0, 0.25, 0.5, 0.75, 1, 1.25, 1.5].map((vy) => {
-                          const px = 60 + (vx / 1.5) * 58;
-                          const py = 60 + (vy / 1.5) * 58;
-                          return (
-                            <circle
-                              key={`${vx}-${vy}`}
-                              cx={px}
-                              cy={py}
-                              r={1.5}
-                              fill="rgba(0,0,0,0.12)"
-                            />
-                          );
-                        })
-                      )}
-                      <circle
-                        cx={60 + (englishX / 1.5) * 58}
-                        cy={60 + (englishY / 1.5) * 58}
-                        r={Math.max(6, 58 / 3)}
-                        fill="rgba(59,130,246,0.25)"
-                        stroke="#3b82f6"
-                        strokeWidth="1.5"
-                        data-testid="english-tip-circle"
-                      />
-                      <circle
-                        cx={60 + (englishX / 1.5) * 58}
-                        cy={60 + (englishY / 1.5) * 58}
-                        r={3}
-                        fill="#3b82f6"
-                        data-testid="english-dot"
-                      />
-                    </svg>
-                    <span className="absolute text-muted-foreground" style={{ fontSize: 8, bottom: -2, right: 0, opacity: 0.6 }}>miscue limit</span>
+        <div
+          className="absolute top-0 right-0 bottom-0 bg-background border-l overflow-y-auto transition-transform duration-200 z-10"
+          style={{
+            width: 280,
+            transform: showSettings ? "translateX(0)" : "translateX(100%)",
+          }}
+          data-testid="settings-sidebar"
+        >
+          <div className="flex items-center justify-between p-3 border-b">
+            <span className="font-bold text-sm">Settings</span>
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={() => setShowSettings(false)}
+              data-testid="button-close-settings"
+            >
+              <X className="w-4 h-4" />
+            </Button>
+          </div>
+          <div className="p-3">
+            <Accordion type="multiple" defaultValue={["speed", "english"]}>
+              <AccordionItem value="speed">
+                <AccordionTrigger className="text-sm py-2">
+                  Shot Speed: {shotSpeed}
+                </AccordionTrigger>
+                <AccordionContent>
+                  <div className="pb-3">
+                    <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                      <span>Soft</span>
+                      <span>Power</span>
+                    </div>
+                    <Slider
+                      value={[shotSpeed]}
+                      min={1}
+                      max={10}
+                      step={1}
+                      onValueChange={([v]) => setShotSpeed(v)}
+                      data-testid="slider-speed"
+                    />
                   </div>
-                  <div className="flex-1 space-y-3 min-w-0">
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="angle">
+                <AccordionTrigger className="text-sm py-2">
+                  Fine-Tune Angle: {angleFine > 0 ? "+" : ""}
+                  {angleFine.toFixed(1)}°
+                </AccordionTrigger>
+                <AccordionContent>
+                  <div className="pb-3">
+                    <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                      <span>-5°</span>
+                      <span>+5°</span>
+                    </div>
+                    <Slider
+                      value={[angleFine]}
+                      min={-5}
+                      max={5}
+                      step={0.1}
+                      onValueChange={([v]) => setAngleFine(Math.round(v * 10) / 10)}
+                      data-testid="slider-angle"
+                    />
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+
+              <AccordionItem value="english">
+                <AccordionTrigger className="text-sm py-2">
+                  English: H {englishX > 0 ? "+" : ""}{englishX.toFixed(1)}, V {englishY > 0 ? "+" : ""}{englishY.toFixed(1)}
+                </AccordionTrigger>
+                <AccordionContent>
+                  <div className="pb-3 space-y-3">
+                    <div
+                      className="relative cursor-pointer mx-auto"
+                      style={{ width: 120, height: 120 }}
+                      onClick={handleEnglishDiagramClick}
+                      data-testid="english-diagram"
+                    >
+                      <svg width="120" height="120" viewBox="0 0 120 120">
+                        <circle cx="60" cy="60" r="58" fill="white" stroke="#ccc" strokeWidth="1" />
+                        <circle cx="60" cy="60" r="58" fill="none" stroke="#ef4444" strokeWidth="1" strokeDasharray="4 3" opacity="0.5" />
+                        <line x1="60" y1="2" x2="60" y2="118" stroke="rgba(0,0,0,0.15)" strokeWidth="0.5" />
+                        <line x1="2" y1="60" x2="118" y2="60" stroke="rgba(0,0,0,0.15)" strokeWidth="0.5" />
+                        {[-1.5, -1.25, -1, -0.75, -0.5, -0.25, 0, 0.25, 0.5, 0.75, 1, 1.25, 1.5].map((vx) =>
+                          [-1.5, -1.25, -1, -0.75, -0.5, -0.25, 0, 0.25, 0.5, 0.75, 1, 1.25, 1.5].map((vy) => {
+                            const px = 60 + (vx / 1.5) * 58;
+                            const py = 60 + (vy / 1.5) * 58;
+                            return (
+                              <circle
+                                key={`${vx}-${vy}`}
+                                cx={px}
+                                cy={py}
+                                r={1.5}
+                                fill="rgba(0,0,0,0.12)"
+                              />
+                            );
+                          })
+                        )}
+                        <circle
+                          cx={60 + (englishX / 1.5) * 58}
+                          cy={60 + (englishY / 1.5) * 58}
+                          r={Math.max(6, 58 / 3)}
+                          fill="rgba(59,130,246,0.25)"
+                          stroke="#3b82f6"
+                          strokeWidth="1.5"
+                          data-testid="english-tip-circle"
+                        />
+                        <circle
+                          cx={60 + (englishX / 1.5) * 58}
+                          cy={60 + (englishY / 1.5) * 58}
+                          r={3}
+                          fill="#3b82f6"
+                          data-testid="english-dot"
+                        />
+                      </svg>
+                      <span className="absolute text-muted-foreground" style={{ fontSize: 8, bottom: -2, right: 0, opacity: 0.6 }}>miscue limit</span>
+                    </div>
                     <div>
                       <div className="flex justify-between text-xs text-muted-foreground mb-1">
                         <span>-1.5</span>
@@ -798,78 +825,78 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
                       Center
                     </Button>
                   </div>
-                </div>
-              </div>
-            </AccordionContent>
-          </AccordionItem>
+                </AccordionContent>
+              </AccordionItem>
 
-          <AccordionItem value="physics">
-            <AccordionTrigger className="text-sm py-2">
-              Table Physics
-            </AccordionTrigger>
-            <AccordionContent>
-              <div className="space-y-3 pb-3">
-                <div>
-                  <span className="text-xs text-muted-foreground block mb-1">
-                    Table Speed
-                  </span>
-                  <ToggleGroup
-                    value={tableConfig.tableSpeed}
-                    options={[
-                      { label: "Slow", value: "slow" },
-                      { label: "Medium", value: "medium" },
-                      { label: "Fast", value: "fast" },
-                    ]}
-                    onChange={(v) =>
-                      setTableConfig((p) => ({
-                        ...p,
-                        tableSpeed: v as TableConfig["tableSpeed"],
-                      }))
-                    }
-                  />
-                </div>
-                <div>
-                  <span className="text-xs text-muted-foreground block mb-1">
-                    Equipment
-                  </span>
-                  <ToggleGroup
-                    value={tableConfig.equipment}
-                    options={[
-                      { label: "Dirty", value: "dirty" },
-                      { label: "Average", value: "average" },
-                      { label: "Clean", value: "clean" },
-                    ]}
-                    onChange={(v) =>
-                      setTableConfig((p) => ({
-                        ...p,
-                        equipment: v as TableConfig["equipment"],
-                      }))
-                    }
-                  />
-                </div>
-                <div>
-                  <span className="text-xs text-muted-foreground block mb-1">
-                    Rails
-                  </span>
-                  <ToggleGroup
-                    value={tableConfig.rails}
-                    options={[
-                      { label: "Soft", value: "soft" },
-                      { label: "Medium", value: "medium" },
-                      { label: "Firm", value: "firm" },
-                    ]}
-                    onChange={(v) =>
-                      setTableConfig((p) => ({
-                        ...p,
-                        rails: v as TableConfig["rails"],
-                      }))
-                    }
-                  />
-                </div>
-              </div>
-            </AccordionContent>
-          </AccordionItem>
-        </Accordion>
+              <AccordionItem value="physics">
+                <AccordionTrigger className="text-sm py-2">
+                  Table Physics
+                </AccordionTrigger>
+                <AccordionContent>
+                  <div className="space-y-3 pb-3">
+                    <div>
+                      <span className="text-xs text-muted-foreground block mb-1">
+                        Table Speed
+                      </span>
+                      <ToggleGroup
+                        value={tableConfig.tableSpeed}
+                        options={[
+                          { label: "Slow", value: "slow" },
+                          { label: "Medium", value: "medium" },
+                          { label: "Fast", value: "fast" },
+                        ]}
+                        onChange={(v) =>
+                          setTableConfig((p) => ({
+                            ...p,
+                            tableSpeed: v as TableConfig["tableSpeed"],
+                          }))
+                        }
+                      />
+                    </div>
+                    <div>
+                      <span className="text-xs text-muted-foreground block mb-1">
+                        Equipment
+                      </span>
+                      <ToggleGroup
+                        value={tableConfig.equipment}
+                        options={[
+                          { label: "Dirty", value: "dirty" },
+                          { label: "Average", value: "average" },
+                          { label: "Clean", value: "clean" },
+                        ]}
+                        onChange={(v) =>
+                          setTableConfig((p) => ({
+                            ...p,
+                            equipment: v as TableConfig["equipment"],
+                          }))
+                        }
+                      />
+                    </div>
+                    <div>
+                      <span className="text-xs text-muted-foreground block mb-1">
+                        Rails
+                      </span>
+                      <ToggleGroup
+                        value={tableConfig.rails}
+                        options={[
+                          { label: "Soft", value: "soft" },
+                          { label: "Medium", value: "medium" },
+                          { label: "Firm", value: "firm" },
+                        ]}
+                        onChange={(v) =>
+                          setTableConfig((p) => ({
+                            ...p,
+                            rails: v as TableConfig["rails"],
+                          }))
+                        }
+                      />
+                    </div>
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+          </div>
+        </div>
       </div>
     </div>
   );
