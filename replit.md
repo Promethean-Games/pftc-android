@@ -67,11 +67,14 @@ The server only handles two Stripe endpoints for the paywall. Development uses V
   - Top-down 9-foot pool table rendered on HTML5 Canvas with green felt, wood rails, 6 pockets, and diamond sights
   - Ball management: add/remove solid (yellow) and stripe (white with green band) balls; drag to reposition; tap to select
   - Aiming: drag from cue ball to set direction; thin aim line extends from cue ball
-  - Full trajectory simulation: colored path lines per ball type (cue=light blue, solids=yellow, stripes=green)
+  - Real-time trajectory preview: trajectories update live as aim angle, speed, english, or physics settings change
+  - Trajectories terminate at pockets (no trajectory extends beyond a pocket)
+  - Colored path lines per ball type (cue=light blue, solids=yellow, stripes=green); each ball involved in a collision gets its own trajectory
+  - Rail bounces: trajectory lines include angles off the rail
   - Settings via accordion panels:
     - Shot Speed: slider 1–10 (maps to initial cue ball velocity)
     - Fine-Tune Angle: slider ±5° with 0.1° steps
-    - English (Spin): visual cue ball diagram with 0.25-tip snap grid + synced horizontal/vertical sliders (-2 to +2 tips)
+    - English (Spin): visual cue ball diagram with 0.25-tip snap grid + synced horizontal/vertical sliders (0 to 2 tips)
     - Table Physics: segmented controls for Table Speed (Slow/Medium/Fast), Equipment (Dirty/Average/Clean), Rails (Soft/Medium/Firm)
   - Physics engine: `client/src/lib/billiards-physics.ts` — pure TypeScript module based on Dr. Dave Alciatore's published research
     - Ball-ball collisions: 2D elastic with throw (friction at contact point)

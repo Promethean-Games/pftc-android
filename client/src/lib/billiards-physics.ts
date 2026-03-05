@@ -321,6 +321,7 @@ export function simulateShot(
       if (ball.pocketed) continue;
       if (checkPocketed(ball)) {
         ball.pocketed = true;
+        trajectoryMap[ball.id]?.push({ x: ball.pos.x, y: ball.pos.y });
         ball.vel = { x: 0, y: 0 };
         ball.spin = { x: 0, y: 0 };
       }
@@ -348,11 +349,11 @@ export function simulateShot(
   }
 
   for (const ball of simBalls) {
-    if (!ball.pocketed && vecLen(ball.vel) > 0) {
-      ball.vel = { x: 0, y: 0 };
-      ball.spin = { x: 0, y: 0 };
-    }
     if (!ball.pocketed) {
+      if (vecLen(ball.vel) > 0) {
+        ball.vel = { x: 0, y: 0 };
+        ball.spin = { x: 0, y: 0 };
+      }
       trajectoryMap[ball.id]?.push({ x: ball.pos.x, y: ball.pos.y });
     }
   }

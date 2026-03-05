@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { X, Plus, Trash2, RotateCcw, Crosshair } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
@@ -16,7 +16,6 @@ import {
   type ShotParams,
   type TableConfig,
   type TrajectorySegment,
-  type SimulationResult,
 } from "@/lib/billiards-physics";
 
 interface CueingEmulatorProps {
@@ -48,7 +47,6 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
   ]);
   const [preShotBalls, setPreShotBalls] = useState<Ball[] | null>(null);
   const [selectedBallId, setSelectedBallId] = useState<string | null>(null);
-  const [trajectories, setTrajectories] = useState<TrajectorySegment[]>([]);
 
   const [aimAngle, setAimAngle] = useState<number>(0);
   const [isAiming, setIsAiming] = useState(false);
@@ -72,6 +70,21 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
     offsetY: number;
   } | null>(null);
   const aimStartRef = useRef<{ x: number; y: number } | null>(null);
+
+  const previewTrajectories = useMemo<TrajectorySegment[]>(() => {
+    if (!hasAimLine) return [];
+    const cueBall = balls.find((b) => b.type === "cue" && !b.pocketed);
+    if (!cueBall) return [];
+    const params: ShotParams = {
+      speed: shotSpeed,
+      angle: aimAngle,
+      angleFine,
+      englishX,
+      englishY,
+    };
+    const result = simulateShot(balls, params, tableConfig);
+    return result.trajectories;
+  }, [hasAimLine, balls, aimAngle, angleFine, shotSpeed, englishX, englishY, tableConfig]);
 
   const getScale = useCallback(() => {
     if (canvasSize.width === 0) return { scale: 1, offsetX: 0, offsetY: 0 };
@@ -174,7 +187,7 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
       drawDiamond(ctx, offsetX + tw + 4, rightD.y, 3);
     }
 
-    for (const traj of trajectories) {
+    for (const traj of previewTrajectories) {
       if (traj.points.length < 2) continue;
       ctx.beginPath();
       ctx.strokeStyle = TRAJ_COLORS[traj.ballType] || "#fff";
@@ -253,24 +266,24 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
       const cueBall = balls.find((b) => b.type === "cue" && !b.pocketed);
       if (cueBall) {
         const totalAngle = aimAngle + (angleFine * Math.PI) / 180;
-        const cp = tableToCanvas(cueBall.pos.x, cueBall.pos.y);
+        const cueCanvas = tableToCanvas(cueBall.pos.x, cueBall.pos.y);
         const lineLen = Math.max(tw, th);
-        const endX = cp.x + Math.cos(totalAngle) * lineLen;
-        const endY = cp.y + Math.sin(totalAngle) * lineLen;
+        const endX = cueCanvas.x + Math.cos(totalAngle) * lineLen;
+        const endY = cueCanvas.y + Math.sin(totalAngle) * lineLen;
 
         ctx.beginPath();
         ctx.setLineDash([6, 4]);
         ctx.strokeStyle = "rgba(255,255,255,0.5)";
         ctx.lineWidth = 1;
-        ctx.moveTo(cp.x, cp.y);
+        ctx.moveTo(cueCanvas.x, cueCanvas.y);
         ctx.lineTo(endX, endY);
         ctx.stroke();
         ctx.setLineDash([]);
 
         ctx.beginPath();
         ctx.arc(
-          cp.x + Math.cos(totalAngle) * 20,
-          cp.y + Math.sin(totalAngle) * 20,
+          cueCanvas.x + Math.cos(totalAngle) * 20,
+          cueCanvas.y + Math.sin(totalAngle) * 20,
           3,
           0,
           Math.PI * 2
@@ -281,7 +294,7 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
     }
   }, [
     balls,
-    trajectories,
+    previewTrajectories,
     selectedBallId,
     hasAimLine,
     aimAngle,
@@ -362,9 +375,9 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
     if (isAiming && aimStartRef.current) {
       const cueBall = balls.find((b) => b.type === "cue" && !b.pocketed);
       if (cueBall) {
-        const cp = tableToCanvas(cueBall.pos.x, cueBall.pos.y);
-        const dx = pos.x - cp.x;
-        const dy = pos.y - cp.y;
+        const cueCanvas = tableToCanvas(cueBall.pos.x, cueBall.pos.y);
+        const dx = pos.x - cueCanvas.x;
+        const dy = pos.y - cueCanvas.y;
         if (Math.sqrt(dx * dx + dy * dy) > 10) {
           setAimAngle(Math.atan2(dy, dx));
           setHasAimLine(true);
@@ -425,8 +438,7 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
       englishY,
     };
 
-    const result: SimulationResult = simulateShot(balls, params, tableConfig);
-    setTrajectories(result.trajectories);
+    const result = simulateShot(balls, params, tableConfig);
     setBalls(result.finalBalls);
     setHasAimLine(false);
     setSelectedBallId(null);
@@ -437,7 +449,6 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
       setBalls(preShotBalls);
       setPreShotBalls(null);
     }
-    setTrajectories([]);
     setHasAimLine(false);
   };
 
@@ -447,10 +458,10 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
 
   const handleEnglishDiagramClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width - 0.5) * 4;
-    const y = ((e.clientY - rect.top) / rect.height - 0.5) * 4;
-    setEnglishX(snapEnglish(Math.max(-2, Math.min(2, x))));
-    setEnglishY(snapEnglish(Math.max(-2, Math.min(2, y))));
+    const x = ((e.clientX - rect.left) / rect.width) * 2;
+    const y = ((e.clientY - rect.top) / rect.height) * 2;
+    setEnglishX(snapEnglish(Math.max(0, Math.min(2, x))));
+    setEnglishY(snapEnglish(Math.max(0, Math.min(2, y))));
   };
 
   const ToggleGroup = ({
@@ -618,21 +629,19 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
 
           <AccordionItem value="english">
             <AccordionTrigger className="text-sm py-2">
-              English: H {englishX > 0 ? "+" : ""}
-              {englishX.toFixed(2)}, V {englishY > 0 ? "+" : ""}
-              {englishY.toFixed(2)}
+              English: H {englishX.toFixed(2)}, V {englishY.toFixed(2)} tips
             </AccordionTrigger>
             <AccordionContent>
               <div className="pb-3">
                 <div className="flex gap-4 items-start">
                   <div
-                    className="relative flex-shrink-0 cursor-pointer border border-border rounded-full"
+                    className="relative flex-shrink-0 cursor-pointer border border-border rounded-md overflow-hidden"
                     style={{ width: 120, height: 120 }}
                     onClick={handleEnglishDiagramClick}
                     data-testid="english-diagram"
                   >
                     <div
-                      className="absolute rounded-full bg-white border border-gray-300"
+                      className="absolute bg-white border border-gray-300"
                       style={{
                         width: 116,
                         height: 116,
@@ -640,14 +649,13 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
                         left: 2,
                       }}
                     />
-                    {Array.from({ length: 17 }).map((_, i) => {
-                      const val = -2 + i * 0.25;
-                      return Array.from({ length: 17 }).map((_, j) => {
-                        const valY = -2 + j * 0.25;
-                        const dist = Math.sqrt(val * val + valY * valY);
-                        if (dist > 2.1) return null;
-                        const px = ((val + 2) / 4) * 116 + 2;
-                        const py = ((valY + 2) / 4) * 116 + 2;
+                    {Array.from({ length: 9 }).map((_, i) => {
+                      const valX = i * 0.25;
+                      return Array.from({ length: 9 }).map((_, j) => {
+                        const valY = j * 0.25;
+                        if (valX > 2 || valY > 2) return null;
+                        const px = (valX / 2) * 116 + 2;
+                        const py = (valY / 2) * 116 + 2;
                         return (
                           <div
                             key={`${i}-${j}`}
@@ -668,8 +676,8 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
                       style={{
                         width: 10,
                         height: 10,
-                        left: ((englishX + 2) / 4) * 116 + 2 - 5,
-                        top: ((englishY + 2) / 4) * 116 + 2 - 5,
+                        left: (englishX / 2) * 116 + 2 - 5,
+                        top: (englishY / 2) * 116 + 2 - 5,
                         boxShadow: "0 0 4px rgba(59,130,246,0.8)",
                       }}
                       data-testid="english-dot"
@@ -677,9 +685,9 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
                     <div
                       className="absolute"
                       style={{
-                        width: 1,
-                        height: 116,
-                        left: 60,
+                        width: 116,
+                        height: 1,
+                        left: 2,
                         top: 2,
                         backgroundColor: "rgba(0,0,0,0.1)",
                       }}
@@ -687,10 +695,10 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
                     <div
                       className="absolute"
                       style={{
-                        width: 116,
-                        height: 1,
+                        width: 1,
+                        height: 116,
                         left: 2,
-                        top: 60,
+                        top: 2,
                         backgroundColor: "rgba(0,0,0,0.1)",
                       }}
                     />
@@ -698,31 +706,33 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
                   <div className="flex-1 space-y-3 min-w-0">
                     <div>
                       <div className="flex justify-between text-xs text-muted-foreground mb-1">
-                        <span>Left (-2)</span>
-                        <span>Right (+2)</span>
+                        <span>0</span>
+                        <span>2 tips</span>
                       </div>
                       <Slider
                         value={[englishX]}
-                        min={-2}
+                        min={0}
                         max={2}
                         step={0.25}
                         onValueChange={([v]) => setEnglishX(v)}
                         data-testid="slider-english-x"
                       />
+                      <span className="text-xs text-muted-foreground">Horizontal</span>
                     </div>
                     <div>
                       <div className="flex justify-between text-xs text-muted-foreground mb-1">
-                        <span>Top (-2)</span>
-                        <span>Bottom (+2)</span>
+                        <span>0</span>
+                        <span>2 tips</span>
                       </div>
                       <Slider
                         value={[englishY]}
-                        min={-2}
+                        min={0}
                         max={2}
                         step={0.25}
                         onValueChange={([v]) => setEnglishY(v)}
                         data-testid="slider-english-y"
                       />
+                      <span className="text-xs text-muted-foreground">Vertical</span>
                     </div>
                     <Button
                       size="sm"
