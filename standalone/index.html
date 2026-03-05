@@ -83,6 +83,7 @@ td.player-cell{text-align:left;font-weight:600}
 .tools-dropdown button{display:flex;align-items:center;gap:8px;width:100%;padding:10px 14px;background:none;color:var(--fg);font-size:14px;text-align:left;border:none;cursor:pointer}
 .tools-dropdown button:active{background:var(--bg2)}
 .leveler-overlay{position:fixed;inset:0;z-index:50;background:var(--bg);display:flex;flex-direction:column}
+.fixed-overlay{position:fixed;inset:0;z-index:50}
 .leveler-header{display:flex;align-items:center;justify-content:space-between;padding:16px;border-bottom:1px solid var(--border)}
 .leveler-body{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;gap:24px;overflow-y:auto}
 .level-container{position:relative;border-radius:50%;transition:box-shadow .3s}
@@ -146,6 +147,9 @@ const I = {
   chevRsm: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>',
   wrench: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>',
   rotateCcw: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>',
+  plus: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>',
+  target: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>',
+  chevD: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>',
 };
 
 const TUTORIAL_SLIDES = [
@@ -179,6 +183,7 @@ let S = {
   jokerPar: null,
   showToolsMenu: false,
   showLeveler: false,
+  showEmulator: false,
   showLevelerTutorial: false,
   levelerTutorialIdx: 0,
 };
@@ -351,6 +356,7 @@ function rSplash(app){
         <div style="position:relative">
           <button class="btn btn-ghost btn-icon" onclick="S.showToolsMenu=!S.showToolsMenu;render()" data-testid="button-tools-menu">${I.wrench}</button>
           ${S.showToolsMenu?`<div class="tools-dropdown" data-testid="tools-dropdown">
+            <button onclick="S.showToolsMenu=false;S.showEmulator=true;initEmulator();render();setTimeout(drawEmulatorCanvas,50)" data-testid="button-cueing-emulator">${I.target||I.game} Cueing Emulator</button>
             <button onclick="S.showToolsMenu=false;S.showLeveler=true;initLeveler();render()" data-testid="button-table-leveler">${I.game} Table Leveler</button>
           </div>`:''}
         </div>
@@ -361,8 +367,9 @@ function rSplash(app){
         <button class="btn btn-outline btn-xl" data-testid="button-load-game" onclick="S.screen='load';render()">Load Game</button>
         <button class="btn btn-ghost btn-xl" data-testid="button-how-to-play" onclick="S.showTutorial=true;S.tutorialIdx=0;render()">${I.book} How to Play</button>
       </div>
-    </div>${S.showTutorial?rTutorial():''}${S.showLeveler?rLeveler():''}`;
+    </div>${S.showTutorial?rTutorial():''}${S.showLeveler?rLeveler():''}${S.showEmulator?rEmulator():''}`;
   if(S.showToolsMenu){document.addEventListener('click',closeToolsMenu,{once:true});}
+  if(S.showEmulator){setTimeout(drawEmulatorCanvas,50);}
 }
 
 function closeToolsMenu(e){
@@ -576,6 +583,306 @@ function rLeveler(){
     </div>
     <div class="leveler-body">${body}</div>
     ${S.showLevelerTutorial?rLevelerTutorial():''}
+  </div>`;
+}
+
+const EMU={
+  balls:[],preShotBalls:null,selectedId:null,trajectories:[],
+  aimAngle:0,hasAimLine:false,isAiming:false,aimStart:null,dragBall:null,
+  shotSpeed:5,angleFine:0,englishX:0,englishY:0,
+  tableSpeed:'medium',equipment:'average',rails:'medium',
+  TW:100,TH:50,BR:1.125,PR:2.25,
+  POCKETS:[{x:0,y:0},{x:50,y:0},{x:100,y:0},{x:0,y:50},{x:50,y:50},{x:100,y:50}],
+  ROLL_F:{slow:0.022,medium:0.016,fast:0.010},
+  SLIDE_F:{slow:0.28,medium:0.22,fast:0.18},
+  RAIL_R:{soft:0.6,medium:0.75,firm:0.9},
+  THROW_F:{dirty:0.06,average:0.035,clean:0.015},
+  expandedSections:{},
+  idCounter:0
+};
+
+function emuId(){return'eb'+(EMU.idCounter++);}
+function emuBall(id,type,x,y){return{id,type,pos:{x,y},vel:{x:0,y:0},spin:{x:0,y:0},pocketed:false};}
+
+function initEmulator(){
+  EMU.balls=[emuBall('cue','cue',25,25)];
+  EMU.preShotBalls=null;EMU.selectedId=null;EMU.trajectories=[];
+  EMU.aimAngle=0;EMU.hasAimLine=false;EMU.isAiming=false;
+  EMU.shotSpeed=5;EMU.angleFine=0;EMU.englishX=0;EMU.englishY=0;
+  EMU.tableSpeed='medium';EMU.equipment='average';EMU.rails='medium';
+  EMU.expandedSections={};
+}
+
+function emuSimulate(){
+  const DT=0.002,MAX=30000,THRESH=0.05,SPEED_SCALE=8,BB_REST=0.95,SQUIRT=0.006,CURVE=0.0004;
+  const balls=EMU.balls.filter(b=>!b.pocketed).map(b=>({...b,pos:{...b.pos},vel:{...b.vel},spin:{...b.spin}}));
+  const cue=balls.find(b=>b.type==='cue');
+  if(!cue)return{trajectories:[],finalBalls:balls};
+  const totalAngle=EMU.aimAngle+(EMU.angleFine*Math.PI/180);
+  const squirtAngle=-EMU.englishX*SQUIRT*EMU.shotSpeed;
+  const fAngle=totalAngle+squirtAngle;
+  const spd=EMU.shotSpeed*SPEED_SCALE;
+  cue.vel={x:Math.cos(fAngle)*spd,y:Math.sin(fAngle)*spd};
+  cue.spin={x:EMU.englishX*spd*0.3,y:EMU.englishY*spd*0.3};
+  const rFric=EMU.ROLL_F[EMU.tableSpeed],sFric=EMU.SLIDE_F[EMU.tableSpeed];
+  const railR=EMU.RAIL_R[EMU.rails],throwF=EMU.THROW_F[EMU.equipment];
+  const trajMap={};balls.forEach(b=>{trajMap[b.id]=[{x:b.pos.x,y:b.pos.y}];});
+  let rc=0;
+  function vLen(v){return Math.sqrt(v.x*v.x+v.y*v.y);}
+  function vNorm(v){const l=vLen(v);return l<1e-10?{x:0,y:0}:{x:v.x/l,y:v.y/l};}
+  for(let step=0;step<MAX;step++){
+    for(const b of balls){if(b.pocketed)continue;b.pos.x+=b.vel.x*DT;b.pos.y+=b.vel.y*DT;}
+    for(let i=0;i<balls.length;i++){for(let j=i+1;j<balls.length;j++){
+      if(balls[i].pocketed||balls[j].pocketed)continue;
+      const dx=balls[j].pos.x-balls[i].pos.x,dy=balls[j].pos.y-balls[i].pos.y;
+      const dist=Math.sqrt(dx*dx+dy*dy);
+      if(dist<EMU.BR*2&&dist>1e-10){
+        const nx=dx/dist,ny=dy/dist;
+        const overlap=EMU.BR*2-dist;
+        if(overlap>0){balls[i].pos.x-=nx*overlap/2;balls[i].pos.y-=ny*overlap/2;balls[j].pos.x+=nx*overlap/2;balls[j].pos.y+=ny*overlap/2;}
+        const rvx=balls[i].vel.x-balls[j].vel.x,rvy=balls[i].vel.y-balls[j].vel.y;
+        const ns=rvx*nx+rvy*ny;
+        if(ns>0){
+          const imp=ns*(1+BB_REST)/2;
+          balls[i].vel.x-=nx*imp;balls[i].vel.y-=ny*imp;
+          balls[j].vel.x+=nx*imp;balls[j].vel.y+=ny*imp;
+          const tx=-ny,ty=nx;const ts=rvx*tx+rvy*ty;const ti=ts*throwF;
+          balls[j].vel.x+=tx*ti;balls[j].vel.y+=ty*ti;
+          balls[i].vel.x-=tx*ti*0.5;balls[i].vel.y-=ty*ti*0.5;
+        }
+      }
+    }}
+    for(const b of balls){
+      if(b.pocketed)continue;
+      if(b.pos.x-EMU.BR<0){b.pos.x=EMU.BR;b.vel.x=Math.abs(b.vel.x)*railR;b.vel.y+=b.spin.y*0.3;b.spin.y*=0.6;}
+      if(b.pos.x+EMU.BR>EMU.TW){b.pos.x=EMU.TW-EMU.BR;b.vel.x=-Math.abs(b.vel.x)*railR;b.vel.y+=-b.spin.y*0.3;b.spin.y*=0.6;}
+      if(b.pos.y-EMU.BR<0){b.pos.y=EMU.BR;b.vel.y=Math.abs(b.vel.y)*railR;b.vel.x+=b.spin.x*0.3;b.spin.x*=0.6;}
+      if(b.pos.y+EMU.BR>EMU.TH){b.pos.y=EMU.TH-EMU.BR;b.vel.y=-Math.abs(b.vel.y)*railR;b.vel.x+=-b.spin.x*0.3;b.spin.x*=0.6;}
+    }
+    for(const b of balls){
+      if(b.pocketed)continue;
+      const spd=vLen(b.vel);
+      if(spd<THRESH){b.vel={x:0,y:0};b.spin={x:0,y:0};continue;}
+      const sm=vLen(b.spin);const isSl=sm>spd*0.1;const fr=isSl?sFric:rFric;
+      const dec=fr*386.4*DT;const d=vNorm(b.vel);const ns=Math.max(0,spd-dec);
+      b.vel={x:d.x*ns,y:d.y*ns};
+      const sd=1-fr*2*DT;b.spin={x:b.spin.x*Math.max(0,sd),y:b.spin.y*Math.max(0,sd)};
+      if(b.type==='cue'&&vLen(b.spin)>0.01&&vLen(b.vel)>THRESH){
+        const vd=vNorm(b.vel);const px=-vd.y,py=vd.x;
+        const lf=b.spin.x*CURVE*vLen(b.vel);
+        b.vel.x+=px*lf*DT*100;b.vel.y+=py*lf*DT*100;
+      }
+    }
+    for(const b of balls){
+      if(b.pocketed)continue;
+      for(const p of EMU.POCKETS){
+        const d=Math.sqrt((b.pos.x-p.x)**2+(b.pos.y-p.y)**2);
+        if(d<EMU.PR){b.pocketed=true;b.vel={x:0,y:0};b.spin={x:0,y:0};break;}
+      }
+    }
+    rc++;if(rc>=3){rc=0;for(const b of balls){if(!b.pocketed&&vLen(b.vel)>THRESH*0.5){trajMap[b.id].push({x:b.pos.x,y:b.pos.y});}}}
+    let allStop=true;for(const b of balls){if(!b.pocketed&&vLen(b.vel)>THRESH){allStop=false;break;}}
+    if(allStop)break;
+  }
+  for(const b of balls){if(!b.pocketed){b.vel={x:0,y:0};b.spin={x:0,y:0};trajMap[b.id].push({x:b.pos.x,y:b.pos.y});}}
+  return{trajectories:balls.map(b=>({ballId:b.id,ballType:b.type,points:trajMap[b.id]||[]})),finalBalls:balls};
+}
+
+function drawEmulatorCanvas(){
+  const c=document.getElementById('emu-canvas');if(!c)return;
+  const ctx=c.getContext('2d');if(!ctx)return;
+  const dpr=window.devicePixelRatio||1;
+  const rect=c.parentElement.getBoundingClientRect();
+  c.width=rect.width*dpr;c.height=rect.height*dpr;
+  c.style.width=rect.width+'px';c.style.height=rect.height+'px';
+  const pad=10;const scX=(c.width-pad*2)/EMU.TW;const scY=(c.height-pad*2)/EMU.TH;
+  const sc=Math.min(scX,scY);const tw=EMU.TW*sc;const th=EMU.TH*sc;
+  const ox=(c.width-tw)/2;const oy=(c.height-th)/2;
+  EMU._sc=sc;EMU._ox=ox;EMU._oy=oy;EMU._cw=c.width;EMU._ch=c.height;
+  function t2c(tx,ty){return{x:ox+tx*sc,y:oy+ty*sc};}
+  ctx.clearRect(0,0,c.width,c.height);
+  ctx.fillStyle='#5a3825';ctx.fillRect(ox-8,oy-8,tw+16,th+16);
+  ctx.fillStyle='#1a7a3a';ctx.fillRect(ox,oy,tw,th);
+  ctx.strokeStyle='#2d8a4a';ctx.lineWidth=0.5;ctx.setLineDash([4,4]);
+  const hs=t2c(EMU.TW*0.25,0);const hs2=t2c(EMU.TW*0.25,EMU.TH);
+  ctx.beginPath();ctx.moveTo(hs.x,hs.y);ctx.lineTo(hs2.x,hs2.y);ctx.stroke();ctx.setLineDash([]);
+  for(const p of EMU.POCKETS){const pp=t2c(p.x,p.y);ctx.beginPath();ctx.arc(pp.x,pp.y,EMU.PR*sc,0,Math.PI*2);ctx.fillStyle='#111';ctx.fill();}
+  ctx.fillStyle='#d4a853';
+  [0.25,0.5,0.75].forEach(f=>{const tp=t2c(EMU.TW*f,0);ddm(ctx,tp.x,oy-4,3);const bp=t2c(EMU.TW*f,EMU.TH);ddm(ctx,bp.x,oy+th+4,3);});
+  [0.25,0.5,0.75].forEach(f=>{const lp=t2c(0,EMU.TH*f);ddm(ctx,ox-4,lp.y,3);const rp=t2c(EMU.TW,EMU.TH*f);ddm(ctx,ox+tw+4,rp.y,3);});
+  const tColors={cue:'#60a5fa',solid:'#eab308',stripe:'#22c55e'};
+  for(const tr of EMU.trajectories){
+    if(tr.points.length<2)continue;
+    ctx.beginPath();ctx.strokeStyle=tColors[tr.ballType]||'#fff';ctx.lineWidth=1.5;ctx.globalAlpha=0.7;
+    const f=t2c(tr.points[0].x,tr.points[0].y);ctx.moveTo(f.x,f.y);
+    for(let i=1;i<tr.points.length;i++){const p=t2c(tr.points[i].x,tr.points[i].y);ctx.lineTo(p.x,p.y);}
+    ctx.stroke();ctx.globalAlpha=1;
+  }
+  const bFill={cue:'#ffffff',solid:'#eab308',stripe:'#ffffff'};
+  for(const b of EMU.balls){
+    if(b.pocketed)continue;
+    const bp=t2c(b.pos.x,b.pos.y);const br=EMU.BR*sc;
+    ctx.beginPath();ctx.arc(bp.x+1,bp.y+1,br,0,Math.PI*2);ctx.fillStyle='rgba(0,0,0,0.25)';ctx.fill();
+    ctx.beginPath();ctx.arc(bp.x,bp.y,br,0,Math.PI*2);ctx.fillStyle=bFill[b.type];ctx.fill();ctx.strokeStyle='#333';ctx.lineWidth=0.5;ctx.stroke();
+    if(b.type==='stripe'){ctx.save();ctx.beginPath();ctx.arc(bp.x,bp.y,br,0,Math.PI*2);ctx.clip();ctx.fillStyle='#16a34a';ctx.fillRect(bp.x-br,bp.y-br*0.35,br*2,br*0.7);ctx.restore();ctx.beginPath();ctx.arc(bp.x,bp.y,br,0,Math.PI*2);ctx.strokeStyle='#333';ctx.lineWidth=0.5;ctx.stroke();}
+    if(b.type==='cue'){const g=ctx.createRadialGradient(bp.x-br*0.3,bp.y-br*0.3,br*0.1,bp.x,bp.y,br);g.addColorStop(0,'rgba(255,255,255,0.6)');g.addColorStop(1,'rgba(255,255,255,0)');ctx.beginPath();ctx.arc(bp.x,bp.y,br,0,Math.PI*2);ctx.fillStyle=g;ctx.fill();}
+    if(b.id===EMU.selectedId){ctx.beginPath();ctx.arc(bp.x,bp.y,br+3,0,Math.PI*2);ctx.strokeStyle='#60a5fa';ctx.lineWidth=2;ctx.stroke();}
+  }
+  if(EMU.hasAimLine){
+    const cb=EMU.balls.find(b=>b.type==='cue'&&!b.pocketed);
+    if(cb){const ta=EMU.aimAngle+(EMU.angleFine*Math.PI/180);const cp=t2c(cb.pos.x,cb.pos.y);const ll=Math.max(tw,th);
+      ctx.beginPath();ctx.setLineDash([6,4]);ctx.strokeStyle='rgba(255,255,255,0.5)';ctx.lineWidth=1;
+      ctx.moveTo(cp.x,cp.y);ctx.lineTo(cp.x+Math.cos(ta)*ll,cp.y+Math.sin(ta)*ll);ctx.stroke();ctx.setLineDash([]);
+      ctx.beginPath();ctx.arc(cp.x+Math.cos(ta)*20,cp.y+Math.sin(ta)*20,3,0,Math.PI*2);ctx.fillStyle='rgba(255,255,255,0.8)';ctx.fill();
+    }
+  }
+}
+function ddm(ctx,x,y,s){ctx.beginPath();ctx.moveTo(x,y-s);ctx.lineTo(x+s,y);ctx.lineTo(x,y+s);ctx.lineTo(x-s,y);ctx.closePath();ctx.fill();}
+
+function emuCanvasPos(e){
+  const c=document.getElementById('emu-canvas');if(!c)return null;
+  const rect=c.getBoundingClientRect();const dpr=window.devicePixelRatio||1;
+  let cx,cy;
+  if(e.touches&&e.touches.length>0){cx=(e.touches[0].clientX-rect.left)*dpr;cy=(e.touches[0].clientY-rect.top)*dpr;}
+  else{cx=(e.clientX-rect.left)*dpr;cy=(e.clientY-rect.top)*dpr;}
+  const sc=EMU._sc||1;const ox=EMU._ox||0;const oy=EMU._oy||0;
+  return{cx,cy,tx:(cx-ox)/sc,ty:(cy-oy)/sc};
+}
+function emuFindBall(tx,ty){
+  const sc=EMU._sc||1;const hr=EMU.BR+4/sc;
+  for(let i=EMU.balls.length-1;i>=0;i--){const b=EMU.balls[i];if(b.pocketed)continue;const dx=tx-b.pos.x,dy=ty-b.pos.y;if(Math.sqrt(dx*dx+dy*dy)<hr)return b;}
+  return null;
+}
+function emuPointerDown(e){
+  e.preventDefault();const p=emuCanvasPos(e);if(!p)return;
+  const hit=emuFindBall(p.tx,p.ty);
+  if(hit){
+    if(hit.type==='cue'){EMU.isAiming=true;EMU.aimStart=p;EMU.selectedId='cue';}
+    else{EMU.selectedId=hit.id;EMU.dragBall={id:hit.id,ox:hit.pos.x-p.tx,oy:hit.pos.y-p.ty};}
+  }else{EMU.selectedId=null;}
+  drawEmulatorCanvas();
+}
+function emuPointerMove(e){
+  e.preventDefault();const p=emuCanvasPos(e);if(!p)return;
+  if(EMU.isAiming){
+    const cb=EMU.balls.find(b=>b.type==='cue'&&!b.pocketed);
+    if(cb){const sc=EMU._sc||1;const ox=EMU._ox||0;const oy=EMU._oy||0;
+      const cpx=ox+cb.pos.x*sc;const cpy=oy+cb.pos.y*sc;
+      const dx=p.cx-cpx;const dy=p.cy-cpy;
+      if(Math.sqrt(dx*dx+dy*dy)>10){EMU.aimAngle=Math.atan2(dy,dx);EMU.hasAimLine=true;}
+    }
+  }
+  if(EMU.dragBall){
+    const nx=Math.max(EMU.BR,Math.min(EMU.TW-EMU.BR,p.tx+EMU.dragBall.ox));
+    const ny=Math.max(EMU.BR,Math.min(EMU.TH-EMU.BR,p.ty+EMU.dragBall.oy));
+    const b=EMU.balls.find(bl=>bl.id===EMU.dragBall.id);if(b){b.pos.x=nx;b.pos.y=ny;}
+  }
+  drawEmulatorCanvas();
+}
+function emuPointerUp(){EMU.isAiming=false;EMU.aimStart=null;EMU.dragBall=null;}
+function emuAddBall(type){
+  const id=emuId();const cx=60+Math.random()*20;const cy=15+Math.random()*20;
+  EMU.balls.push(emuBall(id,type,cx,cy));drawEmulatorCanvas();
+}
+function emuRemoveSelected(){
+  if(!EMU.selectedId||EMU.selectedId==='cue')return;
+  EMU.balls=EMU.balls.filter(b=>b.id!==EMU.selectedId);EMU.selectedId=null;drawEmulatorCanvas();
+}
+function emuShoot(){
+  if(!EMU.hasAimLine)return;
+  EMU.preShotBalls=EMU.balls.map(b=>({...b,pos:{...b.pos},vel:{...b.vel},spin:{...b.spin}}));
+  const r=emuSimulate();EMU.trajectories=r.trajectories;EMU.balls=r.finalBalls;EMU.hasAimLine=false;EMU.selectedId=null;
+  drawEmulatorCanvas();
+}
+function emuReset(){
+  if(EMU.preShotBalls){EMU.balls=EMU.preShotBalls;EMU.preShotBalls=null;}
+  EMU.trajectories=[];EMU.hasAimLine=false;drawEmulatorCanvas();
+}
+function emuSnapEng(v){return Math.round(v*4)/4;}
+function emuEngClick(e){
+  const el=e.currentTarget;const rect=el.getBoundingClientRect();
+  const x=((e.clientX-rect.left)/rect.width-0.5)*4;
+  const y=((e.clientY-rect.top)/rect.height-0.5)*4;
+  EMU.englishX=emuSnapEng(Math.max(-2,Math.min(2,x)));
+  EMU.englishY=emuSnapEng(Math.max(-2,Math.min(2,y)));
+  render();
+}
+function emuToggleSection(s){EMU.expandedSections[s]=!EMU.expandedSections[s];render();}
+
+function rEmulator(){
+  const selNotCue=EMU.selectedId&&EMU.selectedId!=='cue';
+  const accStyle='cursor:pointer;padding:8px 0;border-bottom:1px solid var(--border);display:flex;justify-between;align-items:center;gap:4px;font-size:14px;font-weight:600';
+  const accContent='padding:8px 0 12px';
+
+  function secHead(key,label){
+    const open=EMU.expandedSections[key];
+    return`<div style="${accStyle}" onclick="emuToggleSection('${key}')"><span>${label}</span><span style="transition:transform .2s;transform:rotate(${open?180:0}deg)">${I.chevD}</span></div>`;
+  }
+
+  const engDotLeft=((EMU.englishX+2)/4)*100;
+  const engDotTop=((EMU.englishY+2)/4)*100;
+
+  const toggleBtn=(group,val,label)=>`<button class="btn ${EMU[group]===val?'btn-primary':'btn-outline'}" style="flex:1;min-height:32px;font-size:12px" onclick="EMU.${group}='${val}';render()">${label}</button>`;
+
+  return`<div class="fixed-overlay" style="display:flex;flex-direction:column;background:var(--bg)" data-testid="cueing-emulator">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:4px;padding:8px;border-bottom:1px solid var(--border);flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap">
+        <span class="font-bold" style="font-size:14px">Cueing Emulator</span>
+        <button class="btn btn-outline" style="font-size:12px;min-height:32px" onclick="emuAddBall('solid')" data-testid="button-add-solid">${I.plus} Solid</button>
+        <button class="btn btn-outline" style="font-size:12px;min-height:32px" onclick="emuAddBall('stripe')" data-testid="button-add-stripe">${I.plus} Stripe</button>
+        ${selNotCue?`<button class="btn btn-outline" style="font-size:12px;min-height:32px" onclick="emuRemoveSelected()" data-testid="button-remove-ball">${I.trash} Remove</button>`:''}
+      </div>
+      <div style="display:flex;align-items:center;gap:4px">
+        <button class="btn btn-primary" style="font-size:12px;min-height:32px" onclick="emuShoot()" ${EMU.hasAimLine?'':'disabled'} data-testid="button-shoot">${I.target||'⊕'} Shoot</button>
+        ${EMU.preShotBalls?`<button class="btn btn-outline" style="font-size:12px;min-height:32px" onclick="emuReset()" data-testid="button-reset">↺ Reset</button>`:''}
+        <button class="btn btn-ghost btn-icon" onclick="S.showEmulator=false;render()" data-testid="button-close-emulator">${I.x}</button>
+      </div>
+    </div>
+    <div style="flex:1;min-height:0;background:#1a1a2e;position:relative;touch-action:none" id="emu-canvas-wrap">
+      <canvas id="emu-canvas" style="width:100%;height:100%;display:block"
+        onmousedown="emuPointerDown(event)" onmousemove="emuPointerMove(event)" onmouseup="emuPointerUp()" onmouseleave="emuPointerUp()"
+        ontouchstart="emuPointerDown(event)" ontouchmove="emuPointerMove(event)" ontouchend="emuPointerUp()"
+        data-testid="canvas-table"></canvas>
+    </div>
+    <div style="border-top:1px solid var(--border);overflow-y:auto;max-height:40vh;padding:0 12px">
+      ${secHead('speed','Shot Speed: '+EMU.shotSpeed)}
+      ${EMU.expandedSections.speed?`<div style="${accContent}">
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted-fg);margin-bottom:4px"><span>Soft</span><span>Power</span></div>
+        <input type="range" min="1" max="10" step="1" value="${EMU.shotSpeed}" oninput="EMU.shotSpeed=+this.value;render()" style="width:100%" data-testid="slider-speed">
+      </div>`:''}
+      ${secHead('angle','Fine-Tune Angle: '+(EMU.angleFine>0?'+':'')+EMU.angleFine.toFixed(1)+'°')}
+      ${EMU.expandedSections.angle?`<div style="${accContent}">
+        <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted-fg);margin-bottom:4px"><span>-5°</span><span>+5°</span></div>
+        <input type="range" min="-5" max="5" step="0.1" value="${EMU.angleFine}" oninput="EMU.angleFine=+(Math.round(+this.value*10)/10);render()" style="width:100%" data-testid="slider-angle">
+      </div>`:''}
+      ${secHead('english','English: H '+(EMU.englishX>0?'+':'')+EMU.englishX.toFixed(2)+', V '+(EMU.englishY>0?'+':'')+EMU.englishY.toFixed(2))}
+      ${EMU.expandedSections.english?`<div style="${accContent}">
+        <div style="display:flex;gap:16px;align-items:flex-start">
+          <div onclick="emuEngClick(event)" style="width:100px;height:100px;border-radius:50%;background:#fff;border:1px solid var(--border);position:relative;cursor:pointer;flex-shrink:0" data-testid="english-diagram">
+            <div style="position:absolute;width:1px;height:100%;left:50%;top:0;background:rgba(0,0,0,0.1)"></div>
+            <div style="position:absolute;width:100%;height:1px;left:0;top:50%;background:rgba(0,0,0,0.1)"></div>
+            <div style="position:absolute;width:10px;height:10px;border-radius:50%;background:#3b82f6;box-shadow:0 0 4px rgba(59,130,246,0.8);left:calc(${engDotLeft}% - 5px);top:calc(${engDotTop}% - 5px)" data-testid="english-dot"></div>
+          </div>
+          <div style="flex:1;min-width:0">
+            <div style="margin-bottom:8px">
+              <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted-fg);margin-bottom:2px"><span>Left (-2)</span><span>Right (+2)</span></div>
+              <input type="range" min="-2" max="2" step="0.25" value="${EMU.englishX}" oninput="EMU.englishX=+this.value;render()" style="width:100%" data-testid="slider-english-x">
+            </div>
+            <div style="margin-bottom:8px">
+              <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted-fg);margin-bottom:2px"><span>Top (-2)</span><span>Bottom (+2)</span></div>
+              <input type="range" min="-2" max="2" step="0.25" value="${EMU.englishY}" oninput="EMU.englishY=+this.value;render()" style="width:100%" data-testid="slider-english-y">
+            </div>
+            <button class="btn btn-ghost" style="font-size:12px" onclick="EMU.englishX=0;EMU.englishY=0;render()" data-testid="button-reset-english">Center</button>
+          </div>
+        </div>
+      </div>`:''}
+      ${secHead('physics','Table Physics')}
+      ${EMU.expandedSections.physics?`<div style="${accContent}">
+        <div style="margin-bottom:8px"><span style="font-size:11px;color:var(--muted-fg);display:block;margin-bottom:4px">Table Speed</span><div class="flex gap-1">${toggleBtn('tableSpeed','slow','Slow')}${toggleBtn('tableSpeed','medium','Medium')}${toggleBtn('tableSpeed','fast','Fast')}</div></div>
+        <div style="margin-bottom:8px"><span style="font-size:11px;color:var(--muted-fg);display:block;margin-bottom:4px">Equipment</span><div class="flex gap-1">${toggleBtn('equipment','dirty','Dirty')}${toggleBtn('equipment','average','Average')}${toggleBtn('equipment','clean','Clean')}</div></div>
+        <div style="margin-bottom:8px"><span style="font-size:11px;color:var(--muted-fg);display:block;margin-bottom:4px">Rails</span><div class="flex gap-1">${toggleBtn('rails','soft','Soft')}${toggleBtn('rails','medium','Medium')}${toggleBtn('rails','firm','Firm')}</div></div>
+      </div>`:''}
+    </div>
   </div>`;
 }
 

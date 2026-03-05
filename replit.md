@@ -63,6 +63,25 @@ The server only handles two Stripe endpoints for the paywall. Development uses V
 - **Standalone**: Same analytics (except line chart) rendered in standalone HTML
 
 ### CueMaster Tools
+- **Cueing Emulator**: Canvas-based billiards shot simulator accessible from the wrench icon dropdown on the splash screen
+  - Top-down 9-foot pool table rendered on HTML5 Canvas with green felt, wood rails, 6 pockets, and diamond sights
+  - Ball management: add/remove solid (yellow) and stripe (white with green band) balls; drag to reposition; tap to select
+  - Aiming: drag from cue ball to set direction; thin aim line extends from cue ball
+  - Full trajectory simulation: colored path lines per ball type (cue=light blue, solids=yellow, stripes=green)
+  - Settings via accordion panels:
+    - Shot Speed: slider 1–10 (maps to initial cue ball velocity)
+    - Fine-Tune Angle: slider ±5° with 0.1° steps
+    - English (Spin): visual cue ball diagram with 0.25-tip snap grid + synced horizontal/vertical sliders (-2 to +2 tips)
+    - Table Physics: segmented controls for Table Speed (Slow/Medium/Fast), Equipment (Dirty/Average/Clean), Rails (Soft/Medium/Firm)
+  - Physics engine: `client/src/lib/billiards-physics.ts` — pure TypeScript module based on Dr. Dave Alciatore's published research
+    - Ball-ball collisions: 2D elastic with throw (friction at contact point)
+    - Ball-rail collisions: reflection with restitution + running/reverse English effects
+    - Cue ball squirt: side English offsets initial direction opposite the spin side (squirt coeff 0.006)
+    - Cue ball curve: side spin induces gradual lateral acceleration (curve coeff 0.0004)
+    - Friction: separate rolling (0.010–0.022) and sliding (0.18–0.28) coefficients per table speed
+    - Rail restitution: soft/medium/firm = 0.6/0.75/0.9
+    - Throw factor: dirty/average/clean = 0.06/0.035/0.015
+  - Implemented in both React (`CueingEmulator.tsx`) and standalone HTML
 - **Table Leveler**: Uses the device's motion sensors (DeviceOrientationEvent API) to display a visual bubble/spirit level
   - Circular spirit level with animated bubble that moves based on device tilt
   - Color-coded feedback: green (level) → yellow (slightly off) → red (significantly tilted)
