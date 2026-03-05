@@ -58,6 +58,17 @@ The server only handles two Stripe endpoints for the paywall. Development uses V
   - Scoring rate (strokes/minute)
 - **Standalone**: Same analytics (except line chart) rendered in standalone HTML
 
+### CueMaster Tools
+- **Table Leveler**: Uses the device's motion sensors (DeviceOrientationEvent API) to display a visual bubble/spirit level
+  - Circular spirit level with animated bubble that moves based on device tilt
+  - Color-coded feedback: green (level) → yellow (slightly off) → red (significantly tilted)
+  - Numeric L/R and F/B tilt readouts in degrees
+  - Three calibration presets: Home, League, Tournament — each saved independently to localStorage
+  - iOS permission handling for motion sensor access
+  - Accessible from the wrench icon dropdown on the splash screen
+  - localStorage keys: `pftc_level_home`, `pftc_level_league`, `pftc_level_tournament`
+  - Implemented in both React (`TableLeveler.tsx`) and standalone HTML
+
 ### Key Design Decisions
 1. **Offline-First Local Games**: Single-device gameplay stores all data locally, no server required
    - **Page Persistence**: App screen (splash/setup/game/summary), active tab, and view-only mode are persisted to localStorage so page refresh returns users to the last screen they were visiting

@@ -79,6 +79,17 @@ td.player-cell{text-align:left;font-weight:600}
 .select-wrap{position:relative;display:inline-block}
 .select-wrap select{appearance:none;background:var(--bg2);color:var(--fg);border:1px solid var(--border);border-radius:6px;padding:8px 32px 8px 12px;font-size:16px;min-height:44px;cursor:pointer}
 .select-wrap::after{content:"";position:absolute;right:12px;top:50%;transform:translateY(-50%);border-left:5px solid transparent;border-right:5px solid transparent;border-top:6px solid var(--fg2);pointer-events:none}
+.tools-dropdown{position:absolute;top:100%;right:0;margin-top:4px;background:var(--card);border:1px solid var(--card-border);border-radius:8px;min-width:180px;z-index:60;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,.3)}
+.tools-dropdown button{display:flex;align-items:center;gap:8px;width:100%;padding:10px 14px;background:none;color:var(--fg);font-size:14px;text-align:left;border:none;cursor:pointer}
+.tools-dropdown button:active{background:var(--bg2)}
+.leveler-overlay{position:fixed;inset:0;z-index:50;background:var(--bg);display:flex;flex-direction:column}
+.leveler-header{display:flex;align-items:center;justify-content:space-between;padding:16px;border-bottom:1px solid var(--border)}
+.leveler-body{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;gap:24px;overflow-y:auto}
+.level-container{position:relative;border-radius:50%;transition:box-shadow .3s}
+.level-bubble{position:absolute;border-radius:50%;transition:background-color .3s;box-shadow:inset 0 -2px 4px rgba(0,0,0,.2),inset 0 2px 4px rgba(255,255,255,.3)}
+.preset-tabs{display:flex;gap:4px;padding:4px;border-radius:8px;background:var(--bg2)}
+.preset-tab{flex:1;padding:8px 12px;border-radius:6px;font-size:13px;font-weight:600;background:none;color:var(--fg2);cursor:pointer;border:none;transition:all .15s}
+.preset-tab.active{background:var(--card);color:var(--fg);box-shadow:0 1px 2px rgba(0,0,0,.1)}
 </style>
 </head>
 <body>
@@ -133,6 +144,8 @@ const I = {
   book: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>',
   chevLsm: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>',
   chevRsm: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>',
+  wrench: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>',
+  rotateCcw: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>',
 };
 
 const TUTORIAL_SLIDES = [
@@ -164,6 +177,8 @@ let S = {
   showTutorial: false,
   tutorialIdx: 0,
   jokerPar: null,
+  showToolsMenu: false,
+  showLeveler: false,
 };
 
 function defGame() {
@@ -310,14 +325,181 @@ function render(){
 
 function rSplash(app){
   app.innerHTML=`
-    <div class="screen flex flex-col items-center justify-center" style="min-height:100dvh;gap:24px" data-testid="splash-screen">
+    <div class="screen flex flex-col items-center justify-center" style="min-height:100dvh;gap:24px;position:relative" data-testid="splash-screen">
+      <div style="position:absolute;top:16px;right:16px;z-index:10">
+        <div style="position:relative">
+          <button class="btn btn-ghost btn-icon" onclick="S.showToolsMenu=!S.showToolsMenu;render()" data-testid="button-tools-menu">${I.wrench}</button>
+          ${S.showToolsMenu?`<div class="tools-dropdown" data-testid="tools-dropdown">
+            <button onclick="S.showToolsMenu=false;S.showLeveler=true;initLeveler();render()" data-testid="button-table-leveler">${I.game} Table Leveler</button>
+          </div>`:''}
+        </div>
+      </div>
       <img src="${LOGO}" alt="Par for the Course" style="width:100%;max-width:280px;height:auto" data-testid="img-logo">
       <div class="flex flex-col gap-3 w-full" style="max-width:280px">
         <button class="btn btn-primary btn-xl" data-testid="button-new-game" onclick="S.game=defGame();S.game.deck=shuffleDeck();S.viewOnly=false;S.screen='setup';render()">New Game</button>
         <button class="btn btn-outline btn-xl" data-testid="button-load-game" onclick="S.screen='load';render()">Load Game</button>
         <button class="btn btn-ghost btn-xl" data-testid="button-how-to-play" onclick="S.showTutorial=true;S.tutorialIdx=0;render()">${I.book} How to Play</button>
       </div>
-    </div>${S.showTutorial?rTutorial():''}`;
+    </div>${S.showTutorial?rTutorial():''}${S.showLeveler?rLeveler():''}`;
+  if(S.showToolsMenu){document.addEventListener('click',closeToolsMenu,{once:true});}
+}
+
+function closeToolsMenu(e){
+  const btn=document.querySelector('[data-testid="button-tools-menu"]');
+  const dd=document.querySelector('[data-testid="tools-dropdown"]');
+  if(btn&&btn.contains(e.target))return;
+  if(dd&&dd.contains(e.target))return;
+  S.showToolsMenu=false;render();
+}
+
+const LEVELER={
+  radius:120,bubbleR:18,maxOff:98,deadzone:0.5,warn:2,danger:5,
+  rawBeta:0,rawGamma:0,preset:'home',calibration:null,permGranted:null,needsPerm:false,listener:null
+};
+const LEVEL_PRESETS={home:'pftc_level_home',league:'pftc_level_league',tournament:'pftc_level_tournament'};
+const LEVEL_LABELS={home:'Home',league:'League',tournament:'Tournament'};
+
+function loadLevelCal(preset){try{const r=localStorage.getItem(LEVEL_PRESETS[preset]);if(r)return JSON.parse(r);}catch(e){}return null;}
+function saveLevelCal(preset,data){localStorage.setItem(LEVEL_PRESETS[preset],JSON.stringify(data));}
+
+function initLeveler(){
+  LEVELER.preset='home';
+  LEVELER.calibration=loadLevelCal('home');
+  LEVELER.rawBeta=0;LEVELER.rawGamma=0;
+  LEVELER.permGranted=null;LEVELER.needsPerm=false;
+  const DOE=window.DeviceOrientationEvent;
+  if(DOE&&typeof DOE.requestPermission==='function'){
+    LEVELER.needsPerm=true;
+  }else{
+    startLevelerListener();
+  }
+}
+
+function startLevelerListener(){
+  if(LEVELER.listener){window.removeEventListener('deviceorientation',LEVELER.listener);}
+  LEVELER.listener=function(e){
+    if(e.beta!==null)LEVELER.rawBeta=e.beta;
+    if(e.gamma!==null)LEVELER.rawGamma=e.gamma;
+    updateLevelerBubble();
+  };
+  window.addEventListener('deviceorientation',LEVELER.listener);
+  LEVELER.permGranted=true;
+}
+
+function stopLevelerListener(){
+  if(LEVELER.listener){window.removeEventListener('deviceorientation',LEVELER.listener);LEVELER.listener=null;}
+}
+
+function requestLevelerPerm(){
+  const DOE=window.DeviceOrientationEvent;
+  if(typeof DOE.requestPermission==='function'){
+    DOE.requestPermission().then(function(r){
+      if(r==='granted'){startLevelerListener();render();}
+      else{LEVELER.permGranted=false;render();}
+    }).catch(function(){LEVELER.permGranted=false;render();});
+  }else{startLevelerListener();render();}
+}
+
+function updateLevelerBubble(){
+  const cal=LEVELER.calibration;
+  const tiltX=LEVELER.rawGamma-(cal?cal.gamma:0);
+  const tiltY=LEVELER.rawBeta-(cal?cal.beta:0);
+  const maxOff=LEVELER.maxOff;
+  const bx=Math.max(-maxOff,Math.min(maxOff,(tiltX/15)*maxOff));
+  const by=Math.max(-maxOff,Math.min(maxOff,(tiltY/15)*maxOff));
+  const absTilt=Math.sqrt(tiltX*tiltX+tiltY*tiltY);
+  let color;
+  if(absTilt<=LEVELER.deadzone)color='#22c55e';
+  else if(absTilt<=LEVELER.warn)color='#4ade80';
+  else if(absTilt<=LEVELER.danger)color='#facc15';
+  else color='#ef4444';
+  let ringColor;
+  if(absTilt<=LEVELER.deadzone)ringColor='rgba(34,197,94,.3)';
+  else if(absTilt<=LEVELER.warn)ringColor='rgba(74,222,128,.2)';
+  else if(absTilt<=LEVELER.danger)ringColor='rgba(250,204,21,.2)';
+  else ringColor='rgba(239,68,68,.2)';
+
+  const bubble=document.getElementById('level-bubble');
+  const container=document.getElementById('level-container');
+  const tiltXEl=document.getElementById('tilt-x-val');
+  const tiltYEl=document.getElementById('tilt-y-val');
+  if(bubble){
+    bubble.style.left=(LEVELER.radius+bx-LEVELER.bubbleR)+'px';
+    bubble.style.top=(LEVELER.radius+by-LEVELER.bubbleR)+'px';
+    bubble.style.background=color;
+  }
+  if(container){container.style.boxShadow='0 0 0 8px '+ringColor;}
+  if(tiltXEl)tiltXEl.textContent=tiltX.toFixed(1)+'\u00B0';
+  if(tiltYEl)tiltYEl.textContent=tiltY.toFixed(1)+'\u00B0';
+}
+
+function closeLeveler(){stopLevelerListener();S.showLeveler=false;render();}
+
+function setLevelerPreset(p){
+  LEVELER.preset=p;LEVELER.calibration=loadLevelCal(p);render();
+}
+
+function calibrateLeveler(){
+  const data={beta:LEVELER.rawBeta,gamma:LEVELER.rawGamma};
+  saveLevelCal(LEVELER.preset,data);LEVELER.calibration=data;render();
+}
+
+function resetLevelerCal(){
+  localStorage.removeItem(LEVEL_PRESETS[LEVELER.preset]);LEVELER.calibration=null;render();
+}
+
+function rLeveler(){
+  const R=LEVELER.radius,BR=LEVELER.bubbleR;
+  const cal=LEVELER.calibration;
+  const calText=cal?`Calibrated (offset: ${cal.gamma.toFixed(1)}\u00B0, ${cal.beta.toFixed(1)}\u00B0)`:'Not calibrated \u2014 place device on table and tap Calibrate';
+  const presetBtns=['home','league','tournament'].map(p=>`<button class="preset-tab ${LEVELER.preset===p?'active':''}" onclick="setLevelerPreset('${p}')" data-testid="button-preset-${p}">${LEVEL_LABELS[p]}</button>`).join('');
+
+  let body='';
+  if(LEVELER.needsPerm&&LEVELER.permGranted===null){
+    body=`<div class="card text-center" style="max-width:320px;padding:24px">
+      <p class="text-sm text-muted" style="margin-bottom:16px">This tool needs access to your device's motion sensors to detect table tilt.</p>
+      <button class="btn btn-primary" onclick="requestLevelerPerm()" data-testid="button-request-permission">Enable Motion Sensors</button>
+    </div>`;
+  }else if(LEVELER.permGranted===false){
+    body=`<div class="card text-center" style="max-width:320px;padding:24px">
+      <p class="text-sm text-muted">Motion sensor access was denied. Please enable it in your device settings and try again.</p>
+    </div>`;
+  }else{
+    body=`
+      <div id="level-container" class="level-container" style="width:${R*2}px;height:${R*2}px;background:radial-gradient(circle,var(--bg2) 0%,rgba(23,23,23,.3) 100%)" data-testid="level-container">
+        <div style="position:absolute;width:${R*2-8}px;height:${R*2-8}px;top:4px;left:4px;border-radius:50%;border:1px solid var(--border)"></div>
+        <div style="position:absolute;width:${R}px;height:${R}px;top:${R/2}px;left:${R/2}px;border-radius:50%;border:1px solid var(--border);opacity:.5"></div>
+        <div style="position:absolute;width:12px;height:1px;background:var(--fg3);opacity:.3;top:${R}px;left:${R-6}px"></div>
+        <div style="position:absolute;width:1px;height:12px;background:var(--fg3);opacity:.3;left:${R}px;top:${R-6}px"></div>
+        <div id="level-bubble" class="level-bubble" style="width:${BR*2}px;height:${BR*2}px;left:${R-BR}px;top:${R-BR}px;background:#22c55e" data-testid="level-bubble"></div>
+      </div>
+      <div class="flex gap-4 text-center" style="gap:24px" data-testid="tilt-values">
+        <div>
+          <div class="text-xs text-muted" style="text-transform:uppercase;letter-spacing:.05em">L/R Tilt</div>
+          <div class="text-2xl font-bold" style="font-family:monospace" id="tilt-x-val">0.0\u00B0</div>
+        </div>
+        <div>
+          <div class="text-xs text-muted" style="text-transform:uppercase;letter-spacing:.05em">F/B Tilt</div>
+          <div class="text-2xl font-bold" style="font-family:monospace" id="tilt-y-val">0.0\u00B0</div>
+        </div>
+      </div>
+      <div style="width:100%;max-width:320px">
+        <div class="preset-tabs mb-3" data-testid="preset-tabs">${presetBtns}</div>
+        <div class="text-center text-xs text-muted mb-3">${calText}</div>
+        <div class="flex gap-2">
+          <button class="btn btn-primary flex-1" onclick="calibrateLeveler()" data-testid="button-calibrate">Calibrate ${LEVEL_LABELS[LEVELER.preset]}</button>
+          ${cal?`<button class="btn btn-outline btn-icon" onclick="resetLevelerCal()" data-testid="button-reset-calibration">${I.rotateCcw}</button>`:''}
+        </div>
+      </div>`;
+  }
+
+  return`<div class="leveler-overlay" data-testid="table-leveler">
+    <div class="leveler-header">
+      <h2 class="text-lg font-bold" data-testid="text-leveler-title">Table Leveler</h2>
+      <button class="btn btn-ghost btn-icon" onclick="closeLeveler()" data-testid="button-close-leveler">${I.x}</button>
+    </div>
+    <div class="leveler-body">${body}</div>
+  </div>`;
 }
 
 function rTutorial(){

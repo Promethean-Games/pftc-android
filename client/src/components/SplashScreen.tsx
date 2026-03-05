@@ -1,8 +1,15 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { BookOpen } from "lucide-react";
+import { BookOpen, Wrench, Ruler } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { LOGO_URL } from "@/lib/constants";
 import { TutorialCarousel } from "./TutorialCarousel";
+import { TableLeveler } from "./TableLeveler";
 
 interface SplashScreenProps {
   onNewGame: () => void;
@@ -11,9 +18,26 @@ interface SplashScreenProps {
 
 export function SplashScreen({ onNewGame, onLoadGame }: SplashScreenProps) {
   const [showTutorial, setShowTutorial] = useState(false);
+  const [showLeveler, setShowLeveler] = useState(false);
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-6 relative">
+      <div className="absolute top-4 right-4 z-10">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button size="icon" variant="ghost" data-testid="button-cuemaster-tools">
+              <Wrench className="w-5 h-5" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => setShowLeveler(true)} data-testid="menu-table-leveler">
+              <Ruler className="w-4 h-4 mr-2" />
+              Table Leveler
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
       <div className="mb-8 w-full max-w-md">
         <img 
           src={LOGO_URL} 
@@ -54,6 +78,10 @@ export function SplashScreen({ onNewGame, onLoadGame }: SplashScreenProps) {
 
       {showTutorial && (
         <TutorialCarousel onClose={() => setShowTutorial(false)} />
+      )}
+
+      {showLeveler && (
+        <TableLeveler onClose={() => setShowLeveler(false)} />
       )}
     </div>
   );
