@@ -14,7 +14,7 @@ export function SplashScreen({ onNewGame, onLoadGame }: SplashScreenProps) {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-6 relative">
-      <div className="mb-8 w-full px-4">
+      <div className="mb-8 w-full max-w-md">
         <img 
           src={LOGO_URL} 
           alt="Par for the Course" 

@@ -302,7 +302,7 @@ function render(){
 function rSplash(app){
   app.innerHTML=`
     <div class="screen flex flex-col items-center justify-center" style="min-height:100dvh;gap:24px" data-testid="splash-screen">
-      <img src="${LOGO}" alt="Par for the Course" style="width:100%;max-width:100%;height:auto;padding:0 16px" data-testid="img-logo">
+      <img src="${LOGO}" alt="Par for the Course" style="width:100%;max-width:280px;height:auto" data-testid="img-logo">
       <div class="flex flex-col gap-3 w-full" style="max-width:280px">
         <button class="btn btn-primary btn-xl" data-testid="button-new-game" onclick="S.game=defGame();S.game.deck=shuffleDeck();S.viewOnly=false;S.screen='setup';render()">New Game</button>
         <button class="btn btn-outline btn-xl" data-testid="button-load-game" onclick="S.screen='load';render()">Load Game</button>
