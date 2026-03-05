@@ -94,10 +94,12 @@ The server only handles two Stripe endpoints for the paywall. Development uses V
       - Top spin (negative englishY): spin > natural roll → ball transitions to roll faster, travels further
       - Draw/backspin (positive englishY): spin opposes natural roll → extended sliding phase, ball decelerates then reverses
       - Side spin: stored as perpendicular component, does NOT reduce forward momentum; only produces swerve
-    - Rolling friction: slow/medium/fast = 0.014/0.010/0.007
-    - Sliding friction: slow/medium/fast = 0.24/0.20/0.16
-    - Rail restitution: soft/medium/firm = 0.6/0.75/0.9
-    - Throw factor: dirty/average/clean = 0.06/0.035/0.015
+    - Rolling friction (μᵣ): slow/medium/fast = 0.015/0.010/0.005 (Dr. Dave range: 0.005–0.015)
+    - Sliding friction (μₛ): slow/medium/fast = 0.30/0.20/0.15 (Dr. Dave range: 0.15–0.4)
+    - Rail restitution (e): soft/medium/firm = 0.55/0.72/0.85 (Dr. Dave range: 0.6–0.9+)
+    - Ball-ball throw factor: dirty/average/clean = 0.050/0.035/0.020 (dirty = chalk/grime at contact, clean = polished)
+    - Squirt coefficient: 0.005 (~2.5° max deflection at full english, per Dr. Dave)
+    - Swerve coefficient: 0.00015 (subtle lateral curve from side spin)
   - Implemented in both React (`CueingEmulator.tsx`) and standalone HTML
 - **Table Leveler**: Uses the device's motion sensors (DeviceOrientationEvent API) to display a visual bubble/spirit level
   - Circular spirit level with animated bubble that moves based on device tilt

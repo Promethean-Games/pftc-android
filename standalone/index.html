@@ -596,10 +596,10 @@ const EMU={
   snapToGrid:true,moveCueBall:false,showSettings:false,shotHistory:[],
   TW:100,TH:50,BR:1.125,PR:2.25,
   POCKETS:[{x:0,y:0},{x:50,y:0},{x:100,y:0},{x:0,y:50},{x:50,y:50},{x:100,y:50}],
-  ROLL_F:{slow:0.014,medium:0.010,fast:0.007},
-  SLIDE_F:{slow:0.24,medium:0.20,fast:0.16},
-  RAIL_R:{soft:0.6,medium:0.75,firm:0.9},
-  THROW_F:{dirty:0.06,average:0.035,clean:0.015},
+  ROLL_F:{slow:0.015,medium:0.010,fast:0.005},
+  SLIDE_F:{slow:0.30,medium:0.20,fast:0.15},
+  RAIL_R:{soft:0.55,medium:0.72,firm:0.85},
+  THROW_F:{dirty:0.050,average:0.035,clean:0.020},
   expandedSections:{},
   idCounter:0
 };
@@ -625,7 +625,7 @@ function emuSnapPos(x,y){
 }
 
 function emuSimulate(){
-  const DT=0.002,MAX=30000,THRESH=0.05,SPEED_SCALE=8,BB_REST=0.95,SQUIRT=0.006,SWERVE=0.00012,GG=386.4;
+  const DT=0.002,MAX=30000,THRESH=0.05,SPEED_SCALE=8,BB_REST=0.95,SQUIRT=0.005,SWERVE=0.00015,GG=386.4;
   const balls=EMU.balls.filter(b=>!b.pocketed).map(b=>({...b,pos:{...b.pos},vel:{...b.vel},spin:{...b.spin}}));
   const cue=balls.find(b=>b.type==='cue');
   if(!cue)return{trajectories:[],finalBalls:balls};

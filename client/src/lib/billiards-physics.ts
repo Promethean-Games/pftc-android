@@ -58,31 +58,31 @@ const POCKETS: Vec2[] = [
 ];
 
 const ROLLING_FRICTION: Record<string, number> = {
-  slow: 0.014,
+  slow: 0.015,
   medium: 0.010,
-  fast: 0.007,
+  fast: 0.005,
 };
 
 const SLIDING_FRICTION: Record<string, number> = {
-  slow: 0.24,
+  slow: 0.30,
   medium: 0.20,
-  fast: 0.16,
+  fast: 0.15,
 };
 
 const RAIL_RESTITUTION: Record<string, number> = {
-  soft: 0.6,
-  medium: 0.75,
-  firm: 0.9,
+  soft: 0.55,
+  medium: 0.72,
+  firm: 0.85,
 };
 
 const THROW_FACTOR: Record<string, number> = {
-  dirty: 0.06,
+  dirty: 0.050,
   average: 0.035,
-  clean: 0.015,
+  clean: 0.020,
 };
 
-const SQUIRT_COEFFICIENT = 0.006;
-const SWERVE_COEFFICIENT = 0.00012;
+const SQUIRT_COEFFICIENT = 0.005;
+const SWERVE_COEFFICIENT = 0.00015;
 const SPEED_SCALE = 8;
 const DT = 0.002;
 const MAX_STEPS = 30000;
