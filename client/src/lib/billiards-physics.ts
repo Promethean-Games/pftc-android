@@ -228,8 +228,19 @@ function applyFriction(ball: Ball, rollingFriction: number, slidingFriction: num
     return;
   }
 
+  const spinMag = vecLen(ball.spin);
+
   if (speed < 1e-10) {
-    ball.spin = vecScale(ball.spin, Math.max(0, 1 - slidingFriction * 3 * dt));
+    if (spinMag > VELOCITY_THRESHOLD * 0.5) {
+      const frictionAccel = (2 / 7) * slidingFriction * G * dt;
+      const spinDir = vecNorm(ball.spin);
+      const accel = Math.min(frictionAccel, spinMag * 0.3);
+      ball.vel = vecScale(spinDir, accel);
+      const spinDecay = slidingFriction * 100 * dt;
+      ball.spin = vecScale(ball.spin, Math.max(0, 1 - spinDecay));
+    } else {
+      ball.spin = { x: 0, y: 0 };
+    }
     return;
   }
 
@@ -244,12 +255,26 @@ function applyFriction(ball: Ball, rollingFriction: number, slidingFriction: num
   const relSpinMag = vecLen(relSpin);
 
   if (relSpinMag > speed * 0.05) {
-    const slideDecel = (5 / 7) * slidingFriction * G * dt;
-    const newSpeed = Math.max(0, speed - slideDecel);
-    ball.vel = vecScale(velDir, newSpeed);
+    const frictionForce = slidingFriction * G * dt;
+    const relSpinDir = vecNorm(relSpin);
+
+    const velComponent = vecDot(relSpinDir, velDir);
+
+    const slideDecel = (5 / 7) * frictionForce;
+    if (velComponent < -0.3 && relSpinMag > speed * 0.5) {
+      const decel = Math.min(slideDecel, speed);
+      ball.vel = vecSub(ball.vel, vecScale(velDir, decel));
+      const accel = (2 / 7) * frictionForce;
+      ball.vel = vecAdd(ball.vel, vecScale(relSpinDir, accel));
+    } else {
+      const newSpeed = Math.max(0, speed - slideDecel);
+      ball.vel = vecScale(velDir, newSpeed);
+    }
 
     const spinConvergeRate = slidingFriction * 100 * dt;
-    const newNaturalRoll = vecScale(velDir, newSpeed);
+    const curSpeed = vecLen(ball.vel);
+    const curDir = curSpeed > 1e-10 ? vecNorm(ball.vel) : velDir;
+    const newNaturalRoll = vecScale(curDir, curSpeed);
     ball.spin = vecAdd(
       newNaturalRoll,
       vecScale(relSpin, Math.max(0, 1 - spinConvergeRate))

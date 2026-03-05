@@ -730,17 +730,26 @@ function emuSimulate(){
       if(b.pocketed)continue;
       const sp=vLen(b.vel);
       if(sp<THRESH*0.5&&vLen(b.spin)<THRESH*0.5){b.vel={x:0,y:0};b.spin={x:0,y:0};continue;}
-      if(sp<1e-10){const sd2=Math.max(0,1-sFric*3*DT);b.spin={x:b.spin.x*sd2,y:b.spin.y*sd2};continue;}
+      const spnM=vLen(b.spin);
+      if(sp<1e-10){
+        if(spnM>THRESH*0.5){const fa=(2/7)*sFric*GG*DT;const sd=vNorm(b.spin);const ac=Math.min(fa,spnM*0.3);b.vel={x:sd.x*ac,y:sd.y*ac};const sdc=sFric*100*DT;b.spin={x:b.spin.x*Math.max(0,1-sdc),y:b.spin.y*Math.max(0,1-sdc)};}
+        else{b.spin={x:0,y:0};}
+        continue;
+      }
       const vDir=vNorm(b.vel);
       const nrSpinX=vDir.x*sp,nrSpinY=vDir.y*sp;
       const relX=b.spin.x-nrSpinX,relY=b.spin.y-nrSpinY;
       const relM=Math.sqrt(relX*relX+relY*relY);
       if(relM>sp*0.05){
-        const slDec=(5/7)*sFric*GG*DT;
-        const newSp=Math.max(0,sp-slDec);
-        b.vel={x:vDir.x*newSp,y:vDir.y*newSp};
+        const ff=sFric*GG*DT;
+        const rsd=relM>1e-10?{x:relX/relM,y:relY/relM}:{x:0,y:0};
+        const vc=rsd.x*vDir.x+rsd.y*vDir.y;
+        const slDec=(5/7)*ff;
+        if(vc<-0.3&&relM>sp*0.5){const dc=Math.min(slDec,sp);b.vel.x-=vDir.x*dc;b.vel.y-=vDir.y*dc;const ac=(2/7)*ff;b.vel.x+=rsd.x*ac;b.vel.y+=rsd.y*ac;}
+        else{const newSp=Math.max(0,sp-slDec);b.vel={x:vDir.x*newSp,y:vDir.y*newSp};}
         const spinCR=sFric*100*DT;
-        const nrNew={x:vDir.x*newSp,y:vDir.y*newSp};
+        const cs=vLen(b.vel);const cd=cs>1e-10?vNorm(b.vel):vDir;
+        const nrNew={x:cd.x*cs,y:cd.y*cs};
         const factor=Math.max(0,1-spinCR);
         b.spin={x:nrNew.x+relX*factor,y:nrNew.y+relY*factor};
       }else{
