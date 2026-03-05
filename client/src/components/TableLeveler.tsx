@@ -209,10 +209,13 @@ export function TableLeveler({ onClose }: TableLevelerProps) {
   const [rawGamma, setRawGamma] = useState(0);
   const [permissionGranted, setPermissionGranted] = useState<boolean | null>(null);
   const [needsPermission, setNeedsPermission] = useState(false);
+  const [sensorActive, setSensorActive] = useState(false);
   const [showTutorial, setShowTutorial] = useState(() => {
     return localStorage.getItem("pftc_leveler_tutorial_seen") !== "true";
   });
   const listenerRef = useRef<((e: DeviceOrientationEvent) => void) | null>(null);
+  const receivedDataRef = useRef(false);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const tiltX = rawGamma - (calibration?.gamma ?? 0);
   const tiltY = rawBeta - (calibration?.beta ?? 0);
@@ -240,17 +243,37 @@ export function TableLeveler({ onClose }: TableLevelerProps) {
           : "ring-red-500/20";
 
   const handleOrientation = useCallback((e: DeviceOrientationEvent) => {
-    if (e.beta !== null) setRawBeta(e.beta);
-    if (e.gamma !== null) setRawGamma(e.gamma);
+    if (e.beta !== null || e.gamma !== null) {
+      if (!receivedDataRef.current) {
+        receivedDataRef.current = true;
+        setSensorActive(true);
+        if (timeoutRef.current) {
+          clearTimeout(timeoutRef.current);
+          timeoutRef.current = null;
+        }
+      }
+      if (e.beta !== null) setRawBeta(e.beta);
+      if (e.gamma !== null) setRawGamma(e.gamma);
+    }
   }, []);
 
   const startListening = useCallback(() => {
     if (listenerRef.current) {
       window.removeEventListener("deviceorientation", listenerRef.current);
     }
+    receivedDataRef.current = false;
     listenerRef.current = handleOrientation;
     window.addEventListener("deviceorientation", handleOrientation);
     setPermissionGranted(true);
+
+    timeoutRef.current = setTimeout(() => {
+      if (!receivedDataRef.current) {
+        setSensorActive(false);
+        setPermissionGranted(false);
+        window.removeEventListener("deviceorientation", handleOrientation);
+        listenerRef.current = null;
+      }
+    }, 1500);
   }, [handleOrientation]);
 
   const isSupported = typeof window !== "undefined" && "DeviceOrientationEvent" in window;
@@ -291,6 +314,9 @@ export function TableLeveler({ onClose }: TableLevelerProps) {
     return () => {
       if (listenerRef.current) {
         window.removeEventListener("deviceorientation", listenerRef.current);
+      }
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
       }
     };
   }, [startListening, isSupported]);
@@ -347,7 +373,15 @@ export function TableLeveler({ onClose }: TableLevelerProps) {
           </Card>
         )}
 
-        {(permissionGranted === true || (!needsPermission && permissionGranted === null)) && (
+        {permissionGranted === true && !sensorActive && (
+          <Card className="p-6 text-center max-w-sm">
+            <p className="text-sm text-muted-foreground mb-2">
+              Detecting motion sensors...
+            </p>
+          </Card>
+        )}
+
+        {sensorActive && (
           <>
             <div
               className={cn("relative rounded-full ring-8 transition-all duration-300", ringColor)}

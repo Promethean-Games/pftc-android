@@ -381,17 +381,33 @@ function initLeveler(){
 
 function startLevelerListener(){
   if(LEVELER.listener){window.removeEventListener('deviceorientation',LEVELER.listener);}
+  LEVELER.sensorActive=false;LEVELER.receivedData=false;
   LEVELER.listener=function(e){
-    if(e.beta!==null)LEVELER.rawBeta=e.beta;
-    if(e.gamma!==null)LEVELER.rawGamma=e.gamma;
-    updateLevelerBubble();
+    if(e.beta!==null||e.gamma!==null){
+      if(!LEVELER.receivedData){
+        LEVELER.receivedData=true;LEVELER.sensorActive=true;
+        if(LEVELER.sensorTimeout){clearTimeout(LEVELER.sensorTimeout);LEVELER.sensorTimeout=null;}
+        render();
+      }
+      if(e.beta!==null)LEVELER.rawBeta=e.beta;
+      if(e.gamma!==null)LEVELER.rawGamma=e.gamma;
+      updateLevelerBubble();
+    }
   };
   window.addEventListener('deviceorientation',LEVELER.listener);
   LEVELER.permGranted=true;
+  LEVELER.sensorTimeout=setTimeout(function(){
+    if(!LEVELER.receivedData){
+      LEVELER.sensorActive=false;LEVELER.permGranted=false;
+      window.removeEventListener('deviceorientation',LEVELER.listener);
+      LEVELER.listener=null;render();
+    }
+  },1500);
 }
 
 function stopLevelerListener(){
   if(LEVELER.listener){window.removeEventListener('deviceorientation',LEVELER.listener);LEVELER.listener=null;}
+  if(LEVELER.sensorTimeout){clearTimeout(LEVELER.sensorTimeout);LEVELER.sensorTimeout=null;}
 }
 
 function requestLevelerPerm(){
@@ -496,7 +512,11 @@ function rLeveler(){
     </div>`;
   }else if(LEVELER.permGranted===false){
     body=`<div class="card text-center" style="max-width:320px;padding:24px">
-      <p class="text-sm text-muted">Motion sensor access was denied. Please enable it in your device settings and try again.</p>
+      <p class="text-sm text-muted">Motion sensors are not available on this device. The Table Leveler requires a mobile device with an accelerometer.</p>
+    </div>`;
+  }else if(LEVELER.permGranted===true&&!LEVELER.sensorActive){
+    body=`<div class="card text-center" style="max-width:320px;padding:24px">
+      <p class="text-sm text-muted">Detecting motion sensors...</p>
     </div>`;
   }else{
     body=`
