@@ -22,9 +22,10 @@ interface SummaryScreenProps {
   turnTimes?: TurnTime[];
   gameStartTime?: number;
   gameEndTime?: number | null;
+  totalPlayTimeMs?: number;
 }
 
-export function SummaryScreen({ players, scores, onNewGame, onSubmitToSheets, isGameOver = false, viewOnly = false, onUpdateScore, turnTimes = [], gameStartTime = 0, gameEndTime = null }: SummaryScreenProps) {
+export function SummaryScreen({ players, scores, onNewGame, onSubmitToSheets, isGameOver = false, viewOnly = false, onUpdateScore, turnTimes = [], gameStartTime = 0, gameEndTime = null, totalPlayTimeMs = 0 }: SummaryScreenProps) {
   const { isUnlocked, freeHoles } = useUnlock();
   const [isLandscape, setIsLandscape] = useState(false);
   const [editingCell, setEditingCell] = useState<{ playerId: string; hole: number } | null>(null);
@@ -352,6 +353,7 @@ export function SummaryScreen({ players, scores, onNewGame, onSubmitToSheets, is
         turnTimes={turnTimes}
         gameStartTime={gameStartTime}
         gameEndTime={gameEndTime}
+        totalPlayTimeMs={totalPlayTimeMs}
       />
 
       {!isUnlocked && allHoles.some(h => h > freeHoles) && (

@@ -12,6 +12,7 @@ interface GameAnalyticsProps {
   turnTimes: TurnTime[];
   gameStartTime: number;
   gameEndTime: number | null;
+  totalPlayTimeMs?: number;
 }
 
 function formatDuration(ms: number): string {
@@ -34,12 +35,16 @@ function formatShortDuration(ms: number): string {
   return `${seconds}s`;
 }
 
-export function GameAnalytics({ players, scores, turnTimes, gameStartTime, gameEndTime }: GameAnalyticsProps) {
+export function GameAnalytics({ players, scores, turnTimes, gameStartTime, gameEndTime, totalPlayTimeMs = 0 }: GameAnalyticsProps) {
   const analytics = useMemo(() => {
     if (turnTimes.length === 0 || players.length === 0) return null;
 
-    const effectiveStart = gameStartTime > 0 ? gameStartTime : Math.min(...turnTimes.map(t => t.startTime));
-    const totalGameTime = (gameEndTime || Date.now()) - effectiveStart;
+    const sumOfTurnTimes = turnTimes.reduce((sum, t) => sum + (t.endTime - t.startTime), 0);
+    const totalGameTime = totalPlayTimeMs > 0
+      ? totalPlayTimeMs
+      : sumOfTurnTimes > 0
+        ? sumOfTurnTimes
+        : (gameEndTime || Date.now()) - (gameStartTime > 0 ? gameStartTime : Math.min(...turnTimes.map(t => t.startTime)));
 
     const playerTimeMap: Record<string, number> = {};
     const playerTurnsByHole: Record<string, Record<number, number>> = {};
@@ -154,7 +159,7 @@ export function GameAnalytics({ players, scores, turnTimes, gameStartTime, gameE
       consistencyScores,
       streakData,
     };
-  }, [players, scores, turnTimes, gameStartTime, gameEndTime]);
+  }, [players, scores, turnTimes, gameStartTime, gameEndTime, totalPlayTimeMs]);
 
   if (!analytics) {
     return (

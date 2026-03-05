@@ -48,8 +48,12 @@ The server only handles two Stripe endpoints for the paywall. Development uses V
 
 ### Game Analytics
 - **Turn Timing**: Each player's turn is timed (start/end timestamps recorded in `turnTimes[]` array in GameState)
+- **Accumulated Play Time**: `totalPlayTimeMs` in GameState tracks only active play time (when the game tab is visible and active). Timer pauses when switching tabs, navigating away, or when the browser tab is hidden (via `visibilitychange` API). This prevents inflated game times when saving/loading games across different days.
+  - `pauseTimer()` / `resumeTimer()` methods in GameContext control the timer
+  - App.tsx watches `screen`, `activeTab`, `isComplete`, and document visibility to auto-pause/resume
+  - Same pause/resume logic implemented in standalone HTML
 - **Analytics Component**: `GameAnalytics.tsx` renders post-game analytics in SummaryScreen using recharts:
-  - Total game time and per-player time
+  - Total game time and per-player time (uses `totalPlayTimeMs` when available, falls back to sum of turn times)
   - Line chart of turn durations by card (recharts)
   - Fastest/slowest card per player and group
   - Average turn time per player

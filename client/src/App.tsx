@@ -59,6 +59,26 @@ function GameApp() {
     setTheme(game.settings.theme);
   }, [game.settings.theme, setTheme]);
 
+  useEffect(() => {
+    if (screen === "game" && activeTab === "game" && !game.isComplete) {
+      game.resumeTimer();
+    } else {
+      game.pauseTimer();
+    }
+  }, [screen, activeTab, game.isComplete]);
+
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.hidden) {
+        game.pauseTimer();
+      } else if (screen === "game" && activeTab === "game" && !game.isComplete) {
+        game.resumeTimer();
+      }
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
+  }, [screen, activeTab, game.isComplete]);
+
   const handleNewGame = () => {
     game.resetGame();
     setViewOnly(false);
@@ -182,6 +202,7 @@ function GameApp() {
           turnTimes={game.turnTimes}
           gameStartTime={game.gameStartTime}
           gameEndTime={game.gameEndTime}
+          totalPlayTimeMs={game.totalPlayTimeMs}
         />
       )}
 

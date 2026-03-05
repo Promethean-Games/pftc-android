@@ -188,7 +188,8 @@ function defGame() {
     players:[], hole:1, pi:0, scores:{}, done:false,
     deck:[], drawnCards:{},
     settings:{theme:'dark',lhm:false,autoSave:true},
-    turnTimes:[], gameStartTime:0, gameEndTime:null, currentTurnStart:0
+    turnTimes:[], gameStartTime:0, gameEndTime:null, currentTurnStart:0,
+    totalPlayTimeMs:0, isPaused:true, lastResumedAt:0
   };
 }
 
@@ -207,10 +208,17 @@ function init() {
   if(!S.game) S.game=defGame();
   if(!S.game.deck) S.game.deck=[];
   if(!S.game.drawnCards) S.game.drawnCards={};
+  if(S.game.totalPlayTimeMs===undefined) S.game.totalPlayTimeMs=0;
+  S.game.isPaused=true;S.game.lastResumedAt=0;
   const ss=localStorage.getItem('appScreen');
   if(ss&&['game','summary'].includes(ss)&&S.game.players.length>0) S.screen=ss;
   S.viewOnly=localStorage.getItem('appViewOnly')==='true';
   applyTheme();
+  document.addEventListener('visibilitychange',function(){
+    if(document.hidden){pauseTimer();}
+    else if(S.screen==='game'&&S.tab==='game'&&!S.game.done){resumeTimer();}
+  });
+  if(S.screen==='game'&&S.tab==='game'&&!S.game.done) resumeTimer();
   render();
 }
 
@@ -285,18 +293,29 @@ function nextCard(){
   saveHist();
   const now=Date.now();
   const g=S.game;
+  const activeSince=g.isPaused?0:(now-g.lastResumedAt);
+  g.totalPlayTimeMs=(g.totalPlayTimeMs||0)+activeSince;
   const cp=g.players[g.pi];
   if(cp){
     if(!g.turnTimes)g.turnTimes=[];
     g.turnTimes.push({playerId:cp.id,hole:g.hole,startTime:g.currentTurnStart||now,endTime:now});
   }
-  g.currentTurnStart=now;
+  g.currentTurnStart=now;g.lastResumedAt=now;
   const ni=(g.pi+1)%g.players.length;
   const adv=ni===0;
-  if(adv&&g.hole>=MAX_HOLES){g.done=true;g.gameEndTime=now;S.viewOnly=true;S.tab='summary';render();return;}
+  if(adv&&g.hole>=MAX_HOLES){g.done=true;g.gameEndTime=now;g.isPaused=true;g.lastResumedAt=0;S.viewOnly=true;S.tab='summary';render();return;}
   if(adv){sortByPrev(g.hole);g.pi=0;g.hole++;}
   else{g.pi=ni;}
   render();
+}
+function pauseTimer(){
+  const g=S.game;if(!g||g.isPaused||g.done)return;
+  const now=Date.now();g.totalPlayTimeMs=(g.totalPlayTimeMs||0)+(now-g.lastResumedAt);
+  g.isPaused=true;g.lastResumedAt=0;
+}
+function resumeTimer(){
+  const g=S.game;if(!g||!g.isPaused||g.done)return;
+  const now=Date.now();g.isPaused=false;g.lastResumedAt=now;g.currentTurnStart=now;
 }
 
 function saveGame(slot){
@@ -306,7 +325,7 @@ function saveGame(slot){
 }
 function loadGame(slot){
   const g=JSON.parse(localStorage.getItem('savedGames')||'{}');
-  if(g[slot]){const d=g[slot];S.game={players:d.players,hole:d.hole||d.currentHole||1,pi:d.pi||d.currentPlayerIndex||0,scores:d.scores,done:d.done||d.isComplete||false,deck:d.deck||[],drawnCards:d.drawnCards||{},settings:d.settings||{theme:'dark',lhm:false,autoSave:true},turnTimes:d.turnTimes||[],gameStartTime:d.gameStartTime||0,gameEndTime:d.gameEndTime||null,currentTurnStart:d.currentTurnStart||Date.now()};applyTheme();}
+  if(g[slot]){const d=g[slot];S.game={players:d.players,hole:d.hole||d.currentHole||1,pi:d.pi||d.currentPlayerIndex||0,scores:d.scores,done:d.done||d.isComplete||false,deck:d.deck||[],drawnCards:d.drawnCards||{},settings:d.settings||{theme:'dark',lhm:false,autoSave:true},turnTimes:d.turnTimes||[],gameStartTime:d.gameStartTime||0,gameEndTime:d.gameEndTime||null,currentTurnStart:d.currentTurnStart||Date.now(),totalPlayTimeMs:d.totalPlayTimeMs||0,isPaused:true,lastResumedAt:0};applyTheme();}
 }
 function getSaved(){return JSON.parse(localStorage.getItem('savedGames')||'{}')}
 function delSlot(slot){const g=getSaved();delete g[slot];localStorage.setItem('savedGames',JSON.stringify(g));}
@@ -800,7 +819,8 @@ function rTimeAnalytics(g){
   const tt=g.turnTimes||[];
   if(!tt.length||!g.players.length)return`<div class="card mb-4"><h3 class="font-bold mb-2">${I.clock||'⏱'} Time Analytics</h3><p class="text-sm text-muted">No timing data available.</p></div>`;
 
-  const totalTime=(g.gameEndTime||Date.now())-g.gameStartTime;
+  const sumTT=tt.reduce((s,t)=>s+(t.endTime-t.startTime),0);
+  const totalTime=(g.totalPlayTimeMs||0)>0?g.totalPlayTimeMs:sumTT>0?sumTT:(g.gameEndTime||Date.now())-g.gameStartTime;
   const ptm={},ptbh={},htm={};
   for(const t of tt){
     const d=t.endTime-t.startTime;
@@ -947,7 +967,7 @@ function rSaveTab(){
     </div>
     ${items}
     <div class="flex flex-col gap-2 mt-4">
-      <button class="btn btn-destructive w-full" onclick="saveHist();const now=Date.now();const cp=S.game.players[S.game.pi];if(cp){if(!S.game.turnTimes)S.game.turnTimes=[];S.game.turnTimes.push({playerId:cp.id,hole:S.game.hole,startTime:S.game.currentTurnStart||now,endTime:now});}S.game.gameEndTime=now;S.game.done=true;S.tab='summary';render()" data-testid="button-end-game">End Game</button>
+      <button class="btn btn-destructive w-full" onclick="saveHist();const now=Date.now();const g=S.game;const as=g.isPaused?0:(now-g.lastResumedAt);g.totalPlayTimeMs=(g.totalPlayTimeMs||0)+as;const cp=g.players[g.pi];if(cp){if(!g.turnTimes)g.turnTimes=[];g.turnTimes.push({playerId:cp.id,hole:g.hole,startTime:g.currentTurnStart||now,endTime:now});}g.gameEndTime=now;g.done=true;g.isPaused=true;g.lastResumedAt=0;S.tab='summary';render()" data-testid="button-end-game">End Game</button>
       <button class="btn btn-outline w-full" onclick="S.game=defGame();S.game.deck=shuffleDeck();S.viewOnly=false;S.screen='setup';render()" data-testid="button-new-game-save">New Game</button>
     </div>
   </div>`;
@@ -967,7 +987,7 @@ function rLoadScreen(app){
         <span class="text-xs text-muted" style="margin-left:auto">${d}</span>
       </div>
       <p class="text-sm text-muted mb-2">${auto.players?.length||0} players, Hole ${auto.hole||auto.currentHole||1}</p>
-      <button class="btn btn-outline w-full" style="min-height:44px" onclick="loadGame('__autosave__');S.viewOnly=false;S.screen='game';S.tab='game';render()" data-testid="button-load-autosave">Load Autosave</button>
+      <button class="btn btn-outline w-full" style="min-height:44px" onclick="loadGame('__autosave__');S.viewOnly=false;S.screen='game';S.tab='game';resumeTimer();render()" data-testid="button-load-autosave">Load Autosave</button>
     </div>`;
   }
 
@@ -982,7 +1002,7 @@ function rLoadScreen(app){
         </div>
       </div>
       <p class="text-sm text-muted mb-2">${g.players?.length||0} players, Hole ${g.hole||g.currentHole||1}</p>
-      <button class="btn btn-primary w-full" style="min-height:44px" onclick="loadGame('${esc(n)}');S.viewOnly=false;S.screen='game';S.tab='game';render()" data-testid="button-load-${esc(n)}">Load</button>
+      <button class="btn btn-primary w-full" style="min-height:44px" onclick="loadGame('${esc(n)}');S.viewOnly=false;S.screen='game';S.tab='game';resumeTimer();render()" data-testid="button-load-${esc(n)}">Load</button>
     </div>`;
   }).join('');
 
@@ -1047,7 +1067,11 @@ function rNav(){
   </div>`;
 }
 
-function setTab(t){S.tab=t;render();}
+function setTab(t){
+  if(S.tab==='game'&&t!=='game')pauseTimer();
+  if(t==='game'&&S.tab!=='game'&&!S.game.done)resumeTimer();
+  S.tab=t;render();
+}
 function prevP(){const g=S.game;g.pi=g.pi===0?g.players.length-1:g.pi-1;render();}
 function nextP(){const g=S.game;g.pi=(g.pi+1)%g.players.length;render();}
 
@@ -1078,6 +1102,7 @@ function startGame(){
   if(!S.game.deck||!S.game.deck.length)S.game.deck=shuffleDeck();
   S.game.drawnCards={};
   S.game.turnTimes=[];S.game.gameStartTime=now;S.game.gameEndTime=null;S.game.currentTurnStart=now;
+  S.game.totalPlayTimeMs=0;S.game.isPaused=false;S.game.lastResumedAt=now;
   S.screen='game';S.tab='game';render();
 }
 

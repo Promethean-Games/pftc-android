@@ -23,6 +23,9 @@ interface GameState {
   gameStartTime: number;
   gameEndTime: number | null;
   currentTurnStart: number;
+  totalPlayTimeMs: number;
+  isPaused: boolean;
+  lastResumedAt: number;
 }
 
 interface GameContextValue extends GameState {
@@ -50,6 +53,8 @@ interface GameContextValue extends GameState {
   getSetupTimes: () => SetupTime[];
   drawCard: (hole: number) => CourseCard | null;
   getDrawnCard: (hole: number) => CourseCard | null;
+  pauseTimer: () => void;
+  resumeTimer: () => void;
 }
 
 const GameContext = createContext<GameContextValue | null>(null);
@@ -78,6 +83,9 @@ function createDefaultState(): GameState {
     gameStartTime: 0,
     gameEndTime: null,
     currentTurnStart: 0,
+    totalPlayTimeMs: 0,
+    isPaused: true,
+    lastResumedAt: 0,
   };
 }
 
@@ -96,6 +104,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
           gameStartTime: parsed.gameStartTime || 0,
           gameEndTime: parsed.gameEndTime || null,
           currentTurnStart: parsed.currentTurnStart || Date.now(),
+          totalPlayTimeMs: parsed.totalPlayTimeMs || 0,
+          isPaused: true,
+          lastResumedAt: 0,
         };
       } catch {
       }
@@ -222,6 +233,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
       gameStartTime: now,
       gameEndTime: null,
       currentTurnStart: now,
+      totalPlayTimeMs: 0,
+      isPaused: false,
+      lastResumedAt: now,
     }));
   };
 
@@ -310,6 +324,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
     saveHistory(gameState);
     const now = Date.now();
     setGameState((prev) => {
+      const activeSince = prev.isPaused ? 0 : (now - prev.lastResumedAt);
+      const newTotalPlay = prev.totalPlayTimeMs + activeSince;
+
       const currentPlayer = prev.players[prev.currentPlayerIndex];
       const turnTime: TurnTime = {
         playerId: currentPlayer?.id || "",
@@ -330,6 +347,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
           turnTimes: newTurnTimes,
           gameEndTime: now,
           currentTurnStart: now,
+          totalPlayTimeMs: newTotalPlay,
+          isPaused: true,
+          lastResumedAt: 0,
         };
       }
       
@@ -342,6 +362,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
           currentHole: nextHole,
           turnTimes: newTurnTimes,
           currentTurnStart: now,
+          totalPlayTimeMs: newTotalPlay,
+          lastResumedAt: now,
         };
       }
       
@@ -351,6 +373,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
         currentHole: nextHole,
         turnTimes: newTurnTimes,
         currentTurnStart: now,
+        totalPlayTimeMs: newTotalPlay,
+        lastResumedAt: now,
       };
     });
   };
@@ -376,6 +400,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
     saveHistory(gameState);
     const now = Date.now();
     setGameState((prev) => {
+      const activeSince = prev.isPaused ? 0 : (now - prev.lastResumedAt);
+      const newTotalPlay = prev.totalPlayTimeMs + activeSince;
+
       const currentPlayer = prev.players[prev.currentPlayerIndex];
       const turnTime: TurnTime = {
         playerId: currentPlayer?.id || "",
@@ -388,6 +415,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
         isComplete: true,
         turnTimes: [...prev.turnTimes, turnTime],
         gameEndTime: now,
+        totalPlayTimeMs: newTotalPlay,
+        isPaused: true,
+        lastResumedAt: 0,
       };
     });
   };
@@ -428,6 +458,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
         gameStartTime: games[slot].gameStartTime || 0,
         gameEndTime: games[slot].gameEndTime || null,
         currentTurnStart: games[slot].currentTurnStart || Date.now(),
+        totalPlayTimeMs: games[slot].totalPlayTimeMs || 0,
+        isPaused: true,
+        lastResumedAt: 0,
       });
     }
   };
@@ -493,6 +526,33 @@ export function GameProvider({ children }: { children: ReactNode }) {
     });
   };
 
+  const pauseTimer = () => {
+    setGameState((prev) => {
+      if (prev.isPaused || prev.isComplete) return prev;
+      const now = Date.now();
+      const activeSince = now - prev.lastResumedAt;
+      return {
+        ...prev,
+        totalPlayTimeMs: prev.totalPlayTimeMs + activeSince,
+        isPaused: true,
+        lastResumedAt: 0,
+      };
+    });
+  };
+
+  const resumeTimer = () => {
+    setGameState((prev) => {
+      if (!prev.isPaused || prev.isComplete) return prev;
+      const now = Date.now();
+      return {
+        ...prev,
+        isPaused: false,
+        lastResumedAt: now,
+        currentTurnStart: now,
+      };
+    });
+  };
+
   const recordSetupTime = (setupTime: SetupTime) => {
     const times = JSON.parse(localStorage.getItem("setupTimes") || "[]");
     times.push(setupTime);
@@ -531,6 +591,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
         getSetupTimes,
         drawCard,
         getDrawnCard,
+        pauseTimer,
+        resumeTimer,
       }}
     >
       {children}
