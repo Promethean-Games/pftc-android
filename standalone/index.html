@@ -505,7 +505,7 @@ function rJokerSelect(){
   const c=S.drawnCard;
   if(!c)return'';
   const jp=S.jokerPar;
-  const parOpts=[2,3,4,5,6].map(p=>`<option value="${p}" ${p===jp?'selected':''}>${p}</option>`).join('');
+  const parOpts=Array.from({length:15},(_,i)=>i+1).map(p=>`<option value="${p}" ${p===jp?'selected':''}>${p}</option>`).join('');
   const hasSelection=jp!==null;
   return`<div class="dialog-overlay" data-testid="joker-select-dialog">
     <div class="dialog-content text-center">
