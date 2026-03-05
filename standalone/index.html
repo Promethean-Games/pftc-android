@@ -636,9 +636,14 @@ function rSummary(){
 
   let lbH=lb.map((e,i)=>{
     const s=calcT(g.scores[e.p.id]||[]);
+    const ppar=(g.scores[e.p.id]||[]).reduce((a,sc)=>a+(sc.par||0),0);
+    const vp=e.t-ppar;
+    const vpStr=vp===0?'E':vp>0?'+'+vp:vp;
+    const vpCls=vp<0?'color:#22c55e':vp>0?'color:#ef4444':'';
     return`<div class="leaderboard-item ${i===0?'gold':i===1?'silver':i===2?'bronze':''} mb-2" data-testid="leaderboard-item-${i}">
       <div class="flex items-center gap-2 flex-1" style="min-width:0"><div class="color-dot" style="background:${e.p.color}"></div><span class="font-bold truncate">${esc(e.p.name)}</span></div>
       <div class="text-center text-sm" style="flex-shrink:0"><div class="font-bold">${e.t}</div><div class="text-xs text-muted">Total</div></div>
+      <div class="text-center text-sm" style="flex-shrink:0;${vpCls}"><div class="font-bold">${vpStr}</div><div class="text-xs text-muted">vs Par</div></div>
       <div class="text-center text-sm" style="flex-shrink:0"><div>${s.sc}</div><div class="text-xs text-muted">Scratch</div></div>
       <div class="text-center text-sm" style="flex-shrink:0"><div>${s.pn}</div><div class="text-xs text-muted">Penalty</div></div>
     </div>`;
@@ -669,12 +674,13 @@ function rSummary(){
   return`<div class="screen" data-testid="summary-screen">
     <h1 class="text-3xl font-bold text-center mb-2">Session Summary</h1>
     ${leader?`<p class="text-center text-muted mb-4">${g.done?'Winner':'Leader'}: <span class="font-bold" style="color:${leader.p.color}">${esc(leader.p.name)}</span> (${leader.t} strokes)</p>`:''}
-    <div class="card mb-4"><div class="grid grid-2 gap-4 text-sm">
+    <div class="card mb-4">${(()=>{const fps=(Object.values(g.scores)[0]||[]);const cpar=fps.reduce((a,s)=>a+(s.par||0),0);return`<div class="grid grid-2 gap-4 text-sm">
       <div class="flex justify-between gap-2" style="border-bottom:1px dashed var(--border);padding-bottom:8px"><span>Players:</span><span class="font-bold">${g.players.length}</span></div>
-      <div class="flex justify-between gap-2" style="border-bottom:1px dashed var(--border);padding-bottom:8px"><span>Holes:</span><span class="font-bold">${allH.length}</span></div>
+      <div class="flex justify-between gap-2" style="border-bottom:1px dashed var(--border);padding-bottom:8px"><span>Cards:</span><span class="font-bold">${allH.length}</span></div>
+      <div class="flex justify-between gap-2" style="border-bottom:1px dashed var(--border);padding-bottom:8px"><span>Course Par:</span><span class="font-bold">${cpar}</span></div>
       <div class="flex justify-between gap-2" style="border-bottom:1px dashed var(--border);padding-bottom:8px"><span>Strokes:</span><span class="font-bold">${tot.ts}</span></div>
       <div class="flex justify-between gap-2" style="border-bottom:1px dashed var(--border);padding-bottom:8px"><span>Scratches:</span><span class="font-bold">${tot.sc}</span></div>
-    </div></div>
+    </div>`;})()}</div>
     <div class="card mb-4"><h3 class="font-bold mb-3">Leaderboard</h3>${lbH}</div>
     <div class="card mb-4"><h3 class="font-bold mb-3">Box Score</h3>
     <div style="overflow-x:auto"><table><thead><tr><th style="text-align:left;min-width:90px">Player</th>${allH.map(h=>`<th>H${h}</th>`).join('')}<th>Total</th></tr></thead><tbody>${tRows}</tbody></table></div></div>

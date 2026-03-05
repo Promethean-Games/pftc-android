@@ -61,32 +61,42 @@ export function SummaryScreen({ players, scores, onNewGame, onSubmitToSheets, is
       )}
 
       <Card className="p-4 mb-6">
-        <div className="grid grid-cols-2 gap-4 text-sm">
-          <div className="flex justify-between border-b border-dashed pb-2">
-            <span>Total Players:</span>
-            <span className="font-semibold">{players.length}</span>
-          </div>
-          <div className="flex justify-between border-b border-dashed pb-2">
-            <span>Holes Played:</span>
-            <span className="font-semibold">{allHoles.length}</span>
-          </div>
-          <div className="flex justify-between border-b border-dashed pb-2">
-            <span>Total Strokes:</span>
-            <span className="font-semibold">
-              {Object.values(scores).reduce((sum, playerScores) => 
-                sum + calculatePlayerTotal(playerScores).totalStrokes, 0
-              )}
-            </span>
-          </div>
-          <div className="flex justify-between border-b border-dashed pb-2">
-            <span>Total Scratches:</span>
-            <span className="font-semibold">
-              {Object.values(scores).reduce((sum, playerScores) => 
-                sum + calculatePlayerTotal(playerScores).totalScratches, 0
-              )}
-            </span>
-          </div>
-        </div>
+        {(() => {
+          const firstPlayerScores = Object.values(scores)[0] || [];
+          const coursePar = firstPlayerScores.reduce((sum, s) => sum + (s.par || 0), 0);
+          return (
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="flex justify-between border-b border-dashed pb-2">
+                <span>Total Players:</span>
+                <span className="font-semibold">{players.length}</span>
+              </div>
+              <div className="flex justify-between border-b border-dashed pb-2">
+                <span>Cards Played:</span>
+                <span className="font-semibold">{allHoles.length}</span>
+              </div>
+              <div className="flex justify-between border-b border-dashed pb-2">
+                <span>Course Par:</span>
+                <span className="font-semibold" data-testid="text-course-par">{coursePar}</span>
+              </div>
+              <div className="flex justify-between border-b border-dashed pb-2">
+                <span>Total Strokes:</span>
+                <span className="font-semibold">
+                  {Object.values(scores).reduce((sum, playerScores) => 
+                    sum + calculatePlayerTotal(playerScores).totalStrokes, 0
+                  )}
+                </span>
+              </div>
+              <div className="flex justify-between border-b border-dashed pb-2">
+                <span>Total Scratches:</span>
+                <span className="font-semibold">
+                  {Object.values(scores).reduce((sum, playerScores) => 
+                    sum + calculatePlayerTotal(playerScores).totalScratches, 0
+                  )}
+                </span>
+              </div>
+            </div>
+          );
+        })()}
       </Card>
 
       {!isLandscape && (
@@ -95,6 +105,9 @@ export function SummaryScreen({ players, scores, onNewGame, onSubmitToSheets, is
           <div className="space-y-2">
             {leaderboard.map((entry, index) => {
               const stats = calculatePlayerTotal(scores[entry.player.id] || []);
+              const playerScores = scores[entry.player.id] || [];
+              const playerPar = playerScores.reduce((sum, s) => sum + (s.par || 0), 0);
+              const vsPar = entry.total - playerPar;
               
               return (
                 <div
@@ -117,6 +130,10 @@ export function SummaryScreen({ players, scores, onNewGame, onSubmitToSheets, is
                   <div className="text-center text-sm flex-shrink-0">
                     <div className="font-bold">{entry.total}</div>
                     <div className="text-xs text-muted-foreground">Total</div>
+                  </div>
+                  <div className={cn("text-center text-sm flex-shrink-0", vsPar < 0 && "text-green-500", vsPar > 0 && "text-red-500")}>
+                    <div className="font-bold">{vsPar === 0 ? "E" : vsPar > 0 ? `+${vsPar}` : vsPar}</div>
+                    <div className="text-xs text-muted-foreground">vs Par</div>
                   </div>
                   <div className="text-center text-sm flex-shrink-0">
                     <div>{stats.totalScratches}</div>
