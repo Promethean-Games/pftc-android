@@ -170,7 +170,8 @@ function defGame() {
   return {
     players:[], hole:1, pi:0, scores:{}, done:false,
     deck:[], drawnCards:{},
-    settings:{theme:'dark',lhm:false,autoSave:true}
+    settings:{theme:'dark',lhm:false,autoSave:true},
+    turnTimes:[], gameStartTime:0, gameEndTime:null, currentTurnStart:0
   };
 }
 
@@ -265,11 +266,19 @@ function drawCard(){
 
 function nextCard(){
   saveHist();
-  const ni=(S.game.pi+1)%S.game.players.length;
+  const now=Date.now();
+  const g=S.game;
+  const cp=g.players[g.pi];
+  if(cp){
+    if(!g.turnTimes)g.turnTimes=[];
+    g.turnTimes.push({playerId:cp.id,hole:g.hole,startTime:g.currentTurnStart||now,endTime:now});
+  }
+  g.currentTurnStart=now;
+  const ni=(g.pi+1)%g.players.length;
   const adv=ni===0;
-  if(adv&&S.game.hole>=MAX_HOLES){S.game.done=true;S.viewOnly=true;S.tab='summary';render();return;}
-  if(adv){sortByPrev(S.game.hole);S.game.pi=0;S.game.hole++;}
-  else{S.game.pi=ni;}
+  if(adv&&g.hole>=MAX_HOLES){g.done=true;g.gameEndTime=now;S.viewOnly=true;S.tab='summary';render();return;}
+  if(adv){sortByPrev(g.hole);g.pi=0;g.hole++;}
+  else{g.pi=ni;}
   render();
 }
 
@@ -280,7 +289,7 @@ function saveGame(slot){
 }
 function loadGame(slot){
   const g=JSON.parse(localStorage.getItem('savedGames')||'{}');
-  if(g[slot]){const d=g[slot];S.game={players:d.players,hole:d.hole||d.currentHole||1,pi:d.pi||d.currentPlayerIndex||0,scores:d.scores,done:d.done||d.isComplete||false,deck:d.deck||[],drawnCards:d.drawnCards||{},settings:d.settings||{theme:'dark',lhm:false,autoSave:true}};applyTheme();}
+  if(g[slot]){const d=g[slot];S.game={players:d.players,hole:d.hole||d.currentHole||1,pi:d.pi||d.currentPlayerIndex||0,scores:d.scores,done:d.done||d.isComplete||false,deck:d.deck||[],drawnCards:d.drawnCards||{},settings:d.settings||{theme:'dark',lhm:false,autoSave:true},turnTimes:d.turnTimes||[],gameStartTime:d.gameStartTime||0,gameEndTime:d.gameEndTime||null,currentTurnStart:d.currentTurnStart||Date.now()};applyTheme();}
 }
 function getSaved(){return JSON.parse(localStorage.getItem('savedGames')||'{}')}
 function delSlot(slot){const g=getSaved();delete g[slot];localStorage.setItem('savedGames',JSON.stringify(g));}
@@ -539,6 +548,82 @@ function rCardViewDlg(dc){
     </div></div>`;
 }
 
+function fmtDur(ms){
+  if(ms<=0)return'0s';
+  const s=Math.floor(ms/1000),h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sec=s%60;
+  if(h>0)return`${h}h ${m}m ${sec}s`;
+  if(m>0)return`${m}m ${sec}s`;
+  return`${sec}s`;
+}
+
+function rTimeAnalytics(g){
+  const tt=g.turnTimes||[];
+  if(!tt.length||!g.players.length)return`<div class="card mb-4"><h3 class="font-bold mb-2">${I.clock||'⏱'} Time Analytics</h3><p class="text-sm text-muted">No timing data available.</p></div>`;
+
+  const totalTime=(g.gameEndTime||Date.now())-g.gameStartTime;
+  const ptm={},ptbh={},htm={};
+  for(const t of tt){
+    const d=t.endTime-t.startTime;
+    ptm[t.playerId]=(ptm[t.playerId]||0)+d;
+    if(!ptbh[t.playerId])ptbh[t.playerId]={};
+    ptbh[t.playerId][t.hole]=d;
+    htm[t.hole]=(htm[t.hole]||0)+d;
+  }
+
+  const playerTimeRows=g.players.map(p=>`<div class="flex justify-between gap-2" style="border-bottom:1px dashed var(--border);padding-bottom:8px"><span class="flex items-center gap-1"><div class="color-dot" style="background:${p.color};width:10px;height:10px"></div>${esc(p.name)}:</span><span class="font-bold">${fmtDur(ptm[p.id]||0)}</span></div>`).join('');
+
+  let gFast={h:0,t:Infinity},gSlow={h:0,t:-1};
+  for(const[h,t]of Object.entries(htm)){if(t<gFast.t)gFast={h:Number(h),t};if(t>gSlow.t)gSlow={h:Number(h),t};}
+
+  const speedRows=g.players.map(p=>{
+    const turns=ptbh[p.id];if(!turns)return'';
+    let fast={h:0,t:Infinity},slow={h:0,t:-1};
+    const vals=[];
+    for(const[h,t]of Object.entries(turns)){vals.push(t);if(t<fast.t)fast={h:Number(h),t};if(t>slow.t)slow={h:Number(h),t};}
+    const avg=vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:0;
+    return`<div style="padding:8px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px">
+      <div class="flex items-center gap-2 mb-1"><div class="color-dot" style="background:${p.color};width:10px;height:10px"></div><span class="font-bold">${esc(p.name)}</span></div>
+      <div class="grid grid-3 gap-2 text-xs text-muted">
+        <div>Fastest: Card ${fast.h} (${fmtDur(fast.t)})</div>
+        <div>Slowest: Card ${slow.h} (${fmtDur(slow.t)})</div>
+        <div>Avg: ${fmtDur(avg)}</div>
+      </div></div>`;
+  }).join('');
+
+  const streaks=g.players.map(p=>{
+    const ps=(g.scores[p.id]||[]).sort((a,b)=>a.hole-b.hole);
+    let best=0,cur=0;
+    for(const s of ps){if(s.strokes+s.scratches+s.penalties<=s.par){cur++;best=Math.max(best,cur);}else cur=0;}
+    return{p,best};
+  });
+  const bestStreak=streaks.reduce((a,b)=>b.best>a.best?b:a,{p:null,best:0});
+
+  const spmRows=g.players.map(p=>{
+    const t=ptm[p.id]||0;
+    const ps=g.scores[p.id]||[];
+    const tot=ps.reduce((a,s)=>a+s.strokes+s.scratches+s.penalties,0);
+    const spm=t>0?(tot/(t/60000)).toFixed(1):'--';
+    return`<div class="flex justify-between gap-2" style="border-bottom:1px dashed var(--border);padding-bottom:8px"><span class="flex items-center gap-1"><div class="color-dot" style="background:${p.color};width:10px;height:10px"></div>${esc(p.name)} Rate:</span><span class="font-bold">${spm} strokes/min</span></div>`;
+  }).join('');
+
+  return`<div class="card mb-4"><h3 class="font-bold mb-3">Time Summary</h3>
+    <div class="grid grid-2 gap-4 text-sm">
+      <div class="flex justify-between gap-2" style="border-bottom:1px dashed var(--border);padding-bottom:8px"><span>Total Game Time:</span><span class="font-bold">${fmtDur(totalTime)}</span></div>
+      <div class="flex justify-between gap-2" style="border-bottom:1px dashed var(--border);padding-bottom:8px"><span>Cards Played:</span><span class="font-bold">${[...new Set(tt.map(t=>t.hole))].length}</span></div>
+      ${playerTimeRows}
+    </div></div>
+  <div class="card mb-4"><h3 class="font-bold mb-3">Speed Records</h3>
+    <div class="text-sm" style="margin-bottom:12px">
+      <div class="flex justify-between gap-2" style="padding:8px;border:1px dashed var(--border);border-radius:8px;margin-bottom:8px"><span>Fastest Card (Group):</span><span class="font-bold">Card ${gFast.h} (${fmtDur(gFast.t)})</span></div>
+      <div class="flex justify-between gap-2" style="padding:8px;border:1px dashed var(--border);border-radius:8px;margin-bottom:8px"><span>Slowest Card (Group):</span><span class="font-bold">Card ${gSlow.h} (${fmtDur(gSlow.t)})</span></div>
+    </div>${speedRows}</div>
+  <div class="card mb-4"><h3 class="font-bold mb-3">Performance Insights</h3>
+    <div class="text-sm">
+      ${bestStreak.p&&bestStreak.best>1?`<div class="flex justify-between gap-2" style="padding:8px;border:1px dashed var(--border);border-radius:8px;margin-bottom:8px"><span>Best Par Streak:</span><span class="font-bold flex items-center gap-1"><div class="color-dot" style="background:${bestStreak.p.color};width:10px;height:10px"></div>${esc(bestStreak.p.name)} (${bestStreak.best} cards)</span></div>`:''}
+      ${spmRows}
+    </div></div>`;
+}
+
 function rSummary(){
   const g=S.game,lb=getLB();
   const leader=lb[0];
@@ -590,6 +675,7 @@ function rSummary(){
     <div class="card mb-4"><h3 class="font-bold mb-3">Leaderboard</h3>${lbH}</div>
     <div class="card mb-4"><h3 class="font-bold mb-3">Box Score</h3>
     <div style="overflow-x:auto"><table><thead><tr><th style="text-align:left;min-width:90px">Player</th>${allH.map(h=>`<th>H${h}</th>`).join('')}<th>Total</th></tr></thead><tbody>${tRows}</tbody></table></div></div>
+    ${rTimeAnalytics(g)}
     ${banner}
   </div>`;
 }
@@ -612,7 +698,7 @@ function rSaveTab(){
     </div>
     ${items}
     <div class="flex flex-col gap-2 mt-4">
-      <button class="btn btn-destructive w-full" onclick="saveHist();S.game.done=true;S.tab='summary';render()" data-testid="button-end-game">End Game</button>
+      <button class="btn btn-destructive w-full" onclick="saveHist();const now=Date.now();const cp=S.game.players[S.game.pi];if(cp){if(!S.game.turnTimes)S.game.turnTimes=[];S.game.turnTimes.push({playerId:cp.id,hole:S.game.hole,startTime:S.game.currentTurnStart||now,endTime:now});}S.game.gameEndTime=now;S.game.done=true;S.tab='summary';render()" data-testid="button-end-game">End Game</button>
       <button class="btn btn-outline w-full" onclick="S.game=defGame();S.game.deck=shuffleDeck();S.viewOnly=false;S.screen='setup';render()" data-testid="button-new-game-save">New Game</button>
     </div>
   </div>`;
@@ -738,9 +824,11 @@ function cycleCol(id){
   if(p){const ci=COLORS.indexOf(p.color);p.color=COLORS[(ci+1)%COLORS.length];render();}
 }
 function startGame(){
+  const now=Date.now();
   S.game.hole=1;S.game.pi=0;S.game.done=false;
   if(!S.game.deck||!S.game.deck.length)S.game.deck=shuffleDeck();
   S.game.drawnCards={};
+  S.game.turnTimes=[];S.game.gameStartTime=now;S.game.gameEndTime=null;S.game.currentTurnStart=now;
   S.screen='game';S.tab='game';render();
 }
 

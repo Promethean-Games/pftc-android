@@ -179,6 +179,9 @@ function GameApp() {
           isGameOver={game.isComplete}
           viewOnly={viewOnly}
           onUpdateScore={(playerId, hole, score) => game.updateScore(playerId, hole, score)}
+          turnTimes={game.turnTimes}
+          gameStartTime={game.gameStartTime}
+          gameEndTime={game.gameEndTime}
         />
       )}
 

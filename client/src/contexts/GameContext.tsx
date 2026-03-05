@@ -3,6 +3,13 @@ import type { Player, HoleScore, GameSession, Settings, SetupTime } from "@share
 import { PLAYER_COLORS, MAX_HOLES } from "@/lib/constants";
 import { shuffleDeck, getCardById, type CourseCard } from "@/lib/card-deck";
 
+export interface TurnTime {
+  playerId: string;
+  hole: number;
+  startTime: number;
+  endTime: number;
+}
+
 interface GameState {
   players: Player[];
   currentHole: number;
@@ -12,6 +19,10 @@ interface GameState {
   settings: Settings;
   deckIds: string[];
   drawnCardIds: Record<number, string>;
+  turnTimes: TurnTime[];
+  gameStartTime: number;
+  gameEndTime: number | null;
+  currentTurnStart: number;
 }
 
 interface GameContextValue extends GameState {
@@ -63,6 +74,10 @@ function createDefaultState(): GameState {
     },
     deckIds: [],
     drawnCardIds: {},
+    turnTimes: [],
+    gameStartTime: 0,
+    gameEndTime: null,
+    currentTurnStart: 0,
   };
 }
 
@@ -77,6 +92,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
           ...parsed,
           deckIds: parsed.deckIds || [],
           drawnCardIds: parsed.drawnCardIds || {},
+          turnTimes: parsed.turnTimes || [],
+          gameStartTime: parsed.gameStartTime || 0,
+          gameEndTime: parsed.gameEndTime || null,
+          currentTurnStart: parsed.currentTurnStart || Date.now(),
         };
       } catch {
       }
@@ -191,6 +210,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
   const startGame = () => {
     const newDeck = shuffleDeck();
+    const now = Date.now();
     setGameState((prev) => ({
       ...prev,
       currentHole: 1,
@@ -198,6 +218,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
       isComplete: false,
       deckIds: newDeck.map((c) => c.id),
       drawnCardIds: {},
+      turnTimes: [],
+      gameStartTime: now,
+      gameEndTime: null,
+      currentTurnStart: now,
     }));
   };
 
@@ -284,7 +308,17 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
   const nextCard = () => {
     saveHistory(gameState);
+    const now = Date.now();
     setGameState((prev) => {
+      const currentPlayer = prev.players[prev.currentPlayerIndex];
+      const turnTime: TurnTime = {
+        playerId: currentPlayer?.id || "",
+        hole: prev.currentHole,
+        startTime: prev.currentTurnStart || now,
+        endTime: now,
+      };
+      const newTurnTimes = [...prev.turnTimes, turnTime];
+
       const nextPlayerIndex = (prev.currentPlayerIndex + 1) % prev.players.length;
       const wouldAdvanceHole = nextPlayerIndex === 0;
       const nextHole = wouldAdvanceHole ? prev.currentHole + 1 : prev.currentHole;
@@ -293,6 +327,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
         return {
           ...prev,
           isComplete: true,
+          turnTimes: newTurnTimes,
+          gameEndTime: now,
+          currentTurnStart: now,
         };
       }
       
@@ -303,6 +340,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
           players: sortedPlayers,
           currentPlayerIndex: 0,
           currentHole: nextHole,
+          turnTimes: newTurnTimes,
+          currentTurnStart: now,
         };
       }
       
@@ -310,6 +349,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
         ...prev,
         currentPlayerIndex: nextPlayerIndex,
         currentHole: nextHole,
+        turnTimes: newTurnTimes,
+        currentTurnStart: now,
       };
     });
   };
@@ -333,7 +374,22 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
   const endGame = () => {
     saveHistory(gameState);
-    setGameState((prev) => ({ ...prev, isComplete: true }));
+    const now = Date.now();
+    setGameState((prev) => {
+      const currentPlayer = prev.players[prev.currentPlayerIndex];
+      const turnTime: TurnTime = {
+        playerId: currentPlayer?.id || "",
+        hole: prev.currentHole,
+        startTime: prev.currentTurnStart || now,
+        endTime: now,
+      };
+      return {
+        ...prev,
+        isComplete: true,
+        turnTimes: [...prev.turnTimes, turnTime],
+        gameEndTime: now,
+      };
+    });
   };
 
   const resetGame = () => {
@@ -368,6 +424,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
         settings: games[slot].settings || gameState.settings,
         deckIds: games[slot].deckIds || [],
         drawnCardIds: games[slot].drawnCardIds || {},
+        turnTimes: games[slot].turnTimes || [],
+        gameStartTime: games[slot].gameStartTime || 0,
+        gameEndTime: games[slot].gameEndTime || null,
+        currentTurnStart: games[slot].currentTurnStart || Date.now(),
       });
     }
   };

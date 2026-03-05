@@ -8,6 +8,8 @@ import { calculatePlayerTotal, getLeaderboard } from "@/lib/game-utils";
 import { cn } from "@/lib/utils";
 import { useUnlock } from "@/contexts/UnlockContext";
 import { UnlockBanner } from "./UnlockBanner";
+import { GameAnalytics } from "./GameAnalytics";
+import type { TurnTime } from "@/contexts/GameContext";
 
 interface SummaryScreenProps {
   players: Player[];
@@ -17,9 +19,12 @@ interface SummaryScreenProps {
   isGameOver?: boolean;
   viewOnly?: boolean;
   onUpdateScore?: (playerId: string, hole: number, score: Partial<HoleScore>) => void;
+  turnTimes?: TurnTime[];
+  gameStartTime?: number;
+  gameEndTime?: number | null;
 }
 
-export function SummaryScreen({ players, scores, onNewGame, onSubmitToSheets, isGameOver = false, viewOnly = false, onUpdateScore }: SummaryScreenProps) {
+export function SummaryScreen({ players, scores, onNewGame, onSubmitToSheets, isGameOver = false, viewOnly = false, onUpdateScore, turnTimes = [], gameStartTime = 0, gameEndTime = null }: SummaryScreenProps) {
   const { isUnlocked, freeHoles } = useUnlock();
   const [isLandscape, setIsLandscape] = useState(false);
   const [editingCell, setEditingCell] = useState<{ playerId: string; hole: number } | null>(null);
@@ -323,6 +328,14 @@ export function SummaryScreen({ players, scores, onNewGame, onSubmitToSheets, is
           </div>
         </Card>
       )}
+
+      <GameAnalytics
+        players={players}
+        scores={scores}
+        turnTimes={turnTimes}
+        gameStartTime={gameStartTime}
+        gameEndTime={gameEndTime}
+      />
 
       {!isUnlocked && allHoles.some(h => h > freeHoles) && (
         <div className="mb-6">

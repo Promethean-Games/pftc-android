@@ -1,8 +1,8 @@
-# Par for the Course - Mini-Golf Scoring App
+# Par for the Course - Billiards Training Game
 
 ## Overview
 
-Par for the Course is a mobile-first mini-golf scoring application designed for outdoor use during active gameplay. The app supports local multiplayer scoring with game save/load functionality. It uses a Stripe paywall to gate holes 4-18 (first 3 holes are free). Built with a React frontend and Express backend, all game data is stored in browser localStorage — no database required.
+Par for the Course is a mobile-first billiards training card game designed for active gameplay. The app supports local multiplayer scoring with game save/load functionality. It uses a physical card deck system (16 course cards + 2 jokers) with 3D flip animation. A Stripe paywall gates cards 4-18 (first 3 cards are free). Built with a React frontend and Express backend, all game data is stored in browser localStorage — no database required. A standalone single HTML file version is maintained for GitHub Pages deployment.
 
 ## User Preferences
 
@@ -46,12 +46,25 @@ The server only handles two Stripe endpoints for the paywall. Development uses V
 - **Persistence**: Unlock persists permanently on the device via localStorage
 - **Gating**: GameScreen shows overlay for locked holes; SummaryScreen shows lock icons for holes 4-18 data
 
+### Game Analytics
+- **Turn Timing**: Each player's turn is timed (start/end timestamps recorded in `turnTimes[]` array in GameState)
+- **Analytics Component**: `GameAnalytics.tsx` renders post-game analytics in SummaryScreen using recharts:
+  - Total game time and per-player time
+  - Line chart of turn durations by card (recharts)
+  - Fastest/slowest card per player and group
+  - Average turn time per player
+  - Most consistent pace player
+  - Best par-or-better streak
+  - Scoring rate (strokes/minute)
+- **Standalone**: Same analytics (except line chart) rendered in standalone HTML
+
 ### Key Design Decisions
 1. **Offline-First Local Games**: Single-device gameplay stores all data locally, no server required
    - **Page Persistence**: App screen (splash/setup/game/summary), active tab, and view-only mode are persisted to localStorage so page refresh returns users to the last screen they were visiting
 2. **Device-Based Unlock**: Stripe unlock is per-device via localStorage
-3. **18-Hole Limit**: Games are strictly limited to 18 holes. Frontend enforces this limit. Game auto-completes after hole 18.
-4. **Roster Order**: At each new hole, players are re-sorted by lowest score on the previous hole (tiebreak: lowest total score, then alphabetical)
+3. **18-Card Limit**: Games are strictly limited to 18 cards. Frontend enforces this limit. Game auto-completes after card 18.
+4. **Roster Order**: At each new card, players are re-sorted by lowest score on the previous card (tiebreak: lowest total score, then alphabetical)
+5. **Card Deck System**: 16 course cards (par 2-6) + 2 joker cards. Jokers let the player choose their own par. Cards are shuffled per game.
 
 ### API Endpoints
 - `POST /api/create-checkout-session` - Creates Stripe Checkout Session for unlocking all 18 holes
