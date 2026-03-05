@@ -222,66 +222,34 @@ function resolveRailCollision(
 
 function applyFriction(ball: Ball, rollingFriction: number, slidingFriction: number, dt: number): void {
   const speed = vecLen(ball.vel);
-  if (speed < VELOCITY_THRESHOLD * 0.5 && vecLen(ball.spin) < VELOCITY_THRESHOLD * 0.5) {
+  const spinMag = vecLen(ball.spin);
+
+  if (speed < VELOCITY_THRESHOLD * 0.5 && spinMag < VELOCITY_THRESHOLD * 0.5) {
     ball.vel = { x: 0, y: 0 };
     ball.spin = { x: 0, y: 0 };
     return;
   }
 
-  const spinMag = vecLen(ball.spin);
+  const slip = vecSub(ball.spin, ball.vel);
+  const slipMag = vecLen(slip);
 
-  if (speed < 1e-10) {
-    if (spinMag > VELOCITY_THRESHOLD * 0.5) {
-      const frictionAccel = (2 / 7) * slidingFriction * G * dt;
-      const spinDir = vecNorm(ball.spin);
-      const accel = Math.min(frictionAccel, spinMag * 0.3);
-      ball.vel = vecScale(spinDir, accel);
-      const spinDecay = slidingFriction * 100 * dt;
-      ball.spin = vecScale(ball.spin, Math.max(0, 1 - spinDecay));
-    } else {
-      ball.spin = { x: 0, y: 0 };
-    }
-    return;
-  }
+  if (slipMag > VELOCITY_THRESHOLD * 0.1) {
+    const slipDir = vecNorm(slip);
+    const frictionAccel = slidingFriction * G * dt;
 
-  const velDir = vecNorm(ball.vel);
+    const velDelta = Math.min(frictionAccel, slipMag * (2 / 7));
+    ball.vel = vecAdd(ball.vel, vecScale(slipDir, velDelta));
 
-  const naturalRollSpin = {
-    x: velDir.x * speed,
-    y: velDir.y * speed,
-  };
-
-  const relSpin = vecSub(ball.spin, naturalRollSpin);
-  const relSpinMag = vecLen(relSpin);
-
-  if (relSpinMag > speed * 0.05) {
-    const frictionForce = slidingFriction * G * dt;
-    const relSpinDir = vecNorm(relSpin);
-
-    const velComponent = vecDot(relSpinDir, velDir);
-
-    const slideDecel = (5 / 7) * frictionForce;
-    if (velComponent < -0.3 && relSpinMag > speed * 0.5) {
-      const decel = Math.min(slideDecel, speed);
-      ball.vel = vecSub(ball.vel, vecScale(velDir, decel));
-      const accel = (2 / 7) * frictionForce;
-      ball.vel = vecAdd(ball.vel, vecScale(relSpinDir, accel));
-    } else {
-      const newSpeed = Math.max(0, speed - slideDecel);
-      ball.vel = vecScale(velDir, newSpeed);
-    }
-
-    const spinConvergeRate = slidingFriction * 100 * dt;
-    const curSpeed = vecLen(ball.vel);
-    const curDir = curSpeed > 1e-10 ? vecNorm(ball.vel) : velDir;
-    const newNaturalRoll = vecScale(curDir, curSpeed);
-    ball.spin = vecAdd(
-      newNaturalRoll,
-      vecScale(relSpin, Math.max(0, 1 - spinConvergeRate))
-    );
+    const spinDelta = Math.min(frictionAccel * 2.5, slipMag * (5 / 7));
+    ball.spin = vecSub(ball.spin, vecScale(slipDir, spinDelta));
   } else {
-    ball.spin = { ...naturalRollSpin };
-
+    if (speed < 1e-10) {
+      ball.vel = { x: 0, y: 0 };
+      ball.spin = { x: 0, y: 0 };
+      return;
+    }
+    const velDir = vecNorm(ball.vel);
+    ball.spin = { ...ball.vel };
     const rollDecel = rollingFriction * G * dt;
     const newSpeed = Math.max(0, speed - rollDecel);
     ball.vel = vecScale(velDir, newSpeed);
