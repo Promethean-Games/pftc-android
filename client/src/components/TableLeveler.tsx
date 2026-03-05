@@ -1,8 +1,164 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { X, RotateCcw } from "lucide-react";
+import { X, RotateCcw, ChevronLeft, ChevronRight, HelpCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+const TUTORIAL_SLIDES = [
+  {
+    title: "Place Your Device",
+    icon: "phone",
+    description: "Lay your phone flat on the pool table surface. The leveler works best when the device is centered on the table.",
+  },
+  {
+    title: "Read the Bubble",
+    icon: "bubble",
+    description: "The bubble shows how level the surface is. Green means level, yellow means slightly off, and red means the table needs adjustment.",
+  },
+  {
+    title: "Calibrate a Preset",
+    icon: "calibrate",
+    description: "Choose Home, League, or Tournament. Place your device on a known-level surface and tap Calibrate to set that preset's zero point.",
+  },
+  {
+    title: "Switch Presets",
+    icon: "presets",
+    description: "Each preset saves its own calibration. Switch between them when you move to a different table or venue.",
+  },
+  {
+    title: "Tilt Readout",
+    icon: "readout",
+    description: "The L/R and F/B values show exact tilt in degrees. Aim for less than 0.5\u00B0 in both directions for a truly level table.",
+  },
+];
+
+function TutorialIcon({ type }: { type: string }) {
+  const size = "w-12 h-12 mx-auto mb-3 text-primary";
+  switch (type) {
+    case "phone":
+      return (
+        <svg className={size} viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2">
+          <rect x="12" y="4" width="24" height="40" rx="4" />
+          <line x1="20" y1="38" x2="28" y2="38" />
+          <line x1="24" y1="10" x2="24" y2="30" strokeDasharray="2 3" opacity="0.4" />
+        </svg>
+      );
+    case "bubble":
+      return (
+        <svg className={size} viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2">
+          <circle cx="24" cy="24" r="18" />
+          <circle cx="24" cy="24" r="10" opacity="0.3" />
+          <circle cx="24" cy="24" r="5" fill="currentColor" opacity="0.6" />
+        </svg>
+      );
+    case "calibrate":
+      return (
+        <svg className={size} viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2">
+          <circle cx="24" cy="24" r="18" />
+          <line x1="24" y1="6" x2="24" y2="14" />
+          <line x1="24" y1="34" x2="24" y2="42" />
+          <line x1="6" y1="24" x2="14" y2="24" />
+          <line x1="34" y1="24" x2="42" y2="24" />
+          <circle cx="24" cy="24" r="3" fill="currentColor" />
+        </svg>
+      );
+    case "presets":
+      return (
+        <svg className={size} viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2">
+          <rect x="4" y="18" width="12" height="12" rx="2" />
+          <rect x="18" y="18" width="12" height="12" rx="2" fill="currentColor" opacity="0.2" />
+          <rect x="32" y="18" width="12" height="12" rx="2" />
+          <line x1="10" y1="34" x2="10" y2="38" />
+          <line x1="24" y1="34" x2="24" y2="38" />
+          <line x1="38" y1="34" x2="38" y2="38" />
+        </svg>
+      );
+    case "readout":
+      return (
+        <svg className={size} viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="2">
+          <rect x="6" y="10" width="36" height="28" rx="3" />
+          <text x="14" y="28" fontSize="10" fill="currentColor" fontFamily="monospace">0.3°</text>
+        </svg>
+      );
+    default:
+      return null;
+  }
+}
+
+function LevelerTutorial({ onClose }: { onClose: () => void }) {
+  const [page, setPage] = useState(0);
+  const slide = TUTORIAL_SLIDES[page];
+
+  return (
+    <div className="fixed inset-0 z-[60] bg-black/60 flex items-center justify-center p-6" data-testid="leveler-tutorial">
+      <Card className="w-full max-w-sm p-6 relative">
+        <Button
+          size="icon"
+          variant="ghost"
+          className="absolute top-2 right-2"
+          onClick={onClose}
+          data-testid="button-close-leveler-tutorial"
+        >
+          <X className="w-4 h-4" />
+        </Button>
+
+        <div className="text-center pt-2">
+          <TutorialIcon type={slide.icon} />
+          <h3 className="text-lg font-bold mb-2" data-testid="text-tutorial-slide-title">{slide.title}</h3>
+          <p className="text-sm text-muted-foreground leading-relaxed mb-6">{slide.description}</p>
+        </div>
+
+        <div className="flex items-center justify-center gap-2 mb-4" data-testid="tutorial-dots">
+          {TUTORIAL_SLIDES.map((_, i) => (
+            <button
+              key={i}
+              className={cn(
+                "w-2.5 h-2.5 rounded-full transition-colors",
+                i === page ? "bg-primary" : "bg-muted-foreground/30"
+              )}
+              onClick={() => setPage(i)}
+              data-testid={`button-tutorial-dot-${i}`}
+            />
+          ))}
+        </div>
+
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            className="flex-1"
+            onClick={() => setPage(page - 1)}
+            disabled={page === 0}
+            data-testid="button-tutorial-prev"
+          >
+            <ChevronLeft className="w-4 h-4 mr-1" />
+            Back
+          </Button>
+          {page < TUTORIAL_SLIDES.length - 1 ? (
+            <Button
+              className="flex-1"
+              onClick={() => setPage(page + 1)}
+              data-testid="button-tutorial-next"
+            >
+              Next
+              <ChevronRight className="w-4 h-4 ml-1" />
+            </Button>
+          ) : (
+            <Button
+              className="flex-1"
+              onClick={() => {
+                localStorage.setItem("pftc_leveler_tutorial_seen", "true");
+                onClose();
+              }}
+              data-testid="button-tutorial-done"
+            >
+              Got It
+            </Button>
+          )}
+        </div>
+      </Card>
+    </div>
+  );
+}
 
 type Preset = "home" | "league" | "tournament";
 
@@ -53,6 +209,9 @@ export function TableLeveler({ onClose }: TableLevelerProps) {
   const [rawGamma, setRawGamma] = useState(0);
   const [permissionGranted, setPermissionGranted] = useState<boolean | null>(null);
   const [needsPermission, setNeedsPermission] = useState(false);
+  const [showTutorial, setShowTutorial] = useState(() => {
+    return localStorage.getItem("pftc_leveler_tutorial_seen") !== "true";
+  });
   const listenerRef = useRef<((e: DeviceOrientationEvent) => void) | null>(null);
 
   const tiltX = rawGamma - (calibration?.gamma ?? 0);
@@ -154,11 +313,16 @@ export function TableLeveler({ onClose }: TableLevelerProps) {
 
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col" data-testid="table-leveler">
-      <div className="flex items-center justify-between p-4 border-b">
+      <div className="flex items-center justify-between gap-2 p-4 border-b">
         <h2 className="text-lg font-bold" data-testid="text-leveler-title">Table Leveler</h2>
-        <Button size="icon" variant="ghost" onClick={onClose} data-testid="button-close-leveler">
-          <X className="w-5 h-5" />
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button size="icon" variant="ghost" onClick={() => setShowTutorial(true)} data-testid="button-leveler-help">
+            <HelpCircle className="w-5 h-5" />
+          </Button>
+          <Button size="icon" variant="ghost" onClick={onClose} data-testid="button-close-leveler">
+            <X className="w-5 h-5" />
+          </Button>
+        </div>
       </div>
 
       <div className="flex-1 flex flex-col items-center justify-center p-4 gap-6 overflow-y-auto">
@@ -293,6 +457,13 @@ export function TableLeveler({ onClose }: TableLevelerProps) {
           </>
         )}
       </div>
+
+      {showTutorial && (
+        <LevelerTutorial onClose={() => {
+          localStorage.setItem("pftc_leveler_tutorial_seen", "true");
+          setShowTutorial(false);
+        }} />
+      )}
     </div>
   );
 }

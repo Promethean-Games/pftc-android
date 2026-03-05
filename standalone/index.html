@@ -179,6 +179,8 @@ let S = {
   jokerPar: null,
   showToolsMenu: false,
   showLeveler: false,
+  showLevelerTutorial: false,
+  levelerTutorialIdx: 0,
 };
 
 function defGame() {
@@ -367,6 +369,8 @@ function initLeveler(){
   LEVELER.calibration=loadLevelCal('home');
   LEVELER.rawBeta=0;LEVELER.rawGamma=0;
   LEVELER.permGranted=null;LEVELER.needsPerm=false;
+  S.levelerTutorialIdx=0;
+  S.showLevelerTutorial=localStorage.getItem('pftc_leveler_tutorial_seen')!=='true';
   const DOE=window.DeviceOrientationEvent;
   if(DOE&&typeof DOE.requestPermission==='function'){
     LEVELER.needsPerm=true;
@@ -448,6 +452,36 @@ function resetLevelerCal(){
   localStorage.removeItem(LEVEL_PRESETS[LEVELER.preset]);LEVELER.calibration=null;render();
 }
 
+const LEVELER_TUTORIAL=[
+  {t:"Place Your Device",icon:'<svg width="48" height="48" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2"><rect x="12" y="4" width="24" height="40" rx="4"/><line x1="20" y1="38" x2="28" y2="38"/><line x1="24" y1="10" x2="24" y2="30" stroke-dasharray="2 3" opacity=".4"/></svg>',b:"Lay your phone flat on the pool table surface. The leveler works best when the device is centered on the table."},
+  {t:"Read the Bubble",icon:'<svg width="48" height="48" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2"><circle cx="24" cy="24" r="18"/><circle cx="24" cy="24" r="10" opacity=".3"/><circle cx="24" cy="24" r="5" fill="currentColor" opacity=".6"/></svg>',b:"The bubble shows how level the surface is. Green means level, yellow means slightly off, and red means the table needs adjustment."},
+  {t:"Calibrate a Preset",icon:'<svg width="48" height="48" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2"><circle cx="24" cy="24" r="18"/><line x1="24" y1="6" x2="24" y2="14"/><line x1="24" y1="34" x2="24" y2="42"/><line x1="6" y1="24" x2="14" y2="24"/><line x1="34" y1="24" x2="42" y2="24"/><circle cx="24" cy="24" r="3" fill="currentColor"/></svg>',b:"Choose Home, League, or Tournament. Place your device on a known-level surface and tap Calibrate to set that preset\u2019s zero point."},
+  {t:"Switch Presets",icon:'<svg width="48" height="48" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="18" width="12" height="12" rx="2"/><rect x="18" y="18" width="12" height="12" rx="2" fill="currentColor" opacity=".2"/><rect x="32" y="18" width="12" height="12" rx="2"/><line x1="10" y1="34" x2="10" y2="38"/><line x1="24" y1="34" x2="24" y2="38"/><line x1="38" y1="34" x2="38" y2="38"/></svg>',b:"Each preset saves its own calibration. Switch between them when you move to a different table or venue."},
+  {t:"Tilt Readout",icon:'<svg width="48" height="48" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="10" width="36" height="28" rx="3"/><text x="14" y="28" font-size="10" fill="currentColor" font-family="monospace">0.3\u00B0</text></svg>',b:"The L/R and F/B values show exact tilt in degrees. Aim for less than 0.5\u00B0 in both directions for a truly level table."},
+];
+
+function rLevelerTutorial(){
+  const s=LEVELER_TUTORIAL[S.levelerTutorialIdx];
+  const total=LEVELER_TUTORIAL.length;
+  const dots=LEVELER_TUTORIAL.map((_,i)=>`<button style="width:${i===S.levelerTutorialIdx?10:8}px;height:${i===S.levelerTutorialIdx?10:8}px;border-radius:50%;background:${i===S.levelerTutorialIdx?'var(--primary)':'var(--fg3)'};opacity:${i===S.levelerTutorialIdx?1:0.3};transition:all .2s;padding:0" onclick="S.levelerTutorialIdx=${i};render()" data-testid="button-leveler-tutorial-dot-${i}"></button>`).join('');
+  return`<div style="position:fixed;inset:0;z-index:70;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:24px" data-testid="leveler-tutorial">
+    <div class="card" style="max-width:340px;padding:24px;position:relative">
+      <button class="btn btn-ghost btn-icon" style="position:absolute;top:8px;right:8px" onclick="localStorage.setItem('pftc_leveler_tutorial_seen','true');S.showLevelerTutorial=false;render()" data-testid="button-close-leveler-tutorial">${I.x}</button>
+      <div class="text-center" style="padding-top:8px">
+        <div style="color:var(--primary);margin-bottom:12px">${s.icon}</div>
+        <h3 class="text-lg font-bold" style="margin-bottom:8px" data-testid="text-leveler-tutorial-title">${s.t}</h3>
+        <p class="text-sm text-muted" style="line-height:1.6;margin-bottom:24px">${s.b}</p>
+      </div>
+      <div class="flex items-center justify-center gap-2" style="margin-bottom:16px;gap:6px" data-testid="leveler-tutorial-dots">${dots}</div>
+      <div class="flex gap-2">
+        <button class="btn btn-outline flex-1" onclick="S.levelerTutorialIdx=Math.max(0,S.levelerTutorialIdx-1);render()" ${S.levelerTutorialIdx===0?'disabled':''} data-testid="button-leveler-tutorial-prev">${I.chevLsm} Back</button>
+        ${S.levelerTutorialIdx<total-1
+          ?`<button class="btn btn-primary flex-1" onclick="S.levelerTutorialIdx++;render()" data-testid="button-leveler-tutorial-next">Next ${I.chevRsm}</button>`
+          :`<button class="btn btn-primary flex-1" onclick="localStorage.setItem('pftc_leveler_tutorial_seen','true');S.showLevelerTutorial=false;render()" data-testid="button-leveler-tutorial-done">Got It</button>`}
+      </div>
+    </div></div>`;
+}
+
 function rLeveler(){
   const R=LEVELER.radius,BR=LEVELER.bubbleR;
   const cal=LEVELER.calibration;
@@ -496,9 +530,13 @@ function rLeveler(){
   return`<div class="leveler-overlay" data-testid="table-leveler">
     <div class="leveler-header">
       <h2 class="text-lg font-bold" data-testid="text-leveler-title">Table Leveler</h2>
-      <button class="btn btn-ghost btn-icon" onclick="closeLeveler()" data-testid="button-close-leveler">${I.x}</button>
+      <div class="flex items-center" style="gap:4px">
+        <button class="btn btn-ghost btn-icon" onclick="S.levelerTutorialIdx=0;S.showLevelerTutorial=true;render()" data-testid="button-leveler-help"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></button>
+        <button class="btn btn-ghost btn-icon" onclick="closeLeveler()" data-testid="button-close-leveler">${I.x}</button>
+      </div>
     </div>
     <div class="leveler-body">${body}</div>
+    ${S.showLevelerTutorial?rLevelerTutorial():''}
   </div>`;
 }
 
