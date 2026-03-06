@@ -87,13 +87,16 @@ The server only handles two Stripe endpoints for the paywall. Development uses V
     - Ball-rail collisions: reflection with restitution + running/reverse English effects (spin transfer 0.15, decay 0.7)
     - Cue ball squirt: side English offsets initial direction opposite the spin side (squirt coeff 0.006)
     - Cue ball swerve: side spin component perpendicular to velocity induces gradual lateral curve (swerve coeff 0.00012)
-    - Friction model (Dr. Dave-based): two-phase sliding-to-rolling transition
-      - Spin tracked as 2D vector; natural roll = spin aligned with velocity at same magnitude
-      - Sliding phase: when relative spin (spin - natural roll) exceeds 5% of speed, sliding friction decelerates ball and spin converges toward natural roll
-      - Rolling phase: once spin matches natural roll, only rolling friction applies (much lower deceleration)
-      - Top spin (negative englishY): spin > natural roll → ball transitions to roll faster, travels further
-      - Draw/backspin (positive englishY): spin opposes natural roll → extended sliding phase, ball decelerates then reverses
-      - Side spin: stored as perpendicular component, does NOT reduce forward momentum; only produces swerve
+    - Friction model (Dr. Dave-based): slip-based sliding-to-rolling transition
+      - Spin tracked as 2D vector; natural roll = spin equals velocity (in ωR units)
+      - Slip = spin - velocity; friction acts to reduce slip
+      - Sliding phase: when |slip| > threshold, friction pushes velocity toward spin (2/7 of force) and spin toward velocity (5/7 of force) — solid sphere moment of inertia ratios
+      - Rolling phase: once slip ≈ 0, only rolling friction applies (much lower deceleration)
+      - Draw/backspin (positive englishY): spin opposes velocity → friction decelerates forward motion AND accelerates backward → ball reverses direction after contact
+      - Follow/topspin (negative englishY): spin exceeds velocity → friction accelerates ball forward
+      - Side spin: perpendicular slip component produces swerve via applySwerve function
+      - Spin initialization: rollFactor = topDrawFactor * 1.5 (ensures meaningful backspin at moderate english settings)
+      - Simulation stop condition: checks both velocity AND spin magnitudes (prevents premature termination when ball has spin but near-zero velocity, e.g., draw after pocketing)
     - Rolling friction (μᵣ): slow/medium/fast = 0.015/0.010/0.005 (Dr. Dave range: 0.005–0.015)
     - Sliding friction (μₛ): slow/medium/fast = 0.30/0.20/0.15 (Dr. Dave range: 0.15–0.4)
     - Rail restitution (e): soft/medium/firm = 0.55/0.72/0.85 (Dr. Dave range: 0.6–0.9+)

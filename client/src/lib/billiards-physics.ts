@@ -393,16 +393,7 @@ export function simulateShot(
         break;
       }
     }
-    if (allStopped) {
-      const cueBall = simBalls.find(b => b.type === 'cue');
-      if (cueBall) {
-        console.log(`SIM STOPPED step=${step} cueVel=${vecLen(cueBall.vel).toFixed(4)} cueSpin=${vecLen(cueBall.spin).toFixed(4)} pocketed=${cueBall.pocketed}`);
-        for (const b of simBalls) {
-          console.log(`  ball=${b.id} type=${b.type} pocketed=${b.pocketed} vel=${vecLen(b.vel).toFixed(4)} spin=${vecLen(b.spin).toFixed(4)}`);
-        }
-      }
-      break;
-    }
+    if (allStopped) break;
   }
 
   for (const ball of simBalls) {
