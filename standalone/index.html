@@ -774,7 +774,7 @@ function emuSimulate(){
         if(d<EMU.PR){b.pocketed=true;trajMap[b.id].push({x:b.pos.x,y:b.pos.y});b.vel={x:0,y:0};b.spin={x:0,y:0};break;}
       }
     }
-    rc++;if(rc>=3){rc=0;for(const b of balls){if(!b.pocketed&&vLen(b.vel)>THRESH*0.5){trajMap[b.id].push({x:b.pos.x,y:b.pos.y});}}}
+    rc++;if(rc>=3){rc=0;for(const b of balls){if(!b.pocketed&&(vLen(b.vel)>THRESH*0.5||vLen(b.spin)>THRESH)){trajMap[b.id].push({x:b.pos.x,y:b.pos.y});}}}
     let allStop=true;for(const b of balls){if(!b.pocketed&&(vLen(b.vel)>THRESH||vLen(b.spin)>THRESH)){allStop=false;break;}}
     if(allStop)break;
   }

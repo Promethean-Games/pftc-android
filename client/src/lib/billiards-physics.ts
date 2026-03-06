@@ -380,7 +380,7 @@ export function simulateShot(
       recordCounter = 0;
       for (const ball of simBalls) {
         if (ball.pocketed) continue;
-        if (vecLen(ball.vel) > VELOCITY_THRESHOLD * 0.5) {
+        if (vecLen(ball.vel) > VELOCITY_THRESHOLD * 0.5 || vecLen(ball.spin) > VELOCITY_THRESHOLD) {
           trajectoryMap[ball.id]?.push({ x: ball.pos.x, y: ball.pos.y });
         }
       }
