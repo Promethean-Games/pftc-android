@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { BookOpen, Wrench, Ruler, Crosshair } from "lucide-react";
+import { BookOpen, Wrench, Ruler, Crosshair, ShoppingCart } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,6 +16,7 @@ import { LOGO_URL } from "@/lib/constants";
 import { TutorialCarousel } from "./TutorialCarousel";
 import { TableLeveler } from "./TableLeveler";
 import { CueingEmulator } from "./CueingEmulator";
+import { useUnlock } from "@/contexts/UnlockContext";
 
 interface SplashScreenProps {
   onNewGame: () => void;
@@ -27,6 +28,7 @@ export function SplashScreen({ onNewGame, onLoadGame }: SplashScreenProps) {
   const [showLeveler, setShowLeveler] = useState(false);
   const [showEmulatorWarning, setShowEmulatorWarning] = useState(false);
   const [showEmulator, setShowEmulator] = useState(false);
+  const { isUnlocked, initiateCheckout } = useUnlock();
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-6 relative">
@@ -65,7 +67,7 @@ export function SplashScreen({ onNewGame, onLoadGame }: SplashScreenProps) {
           onClick={onNewGame}
           data-testid="button-new-game"
         >
-          New Game
+          {isUnlocked ? "New Game" : "Start Demo"}
         </Button>
         <Button 
           size="lg"
@@ -76,6 +78,17 @@ export function SplashScreen({ onNewGame, onLoadGame }: SplashScreenProps) {
         >
           Load Game
         </Button>
+        {!isUnlocked && (
+          <Button
+            size="lg"
+            className="w-full text-lg h-14 bg-gradient-to-r from-emerald-600 to-green-500 hover:from-emerald-700 hover:to-green-600 border-0 text-white font-bold shadow-lg"
+            onClick={initiateCheckout}
+            data-testid="button-buy-now"
+          >
+            <ShoppingCart className="w-5 h-5 mr-2" />
+            Buy Now — Unlock All 18 Courses
+          </Button>
+        )}
         <Button
           size="lg"
           variant="ghost"
