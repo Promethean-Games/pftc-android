@@ -773,7 +773,7 @@ function emuSimulate(){
       }
     }
     rc++;if(rc>=3){rc=0;for(const b of balls){if(!b.pocketed&&vLen(b.vel)>THRESH*0.5){trajMap[b.id].push({x:b.pos.x,y:b.pos.y});}}}
-    let allStop=true;for(const b of balls){if(!b.pocketed&&vLen(b.vel)>THRESH){allStop=false;break;}}
+    let allStop=true;for(const b of balls){if(!b.pocketed&&(vLen(b.vel)>THRESH||vLen(b.spin)>THRESH)){allStop=false;break;}}
     if(allStop)break;
   }
   for(const b of balls){if(!b.pocketed){if(vLen(b.vel)>0){b.vel={x:0,y:0};b.spin={x:0,y:0};}trajMap[b.id].push({x:b.pos.x,y:b.pos.y});}}

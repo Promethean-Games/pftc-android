@@ -388,7 +388,7 @@ export function simulateShot(
 
     let allStopped = true;
     for (const ball of simBalls) {
-      if (!ball.pocketed && vecLen(ball.vel) > VELOCITY_THRESHOLD) {
+      if (!ball.pocketed && (vecLen(ball.vel) > VELOCITY_THRESHOLD || vecLen(ball.spin) > VELOCITY_THRESHOLD)) {
         allStopped = false;
         break;
       }
