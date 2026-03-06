@@ -318,7 +318,7 @@ export function simulateShot(
   const perpY = velDir.x;
 
   const topDrawFactor = -shotParams.englishY;
-  const rollFactor = topDrawFactor * 0.6;
+  const rollFactor = topDrawFactor * 1.5;
 
   cueBall.spin = {
     x: naturalRollX * (1 + rollFactor) + perpX * sideSpinMag,

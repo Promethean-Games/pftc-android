@@ -687,7 +687,7 @@ function emuSimulate(){
   const sideMag=EMU.englishX*spd*0.25;
   const px=-vd.y,py=vd.x;
   const topDraw=-EMU.englishY;
-  const rollF=topDraw*0.6;
+  const rollF=topDraw*1.5;
   cue.spin={x:nrx*(1+rollF)+px*sideMag,y:nry*(1+rollF)+py*sideMag};
   const rFric=EMU.ROLL_F[EMU.tableSpeed],sFric=EMU.SLIDE_F[EMU.tableSpeed];
   const railR=EMU.RAIL_R[EMU.rails],throwF=EMU.THROW_F[EMU.equipment];
