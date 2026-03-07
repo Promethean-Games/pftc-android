@@ -37,6 +37,7 @@ const cspDirectives: helmet.ContentSecurityPolicyOptions["directives"] = isDev
       connectSrc: ["'self'", "https://api.stripe.com", "ws:", "wss:"],
       frameSrc: ["https://js.stripe.com", "https://hooks.stripe.com"],
       frameAncestors: ["'none'"],
+      workerSrc: ["'self'"],
     }
   : {
       defaultSrc: ["'self'"],
@@ -47,6 +48,7 @@ const cspDirectives: helmet.ContentSecurityPolicyOptions["directives"] = isDev
       connectSrc: ["'self'", "https://api.stripe.com"],
       frameSrc: ["https://js.stripe.com", "https://hooks.stripe.com"],
       frameAncestors: ["'none'"],
+      workerSrc: ["'self'"],
     };
 
 app.use(helmet({

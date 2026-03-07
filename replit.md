@@ -136,6 +136,16 @@ The server only handles two Stripe endpoints for the paywall. Development uses V
 - **X-Powered-By**: Disabled to avoid exposing Express fingerprint
 - **Frame Ancestors**: Set to `'none'` to prevent clickjacking via iframes
 
+### Progressive Web App (PWA)
+- **Web App Manifest**: `client/public/manifest.json` with app name, icons (72-512px), standalone display mode, portrait orientation
+- **Service Worker**: `client/public/sw.js` — network-first caching strategy with offline fallback; skips `/api/` routes; auto-updates on new deployments via `skipWaiting` + `clients.claim`
+- **App Icons**: Generated from favicon at 72, 96, 128, 144, 152, 192, 384, 512px sizes; 192px and 512px marked as `maskable` for adaptive icons on Android
+- **iOS Support**: `apple-mobile-web-app-capable`, `black-translucent` status bar, apple-touch-icon linked, safe area insets applied via `env(safe-area-inset-*)` in CSS body
+- **Android Support**: `mobile-web-app-capable`, theme-color `#16a34a` (green), background-color `#111111` (dark)
+- **Open Graph**: Meta tags for social sharing (title, description, image)
+- **Mobile UX**: Tap highlight disabled, callout disabled, overscroll-behavior none, viewport-fit cover for notched devices
+- **Store Deployment**: App is PWA-ready for Google Play (via TWA/Trusted Web Activity) and Apple App Store (via WKWebView wrapper)
+
 ## External Dependencies
 
 ### UI Components
