@@ -151,6 +151,7 @@ const I = {
   plus: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>',
   target: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>',
   chevD: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>',
+  shield: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></svg>',
   grid: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M3 15h18"/><path d="M9 3v18"/><path d="M15 3v18"/></svg>',
   move: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20"/><path d="m15 19-3 3-3-3"/><path d="m19 15 3-3-3-3"/><path d="M2 12h20"/><path d="m5 9-3 3 3 3"/><path d="m9 5 3-3 3 3"/></svg>',
 };
@@ -188,6 +189,8 @@ let S = {
   showLeveler: false,
   showEmulator: false,
   showEmulatorWarning: false,
+  showPrivacy: false,
+  showDeleteConfirm: false,
   showLevelerTutorial: false,
   levelerTutorialIdx: 0,
 };
@@ -371,6 +374,7 @@ function rSplash(app){
         <button class="btn btn-outline btn-xl" data-testid="button-load-game" onclick="S.screen='load';render()">Load Game</button>
         ${!unlocked()?`<button class="btn btn-xl" data-testid="button-buy-now" onclick="window.location.href='${STRIPE_LINK}'" style="background:linear-gradient(to right,#059669,#22c55e);border:none;color:#fff;font-weight:bold;box-shadow:0 4px 14px rgba(34,197,94,0.35)">${I.cart||'🛒'} Buy Now — Unlock All 18 Courses</button>`:''}
         <button class="btn btn-ghost btn-xl" data-testid="button-how-to-play" onclick="S.showTutorial=true;S.tutorialIdx=0;render()">${I.book} How to Play</button>
+        <button class="btn btn-ghost" data-testid="button-privacy-policy" onclick="S.showPrivacy=true;S.showDeleteConfirm=false;render()" style="font-size:13px;color:var(--muted-fg)">${I.shield||'&#128274;'} Privacy Policy & Terms</button>
       </div>
     </div>${S.showEmulatorWarning?`<div style="position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5)" data-testid="dialog-emulator-warning">
       <div style="background:var(--bg,#1a1a2e);border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:32px;max-width:400px;width:90%;text-align:center">
@@ -381,9 +385,61 @@ function rSplash(app){
           <button class="btn" onclick="S.showEmulatorWarning=false;S.showEmulator=true;initEmulator();render();setTimeout(drawEmulatorCanvas,50)" data-testid="button-continue-anyways" style="min-width:100px">Continue Anyways</button>
         </div>
       </div>
-    </div>`:''}${S.showTutorial?rTutorial():''}${S.showLeveler?rLeveler():''}${S.showEmulator?rEmulator():''}`;
+    </div>`:''}${S.showTutorial?rTutorial():''}${S.showLeveler?rLeveler():''}${S.showEmulator?rEmulator():''}${S.showPrivacy?rPrivacy():''}`;
   if(S.showToolsMenu){setTimeout(()=>document.addEventListener('click',closeToolsMenu,{once:true}),0);}
   if(S.showEmulator){setTimeout(drawEmulatorCanvas,50);}
+}
+
+function deleteAllAppData(){
+  const keys=['currentGame','savedGames','pftc_unlocked','appScreen','appActiveTab','appViewOnly','setupTimes','pftc_leveler_tutorial_seen','pftc_level_home','pftc_level_league','pftc_level_tournament','pftc_terms_accepted','pftc_terms_version','pftc_terms_accepted_at','pftc_device_id','sidebar:state'];
+  keys.forEach(k=>{try{localStorage.removeItem(k)}catch{}});
+  for(let i=localStorage.length-1;i>=0;i--){const k=localStorage.key(i);if(k&&k.startsWith('pftc_'))try{localStorage.removeItem(k)}catch{}}
+  S.showDeleteConfirm=false;
+  render();
+  setTimeout(()=>alert('All app data has been deleted. The page will now reload.'),50);
+  setTimeout(()=>location.reload(),500);
+}
+
+function rPrivacy(){
+  const sectionStyle='background:var(--card-bg,rgba(255,255,255,0.05));border:1px solid rgba(255,255,255,0.1);border-radius:8px;padding:16px;margin-bottom:12px';
+  const hStyle='font-weight:600;margin:0 0 8px;font-size:14px';
+  const pStyle='color:var(--muted-fg,rgba(255,255,255,0.6));font-size:13px;line-height:1.6;margin:0';
+  const liStyle='color:var(--muted-fg,rgba(255,255,255,0.6));font-size:13px;line-height:1.6;margin:0 0 4px';
+  const deleteBtn=S.showDeleteConfirm
+    ?`<div style="margin-top:12px"><p style="color:#ef4444;font-size:12px;font-weight:500;margin:0 0 8px">This will erase all saved games, settings, and unlock status. This cannot be undone.</p><div class="flex gap-2"><button class="btn btn-ghost" onclick="S.showDeleteConfirm=false;render()" data-testid="button-cancel-delete">Cancel</button><button class="btn" style="background:#ef4444;border-color:#ef4444;color:#fff" onclick="deleteAllAppData()" data-testid="button-confirm-delete">Confirm Delete</button></div></div>`
+    :`<button class="btn" style="background:#ef4444;border-color:#ef4444;color:#fff;margin-top:12px" onclick="S.showDeleteConfirm=true;render()" data-testid="button-delete-data">${I.trash} Delete All App Data</button>`;
+  return`<div style="position:fixed;inset:0;z-index:9999;background:var(--bg,#111);overflow-y:auto" data-testid="screen-privacy-policy">
+    <div style="max-width:600px;margin:0 auto;padding:16px 16px 48px">
+      <div class="flex items-center justify-between gap-2" style="position:sticky;top:0;background:var(--bg,#111);padding:8px 0;z-index:1;margin-bottom:16px">
+        <h1 style="font-size:18px;font-weight:bold;margin:0">Terms of Use & Privacy Policy</h1>
+        <button class="btn btn-ghost btn-icon" onclick="S.showPrivacy=false;render()" data-testid="button-close-policy">${I.x}</button>
+      </div>
+      <p style="font-size:11px;color:var(--muted-fg);margin:0 0 16px">Promethean Games LLC &middot; Effective Oct 23, 2025</p>
+      <div style="${sectionStyle}"><h2 style="${hStyle}">1. Acceptance</h2><p style="${pStyle}">By using the Par for the Course Scorekeeper ("App"), you agree to these Terms and this Privacy Policy. If you do not agree, please do not use the App.</p></div>
+      <div style="${sectionStyle}"><h2 style="${hStyle}">2. Purpose</h2><p style="${pStyle}">The App is a scorekeeping and training tool for Par for the Course billiards training. It is not for gambling or betting.</p></div>
+      <div style="${sectionStyle}"><h2 style="${hStyle}">3. Your Use</h2><ul style="padding-left:18px;margin:0"><li style="${liStyle}">Use the App lawfully and responsibly.</li><li style="${liStyle}">Do not reverse-engineer, redistribute, or inject harmful content.</li></ul></div>
+      <div style="${sectionStyle}"><h2 style="${hStyle}">4. Intellectual Property</h2><p style="${pStyle}">All names, layouts, and designs are &copy; Promethean Games LLC. Do not reuse without written permission.</p></div>
+      <div style="${sectionStyle}"><h2 style="${hStyle}">5. Warranty & Liability</h2><p style="${pStyle}">The App is provided "as is". We do not guarantee uptime or error-free operation. Promethean Games LLC is not liable for damages or data loss.</p></div>
+      <div style="${sectionStyle}"><h2 style="${hStyle}">6. Privacy & Data Collection</h2><ul style="padding-left:18px;margin:0">
+        <li style="${liStyle}"><strong>No personal data</strong> is sent to our servers. Player names, scores, and game settings stay on your device in local browser storage.</li>
+        <li style="${liStyle}"><strong>Payment processing</strong> is handled by Stripe. When you purchase the full version, Stripe collects your payment information directly. We do not store or have access to your payment details. See <a href="https://stripe.com/privacy" target="_blank" rel="noopener noreferrer" style="text-decoration:underline">Stripe's Privacy Policy</a>.</li>
+        <li style="${liStyle}"><strong>Device sensors</strong>: The Table Leveler feature uses your device's accelerometer/gyroscope. This data is processed locally and is never transmitted to any server.</li>
+        <li style="${liStyle}"><strong>Google Fonts</strong>: The App loads fonts from Google's servers. Google may collect standard web request data (IP address, browser type). See <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer" style="text-decoration:underline">Google's Privacy Policy</a>.</li>
+        <li style="${liStyle}"><strong>No third-party ads or analytics</strong>. No tracking cookies or advertising identifiers are used.</li>
+        <li style="${liStyle}"><strong>No account required</strong>. The App does not require sign-up, login, or any personal information to use.</li>
+      </ul></div>
+      <div style="${sectionStyle}"><h2 style="${hStyle}">7. Data Stored on Your Device</h2><p style="${pStyle}">The App stores the following data locally in your browser:</p><ul style="padding-left:18px;margin:8px 0 0">
+        <li style="${liStyle}">Game sessions (player names, scores, turn timing)</li>
+        <li style="${liStyle}">Saved games</li>
+        <li style="${liStyle}">App settings (theme, display preferences)</li>
+        <li style="${liStyle}">Purchase unlock status</li>
+        <li style="${liStyle}">Table Leveler calibration data</li>
+      </ul><p style="${pStyle}">This data never leaves your device unless you choose to share it.</p></div>
+      <div style="${sectionStyle}"><h2 style="${hStyle}">8. Data Retention & Deletion</h2><p style="${pStyle}">Saved games and settings remain on your device until you delete them. You can delete all app data at any time using the button below. Uninstalling the App also removes all local data.</p>${deleteBtn}</div>
+      <div style="${sectionStyle}"><h2 style="${hStyle}">9. Children's Privacy</h2><p style="${pStyle}">The App does not knowingly collect personal information from children under 13. Since no personal data is collected or transmitted, the App is suitable for users of all ages.</p></div>
+      <div style="${sectionStyle}"><h2 style="${hStyle}">10. Changes & Contact</h2><p style="${pStyle}">We may update these terms. Continued use after an update means you accept the revised version.</p><p style="${pStyle};margin-top:8px">Contact: <a href="mailto:support@promethean-games.com" style="text-decoration:underline">support@promethean-games.com</a> &middot; <a href="https://www.Promethean-Games.com" target="_blank" rel="noopener noreferrer" style="text-decoration:underline">Promethean-Games.com</a></p></div>
+    </div>
+  </div>`;
 }
 
 function closeToolsMenu(e){

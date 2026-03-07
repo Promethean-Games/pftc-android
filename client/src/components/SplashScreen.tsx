@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { BookOpen, Wrench, Ruler, Crosshair, ShoppingCart } from "lucide-react";
+import { BookOpen, Wrench, Ruler, Crosshair, ShoppingCart, Shield } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -16,6 +16,7 @@ import { LOGO_URL } from "@/lib/constants";
 import { TutorialCarousel } from "./TutorialCarousel";
 import { TableLeveler } from "./TableLeveler";
 import { CueingEmulator } from "./CueingEmulator";
+import { PrivacyPolicy } from "./PrivacyPolicy";
 import { useUnlock } from "@/contexts/UnlockContext";
 
 interface SplashScreenProps {
@@ -28,6 +29,7 @@ export function SplashScreen({ onNewGame, onLoadGame }: SplashScreenProps) {
   const [showLeveler, setShowLeveler] = useState(false);
   const [showEmulatorWarning, setShowEmulatorWarning] = useState(false);
   const [showEmulator, setShowEmulator] = useState(false);
+  const [showPrivacy, setShowPrivacy] = useState(false);
   const { isUnlocked, initiateCheckout } = useUnlock();
 
   return (
@@ -99,6 +101,16 @@ export function SplashScreen({ onNewGame, onLoadGame }: SplashScreenProps) {
           <BookOpen className="w-5 h-5 mr-2" />
           How to Play
         </Button>
+        <Button
+          size="lg"
+          variant="ghost"
+          className="w-full text-sm h-10 text-muted-foreground"
+          onClick={() => setShowPrivacy(true)}
+          data-testid="button-privacy-policy"
+        >
+          <Shield className="w-4 h-4 mr-2" />
+          Privacy Policy & Terms
+        </Button>
       </div>
 
       {showTutorial && (
@@ -138,6 +150,10 @@ export function SplashScreen({ onNewGame, onLoadGame }: SplashScreenProps) {
 
       {showEmulator && (
         <CueingEmulator onClose={() => setShowEmulator(false)} />
+      )}
+
+      {showPrivacy && (
+        <PrivacyPolicy onClose={() => setShowPrivacy(false)} />
       )}
     </div>
   );

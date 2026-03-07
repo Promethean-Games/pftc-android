@@ -11,6 +11,7 @@ import { PlayerSetup } from "@/components/PlayerSetup";
 import { GameScreen } from "@/components/GameScreen";
 import { SummaryScreen } from "@/components/SummaryScreen";
 import { SettingsPanel } from "@/components/SettingsPanel";
+import { PrivacyPolicy } from "@/components/PrivacyPolicy";
 import { SaveLoadDialog } from "@/components/SaveLoadDialog";
 import { BottomNav } from "@/components/BottomNav";
 import { isLeader } from "@/lib/game-utils";
@@ -42,6 +43,7 @@ function GameApp() {
   const [viewOnly, setViewOnly] = useState(() => {
     return localStorage.getItem("appViewOnly") === "true";
   });
+  const [showPrivacy, setShowPrivacy] = useState(false);
 
   useEffect(() => {
     localStorage.setItem("appScreen", screen);
@@ -229,6 +231,7 @@ function GameApp() {
           onEndGame={handleEndGame}
           onHome={() => setScreen("splash")}
           viewOnly={viewOnly}
+          onShowPrivacy={() => setShowPrivacy(true)}
           onLogout={() => {
             game.endGame();
             setViewOnly(false);
@@ -236,6 +239,10 @@ function GameApp() {
             setScreen("splash");
           }}
         />
+      )}
+
+      {showPrivacy && (
+        <PrivacyPolicy onClose={() => setShowPrivacy(false)} />
       )}
 
       <BottomNav

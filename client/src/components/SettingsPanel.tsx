@@ -5,7 +5,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { UserPlus, Home } from "lucide-react";
+import { UserPlus, Home, Shield } from "lucide-react";
 import type { Settings, Player } from "@shared/schema";
 
 interface SettingsPanelProps {
@@ -17,9 +17,10 @@ interface SettingsPanelProps {
   onHome?: () => void;
   onLogout?: () => void;
   viewOnly?: boolean;
+  onShowPrivacy?: () => void;
 }
 
-export function SettingsPanel({ settings, players, onUpdateSettings, onAddPlayer, onEndGame, onHome, onLogout, viewOnly = false }: SettingsPanelProps) {
+export function SettingsPanel({ settings, players, onUpdateSettings, onAddPlayer, onEndGame, onHome, onLogout, viewOnly = false, onShowPrivacy }: SettingsPanelProps) {
   const [newPlayerName, setNewPlayerName] = useState("");
   const [insertPosition, setInsertPosition] = useState<string>("end");
 
@@ -137,7 +138,18 @@ export function SettingsPanel({ settings, players, onUpdateSettings, onAddPlayer
           <Card className="p-4">
             <h3 className="font-semibold mb-3">About</h3>
             <p className="text-sm text-muted-foreground mb-2">Par for the Course</p>
-            <p className="text-xs text-muted-foreground">Version 2.1.0</p>
+            <p className="text-xs text-muted-foreground mb-3">Version 2.1.0</p>
+            {onShowPrivacy && (
+              <Button
+                variant="ghost"
+                className="w-full justify-start text-muted-foreground"
+                onClick={onShowPrivacy}
+                data-testid="button-settings-privacy"
+              >
+                <Shield className="w-4 h-4 mr-2" />
+                Privacy Policy & Terms
+              </Button>
+            )}
           </Card>
 
           <div className="pt-4 space-y-3">

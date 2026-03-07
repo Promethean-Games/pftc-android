@@ -136,6 +136,18 @@ The server only handles two Stripe endpoints for the paywall. Development uses V
 - **X-Powered-By**: Disabled to avoid exposing Express fingerprint
 - **Frame Ancestors**: Set to `'none'` to prevent clickjacking via iframes
 
+### Google Play / App Store Compliance
+- **Privacy Policy**: In-app Privacy Policy & Terms accessible from SplashScreen button and Settings panel "About" section; covers data collection, Stripe payment disclosure, device sensors, Google Fonts, children's privacy (COPPA), data retention/deletion
+- **Data Deletion**: "Delete All App Data" button in Privacy Policy page; clears all localStorage keys (game data, settings, unlock status, calibration); auto-reloads page to prevent re-persistence from in-memory state
+- **No Gambling**: App explicitly states it is not for gambling or betting; randomized card draws are for table layout selection only
+- **No Ads/Analytics**: No third-party tracking, advertising identifiers, or analytics SDKs
+- **No Account System**: No PII collection; player names stored locally only
+- **Children's Privacy**: Compliant — no personal data collected or transmitted; suitable for all ages
+- **Payment Disclosure**: Stripe payment processing disclosed; links to Stripe's privacy policy
+- **Contact Info**: support@promethean-games.com and Promethean-Games.com listed in policy
+- **Component**: `client/src/components/PrivacyPolicy.tsx` — full-screen overlay with print support
+- **Standalone**: `rPrivacy()` function + `deleteAllAppData()` mirror the React version
+
 ### Progressive Web App (PWA)
 - **Web App Manifest**: `client/public/manifest.json` with app name, icons (72-512px), standalone display mode, portrait orientation
 - **Service Worker**: `client/public/sw.js` — network-first caching strategy with offline fallback; skips `/api/` routes; auto-updates on new deployments via `skipWaiting` + `clients.claim`
