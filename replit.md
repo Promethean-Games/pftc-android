@@ -126,6 +126,16 @@ The server only handles two Stripe endpoints for the paywall. Development uses V
 - `POST /api/create-checkout-session` - Creates Stripe Checkout Session for unlocking all 18 holes
 - `GET /api/check-unlock-status?session_id=xxx` - Verifies a Stripe checkout session payment status
 
+### Security Hardening
+- **Helmet**: Sets security HTTP headers (X-Frame-Options, X-Content-Type-Options, Strict-Transport-Security, etc.)
+- **Content Security Policy (CSP)**: Environment-scoped — production removes `unsafe-inline`/`unsafe-eval` from scripts and restricts WebSocket origins; development allows them for Vite HMR
+- **Rate Limiting**: `express-rate-limit` on Stripe endpoints — 10 checkout sessions / 30 status checks per 15-minute window per IP
+- **Trust Proxy**: `app.set("trust proxy", 1)` ensures rate limiting uses real client IPs behind Replit's proxy
+- **Input Validation**: `session_id` parameter validated against Stripe's format (`cs_test_`/`cs_live_` prefix + alphanumeric) before hitting Stripe API
+- **Body Size Limits**: JSON and URL-encoded payloads capped at 16kb
+- **X-Powered-By**: Disabled to avoid exposing Express fingerprint
+- **Frame Ancestors**: Set to `'none'` to prevent clickjacking via iframes
+
 ## External Dependencies
 
 ### UI Components

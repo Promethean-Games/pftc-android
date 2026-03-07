@@ -1,6 +1,25 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import Stripe from "stripe";
+import rateLimit from "express-rate-limit";
+
+const STRIPE_SESSION_ID_PATTERN = /^cs_(test_|live_)[a-zA-Z0-9]{10,300}$/;
+
+const checkoutLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many checkout requests, please try again later" },
+});
+
+const statusLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many status checks, please try again later" },
+});
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
@@ -11,7 +30,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     stripe = new Stripe(stripeSecretKey);
   }
 
-  app.post("/api/create-checkout-session", async (req, res) => {
+  app.post("/api/create-checkout-session", checkoutLimiter, async (req, res) => {
     if (!stripe || !stripePriceId) {
       return res.status(500).json({ error: "Stripe is not configured" });
     }
@@ -32,7 +51,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/check-unlock-status", async (req, res) => {
+  app.get("/api/check-unlock-status", statusLimiter, async (req, res) => {
     if (!stripe) {
       return res.status(500).json({ error: "Stripe is not configured" });
     }
@@ -41,6 +60,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const sessionId = req.query.session_id as string;
       if (!sessionId) {
         return res.status(400).json({ error: "Missing session_id" });
+      }
+
+      if (!STRIPE_SESSION_ID_PATTERN.test(sessionId)) {
+        return res.status(400).json({ error: "Invalid session_id format" });
       }
 
       const session = await stripe.checkout.sessions.retrieve(sessionId);

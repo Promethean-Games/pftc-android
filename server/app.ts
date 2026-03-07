@@ -6,6 +6,7 @@ import express, {
   Response,
   NextFunction,
 } from "express";
+import helmet from "helmet";
 
 import { registerRoutes } from "./routes";
 
@@ -22,17 +23,51 @@ export function log(message: string, source = "express") {
 
 export const app = express();
 
+const isDev = process.env.NODE_ENV !== "production";
+
+app.set("trust proxy", 1);
+
+const cspDirectives: helmet.ContentSecurityPolicyOptions["directives"] = isDev
+  ? {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      imgSrc: ["'self'", "data:", "blob:", "https://prometheangamescom.wordpress.com"],
+      connectSrc: ["'self'", "https://api.stripe.com", "ws:", "wss:"],
+      frameSrc: ["https://js.stripe.com", "https://hooks.stripe.com"],
+      frameAncestors: ["'none'"],
+    }
+  : {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      imgSrc: ["'self'", "data:", "blob:", "https://prometheangamescom.wordpress.com"],
+      connectSrc: ["'self'", "https://api.stripe.com"],
+      frameSrc: ["https://js.stripe.com", "https://hooks.stripe.com"],
+      frameAncestors: ["'none'"],
+    };
+
+app.use(helmet({
+  contentSecurityPolicy: { directives: cspDirectives },
+  crossOriginEmbedderPolicy: false,
+}));
+
+app.disable("x-powered-by");
+
 declare module 'http' {
   interface IncomingMessage {
     rawBody: unknown
   }
 }
 app.use(express.json({
+  limit: "16kb",
   verify: (req, _res, buf) => {
     req.rawBody = buf;
   }
 }));
-app.use(express.urlencoded({ extended: false }));
+app.use(express.urlencoded({ extended: false, limit: "16kb" }));
 
 app.use((req, res, next) => {
   const start = Date.now();
