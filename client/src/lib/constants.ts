@@ -15,6 +15,5 @@ export const MAX_PLAYERS = 8;
 
 export const MAX_HOLES = 18;
 
-export const LOGO_URL = "https://prometheangamescom.wordpress.com/wp-content/uploads/2025/08/400x400.png";
+export const LOGO_URL = "/logo.png";
 
-export const LEADER_ICON_URL = "https://prometheangamescom.wordpress.com/wp-content/uploads/2025/08/unnamed-file.png";

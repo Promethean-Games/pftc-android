@@ -101,8 +101,8 @@
     const MAX_HOLES = 18;
     const MAX_PLAYERS = 8;
     const FREE_HOLES = 3;
-    const LOGO = "https://prometheangamescom.wordpress.com/wp-content/uploads/2025/08/400x400.png";
-    const LEADER_ICON = "https://prometheangamescom.wordpress.com/wp-content/uploads/2025/08/unnamed-file.png";
+    const LOGO = "/logo.png";
+    const LEADER_ICON = null;
 
     const ALL_CARDS = [
       {id:'2-01',par:2,img:'cards/2-01.png',joker:false},
@@ -1169,7 +1169,7 @@
       return`<div class="flex items-center gap-3 mb-4">
         <button class="btn btn-outline" style="width:64px;min-height:44px" onclick="prevP()" data-testid="button-prev-player">${I.chevL}</button>
         <div class="flex-1 flex items-center justify-center gap-2" style="padding:8px 12px;border:2px solid ${cp.color};border-radius:8px;min-width:0">
-          ${ldr?`<img src="${LEADER_ICON}" style="width:20px;height:20px;flex-shrink:0">`:''}<span class="text-xl font-bold truncate" data-testid="text-current-player">${esc(cp.name)}</span>
+          ${ldr?`<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#facc15" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>`:''}<span class="text-xl font-bold truncate" data-testid="text-current-player">${esc(cp.name)}</span>
         </div>
         <button class="btn btn-outline" style="width:64px;min-height:44px" onclick="nextP()" data-testid="button-next-player">${I.chevR}</button>
       </div>

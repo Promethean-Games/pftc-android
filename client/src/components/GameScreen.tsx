@@ -2,9 +2,9 @@ import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ChevronLeft, ChevronRight, Undo2, Eye, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Undo2, Eye, X, Trophy } from "lucide-react";
 import type { Player, HoleScore } from "@shared/schema";
-import { PAR_OPTIONS, LEADER_ICON_URL, MAX_HOLES } from "@/lib/constants";
+import { PAR_OPTIONS, MAX_HOLES } from "@/lib/constants";
 import { getScoreCallout } from "@/lib/game-utils";
 import { cn } from "@/lib/utils";
 import { DrawDialog } from "./DrawDialog";
@@ -216,7 +216,7 @@ export function GameScreen({
           borderWidth: "2px"
         }}>
           {isLeader && (
-            <img src={LEADER_ICON_URL} alt="Leader" className="w-5 h-5" data-testid="img-leader" />
+            <Trophy className="w-5 h-5 text-yellow-400 flex-shrink-0" data-testid="img-leader" />
           )}
           <span className="text-2xl font-bold" data-testid="text-player-name">{currentPlayer.name}</span>
         </div>
