@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { X, Plus, Trash2, Undo2, Crosshair, Grid3x3, Move, Settings } from "lucide-react";
+import { X, Plus, Trash2, Undo2, Crosshair, Grid3x3, Move, Settings, Lock } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import {
@@ -1083,53 +1084,18 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
 
               <AccordionItem value="presets">
                 <AccordionTrigger className="text-sm py-2" data-testid="accordion-course-layouts">
-                  Course Layouts
+                  <span className="flex items-center gap-2">
+                    Course Layouts
+                    <Badge variant="secondary" className="text-xs no-default-active-elevate">
+                      <Lock className="w-2.5 h-2.5 mr-1" />
+                      Coming Soon
+                    </Badge>
+                  </span>
                 </AccordionTrigger>
                 <AccordionContent>
-                  <div className="space-y-1 pb-3 max-h-48 overflow-y-auto">
-                    {[2, 3, 4, 5, 6].map((par) => {
-                      const group = COURSE_PRESETS.filter((p) => p.par === par);
-                      if (group.length === 0) return null;
-                      return (
-                        <div key={par}>
-                          <span className="text-xs text-muted-foreground block mb-1 mt-2">
-                            Par {par}
-                          </span>
-                          <div className="flex flex-wrap gap-1">
-                            {group.map((preset) => (
-                              <Button
-                                key={preset.id}
-                                size="sm"
-                                variant="outline"
-                                className="text-xs"
-                                data-testid={`button-preset-${preset.id}`}
-                                onClick={() => {
-                                  const cuePos = findCueBallPosition(preset.balls);
-                                  const newBalls: Ball[] = [
-                                    createBall("cue", "cue", cuePos.x, cuePos.y),
-                                    ...preset.balls.map((pb, i) =>
-                                      createBall(
-                                        `${preset.id}-${pb.type}-${i}`,
-                                        pb.type,
-                                        pb.x,
-                                        pb.y
-                                      )
-                                    ),
-                                  ];
-                                  setBalls(newBalls);
-                                  setShotHistory([]);
-                                  setSelectedBallId(null);
-                                  setHasAimLine(false);
-                                }}
-                              >
-                                {preset.label}
-                              </Button>
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+                  <p className="text-xs text-muted-foreground pb-3 leading-relaxed" data-testid="text-courses-coming-soon">
+                    Preset course layouts — matching the card deck holes — are coming soon as a purchasable add-on.
+                  </p>
                 </AccordionContent>
               </AccordionItem>
             </Accordion>

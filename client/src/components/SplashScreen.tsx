@@ -7,11 +7,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-} from "@/components/ui/dialog";
 import { LOGO_URL } from "@/lib/constants";
 import { TutorialCarousel } from "./TutorialCarousel";
 import { TableLeveler } from "./TableLeveler";
@@ -27,7 +22,6 @@ interface SplashScreenProps {
 export function SplashScreen({ onNewGame, onLoadGame }: SplashScreenProps) {
   const [showTutorial, setShowTutorial] = useState(false);
   const [showLeveler, setShowLeveler] = useState(false);
-  const [showEmulatorWarning, setShowEmulatorWarning] = useState(false);
   const [showEmulator, setShowEmulator] = useState(false);
   const [showPrivacy, setShowPrivacy] = useState(false);
   const { isUnlocked, initiateCheckout } = useUnlock();
@@ -42,7 +36,7 @@ export function SplashScreen({ onNewGame, onLoadGame }: SplashScreenProps) {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => setShowEmulatorWarning(true)} data-testid="menu-cueing-emulator">
+            <DropdownMenuItem onClick={() => setShowEmulator(true)} data-testid="menu-cueing-emulator">
               <Crosshair className="w-4 h-4 mr-2" />
               Cueing Emulator
             </DropdownMenuItem>
@@ -120,33 +114,6 @@ export function SplashScreen({ onNewGame, onLoadGame }: SplashScreenProps) {
       {showLeveler && (
         <TableLeveler onClose={() => setShowLeveler(false)} />
       )}
-
-      <Dialog open={showEmulatorWarning} onOpenChange={setShowEmulatorWarning}>
-        <DialogContent className="max-w-md text-center" data-testid="dialog-emulator-warning">
-          <h1 className="text-2xl font-bold" data-testid="text-coming-soon">Coming Soon!</h1>
-          <h3 className="text-base text-muted-foreground" data-testid="text-warning-message">
-            This feature is not fully developed and may not function properly or at all. Updates are published automatically on a regular basis.
-          </h3>
-          <DialogFooter className="flex flex-row justify-center gap-3 sm:justify-center">
-            <Button
-              variant="outline"
-              onClick={() => setShowEmulatorWarning(false)}
-              data-testid="button-go-back"
-            >
-              Go Back
-            </Button>
-            <Button
-              onClick={() => {
-                setShowEmulatorWarning(false);
-                setShowEmulator(true);
-              }}
-              data-testid="button-continue-anyways"
-            >
-              Continue Anyways
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {showEmulator && (
         <CueingEmulator onClose={() => setShowEmulator(false)} />

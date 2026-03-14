@@ -28,7 +28,7 @@ export async function serveStatic(app: Express, _server: Server) {
   
   console.log(`Serving static files from: ${distPath}`);
 
-  app.use(express.static(distPath));
+  app.use(express.static(distPath, { dotfiles: "allow" }));
 
   // fall through to index.html if the file doesn't exist
   app.use("*", (_req, res) => {
