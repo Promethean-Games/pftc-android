@@ -10,6 +10,8 @@
   "orientation": "portrait",
   "background_color": "#111111",
   "theme_color": "#16a34a",
+  "lang": "en-US",
+  "dir": "ltr",
   "categories": ["games", "sports", "education"],
   "launch_handler": {
     "client_mode": ["navigate-existing", "auto"]
@@ -56,7 +58,29 @@
       "src": "/icon-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
       "purpose": "maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshot-wide.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Par for the Course — game scoring screen"
+    },
+    {
+      "src": "/screenshot-narrow.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Par for the Course — splash screen"
     }
   ],
   "prefer_related_applications": false,
