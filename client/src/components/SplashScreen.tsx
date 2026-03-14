@@ -48,11 +48,12 @@ export function SplashScreen({ onNewGame, onLoadGame }: SplashScreenProps) {
         </DropdownMenu>
       </div>
 
-      <div className="mb-8 w-full max-w-md">
+      <div className="mb-6 flex justify-center">
         <img 
           src={LOGO_URL} 
           alt="Par for the Course" 
-          className="w-full h-auto"
+          className="w-auto max-w-full"
+          style={{ maxHeight: "36vh" }}
         />
       </div>
       

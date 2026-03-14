@@ -101,7 +101,7 @@
     const MAX_HOLES = 18;
     const MAX_PLAYERS = 8;
     const FREE_HOLES = 3;
-    const LOGO = "https://prometheangamescom.wordpress.com/wp-content/uploads/2025/08/400x400.png";
+    const LOGO = "/splash-logo.png";
     const LEADER_ICON = null;
 
     const ALL_CARDS = [
@@ -364,7 +364,7 @@
               </div>`:''}
             </div>
           </div>
-          <img src="${LOGO}" alt="Par for the Course" style="width:100%;max-width:280px;height:auto" data-testid="img-logo">
+          <img src="${LOGO}" alt="Par for the Course" style="width:auto;max-width:100%;max-height:36vh;object-fit:contain" data-testid="img-logo">
           <div class="flex flex-col gap-3 w-full" style="max-width:280px">
             <button class="btn btn-primary btn-xl" data-testid="button-new-game" onclick="S.game=defGame();S.game.deck=shuffleDeck();S.viewOnly=false;S.screen='setup';render()">${unlocked()?'New Game':'Start Demo'}</button>
             <button class="btn btn-outline btn-xl" data-testid="button-load-game" onclick="S.screen='load';render()">Load Game</button>
