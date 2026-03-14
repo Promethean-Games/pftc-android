@@ -5,9 +5,9 @@
     ],
     "target": {
       "namespace": "android_app",
-      "package_name": "com.prometheangames.parforcourse",
+      "package_name": "com.prometheangames.parforthecourse",
       "sha256_cert_fingerprints": [
-        "PLACEHOLDER:REPLACE_WITH_SHA256_FROM_PWABBUILDER"
+        "BC:F5:84:5E:F4:52:49:0A:1B:7F:DB:19:06:DA:7F:5D:6F:AC:98:A2:06:FA:CA:E2:1C:5E:11:21:1B:98:F3:37"
       ]
     }
   }
