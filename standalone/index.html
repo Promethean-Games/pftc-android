@@ -1024,29 +1024,27 @@
     }
 
     function rTutorial(){
+      const B=t=>`<strong style="font-weight:600;color:var(--fg)">${t}</strong>`;
       const SEC=[
-        {label:'The Game',grad:'linear-gradient(135deg,#1e40af,#1d4ed8)',ic:'#93c5fd',bg:'rgba(59,130,246,0.12)',rules:[
-          {icon:'ℹ',t:'Par for the Course',b:'Turns the pool table into a golf course. Each card creates a new layout — a "hole". Players clear the table — stripes first, then solids — in fewer shots than the hole\'s par.'},
+        {label:'To Begin',grad:'linear-gradient(135deg,#1e40af,#1d4ed8)',ic:'#93c5fd',bg:'rgba(59,130,246,0.12)',rules:[
+          {b:`Turn your pool table into a golf course! Each card creates a new layout or "hole". Players clear the table; stripes first, then solids. Players tee off with ${B('ball-in-hand')} and are ${B('not required to call their shot or pocket.')}`},
+          {b:`Play solo or challenge your friends. Add player names to begin. Each player may be assigned a unique identifying ${B('DASHBOARD')} color.`},
         ]},
-        {label:'Setup',grad:'linear-gradient(135deg,#065f46,#059669)',ic:'#6ee7b7',bg:'rgba(16,185,129,0.12)',rules:[
-          {icon:'⬡',t:'Draw a Course Card',b:"The tallest player draws a card to determine the ball layout. A Joker lets that player design a custom layout or replay a previous card."},
-          {icon:'◉',t:'Set Up the Balls',b:'Arrange balls exactly as shown on the card — aligned with table diamonds, cushions, pockets, or other balls.'},
-          {icon:'#',t:'Determine Par',b:'Par = total number of balls in the layout.'},
-          {icon:'⚑',t:'Tee Off',b:'Players shoot tallest to shortest on the first hole. Each player starts with ball in hand.'},
-        ]},
-        {label:'Gameplay',grad:'linear-gradient(135deg,#92400e,#d97706)',ic:'#fcd34d',bg:'rgba(245,158,11,0.12)',rules:[
-          {icon:'✓',t:'Clear the Table',b:'Stripes must be pocketed first. Solids follow once all stripes are gone. Every shot attempt — made or missed — counts as one stroke.'},
-          {icon:'⚡',t:'No Called Shots',b:'Players do not need to call balls or pockets. Any ball that drops counts.'},
+        {label:'Dashboard',grad:'linear-gradient(135deg,#065f46,#059669)',ic:'#6ee7b7',bg:'rgba(16,185,129,0.12)',rules:[
+          {b:'Draw a card at random (by tapping the back of the card). Set up the table to match the card as shown. A Joker lets the leader design a custom layout or replay a previous card.'},
+          {b:`Tally each player's score for the respective hole. When all players have a score recorded (non-zero), proceed to ${B('NEXT CARD.')}`},
         ]},
         {label:'Penalties',grad:'linear-gradient(135deg,#7f1d1d,#dc2626)',ic:'#fca5a5',bg:'rgba(239,68,68,0.12)',rules:[
-          {icon:'⚠',t:'Wrong Ball Order  +1',b:'Contacting or disturbing any solid before all stripes are cleared adds one penalty stroke.'},
-          {icon:'↑',t:'Ball Off the Table  +1 per ball',b:'Each ball that leaves the table counts as pocketed and adds one penalty stroke.'},
-          {icon:'⊘',t:'Scratch  +1',b:'Pocketing the cue ball costs one penalty stroke, but the player continues with ball in hand.'},
-          {icon:'≡',t:'Fouls Stack',b:'Multiple penalties on a single shot all apply and are counted after all balls stop moving.'},
-          {icon:'♥',t:'Mercy Rule',b:'If a player reaches 5 strokes over par for a hole, they may pick up and record Par + 5.'},
+          {t:'Scratch',b:`Pocketing the cue ball costs one penalty stroke ${B('(added to the stroke attempt = +2)')}, but the player continues with ${B('ball-in-hand')}.`},
+          {t:'Wrong Order',b:`Contacting or disturbing a solid before all stripes are pocketed is a foul and results in one penalty stroke ${B('(added to the stroke attempt = +2)')}. Play resumes where the balls lay.`},
+          {t:'Off Table',b:`An ${B('object ball')} that comes off the table is considered pocketed, but results in a one stroke penalty ${B('(added to the stroke attempt = +2)')}.`},
+          {b:'Scratches, Wrong Order, and Off-Table penalties can only be assessed once per stroke but are stacked when applicable.'},
+        ]},
+        {label:'Mercy',grad:'linear-gradient(135deg,#92400e,#d97706)',ic:'#fcd34d',bg:'rgba(245,158,11,0.12)',rules:[
+          {b:`A player whose score exceeds 5 over par may declare ${B('"mercy"')} and accept a score of +5 over par (regardless of the number of strokes or balls still on the table).`},
         ]},
         {label:'Winning',grad:'linear-gradient(135deg,#713f12,#ca8a04)',ic:'#fde68a',bg:'rgba(234,179,8,0.12)',rules:[
-          {icon:'★',t:'Lowest Score Wins',b:'After all holes are played, the player with the fewest total strokes wins. Ties are broken by the most holes at or under par.'},
+          {b:'The lowest score at the end of the game (strokes + penalties) is the winner!'},
         ]},
       ];
       const sectionsHtml=SEC.map(s=>`
@@ -1054,12 +1052,12 @@
           <div style="background:${s.grad};border-radius:8px;padding:10px 16px;margin-bottom:10px">
             <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#fff">${s.label}</span>
           </div>
-          ${s.rules.map(r=>`
-            <div style="display:flex;gap:12px;align-items:flex-start;background:${s.bg};border-radius:8px;padding:12px;margin-bottom:8px">
-              <div style="font-size:14px;color:${s.ic};min-width:18px;margin-top:1px;text-align:center">${r.icon}</div>
+          ${s.rules.map((r,i)=>`
+            <div style="display:flex;gap:12px;align-items:flex-start;background:${s.bg};border-radius:8px;padding:12px;margin-bottom:8px" data-testid="rule-${s.label.toLowerCase()}-${i}">
+              <div style="font-size:13px;color:${s.ic};min-width:18px;margin-top:2px;text-align:center;flex-shrink:0">&#9679;</div>
               <div>
-                <div style="font-weight:600;font-size:13px;margin-bottom:3px;color:var(--fg)">${r.t}</div>
-                <div style="font-size:12px;line-height:1.55;color:var(--fg2)">${r.b}</div>
+                ${r.t?`<div style="font-weight:700;font-size:13px;margin-bottom:4px;color:var(--fg)">${r.t}</div>`:''}
+                <div style="font-size:12px;line-height:1.6;color:var(--fg2)">${r.b}</div>
               </div>
             </div>`).join('')}
         </div>`).join('');

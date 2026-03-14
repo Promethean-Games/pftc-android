@@ -1,10 +1,10 @@
-import { X, Info, Layers, Circle, Hash, Flag, CheckCircle2, Zap, AlertTriangle, ArrowUpToLine, AlertCircle, ListChecks, Heart, Trophy } from "lucide-react";
+import { X, PlayCircle, LayoutDashboard, AlertCircle, AlertTriangle, ArrowUpToLine, ListChecks, Heart, Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface Rule {
   icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
-  title: string;
-  body: string;
+  title?: string;
+  body: React.ReactNode;
 }
 
 interface Section {
@@ -15,63 +15,63 @@ interface Section {
   rules: Rule[];
 }
 
+const B = ({ children }: { children: React.ReactNode }) => (
+  <strong className="font-semibold text-foreground">{children}</strong>
+);
+
 const SECTIONS: Section[] = [
   {
-    label: "The Game",
+    label: "To Begin",
     gradient: "linear-gradient(135deg, #1e40af 0%, #1d4ed8 100%)",
     iconColor: "#93c5fd",
     pillBg: "rgba(59,130,246,0.12)",
     rules: [
       {
-        icon: Info,
-        title: "Par for the Course",
-        body: "Turns the pool table into a golf course. Each card creates a new layout — a \"hole\". Players clear the table — stripes first, then solids — in fewer shots than the hole's par.",
+        icon: PlayCircle,
+        body: (
+          <>
+            Turn your pool table into a golf course! Each card creates a new layout or
+            {" "}"hole". Players clear the table; stripes first, then solids. Players tee
+            off with <B>ball-in-hand</B> and are{" "}
+            <B>not required to call their shot or pocket.</B>
+          </>
+        ),
+      },
+      {
+        icon: PlayCircle,
+        body: (
+          <>
+            Play solo or challenge your friends. Add player names to begin. Each player
+            may be assigned a unique identifying <B>DASHBOARD</B> color.
+          </>
+        ),
       },
     ],
   },
   {
-    label: "Setup",
+    label: "Dashboard",
     gradient: "linear-gradient(135deg, #065f46 0%, #059669 100%)",
     iconColor: "#6ee7b7",
     pillBg: "rgba(16,185,129,0.12)",
     rules: [
       {
-        icon: Layers,
-        title: "Draw a Course Card",
-        body: "The tallest player draws a card to determine the ball layout. A Joker lets that player design a custom layout or replay a previous card.",
+        icon: LayoutDashboard,
+        body: (
+          <>
+            Draw a card at random (by tapping the back of the card). Set up the table to
+            match the card as shown. A Joker lets the leader design a custom layout or
+            replay a previous card.
+          </>
+        ),
       },
       {
-        icon: Circle,
-        title: "Set Up the Balls",
-        body: "Arrange balls exactly as shown on the card — aligned with table diamonds, cushions, pockets, or other balls.",
-      },
-      {
-        icon: Hash,
-        title: "Determine Par",
-        body: "Par = total number of balls in the layout.",
-      },
-      {
-        icon: Flag,
-        title: "Tee Off",
-        body: "Players shoot tallest to shortest on the first hole. Each player starts with ball in hand.",
-      },
-    ],
-  },
-  {
-    label: "Gameplay",
-    gradient: "linear-gradient(135deg, #92400e 0%, #d97706 100%)",
-    iconColor: "#fcd34d",
-    pillBg: "rgba(245,158,11,0.12)",
-    rules: [
-      {
-        icon: CheckCircle2,
-        title: "Clear the Table",
-        body: "Stripes must be pocketed first. Solids follow once all stripes are gone. Every shot attempt — made or missed — counts as one stroke.",
-      },
-      {
-        icon: Zap,
-        title: "No Called Shots",
-        body: "Players do not need to call balls or pockets. Any ball that drops counts.",
+        icon: LayoutDashboard,
+        body: (
+          <>
+            Tally each player's score for the respective hole. When all players have a
+            score recorded (non-zero), proceed to <B>NEXT CARD.</B>
+          </>
+        ),
       },
     ],
   },
@@ -82,29 +82,64 @@ const SECTIONS: Section[] = [
     pillBg: "rgba(239,68,68,0.12)",
     rules: [
       {
+        icon: AlertCircle,
+        title: "Scratch",
+        body: (
+          <>
+            Pocketing the cue ball costs one penalty stroke{" "}
+            <B>(added to the stroke attempt = +2)</B>, but the player continues with{" "}
+            <B>ball-in-hand</B>.
+          </>
+        ),
+      },
+      {
         icon: AlertTriangle,
-        title: "Wrong Ball Order  +1",
-        body: "Contacting or disturbing any solid before all stripes are cleared adds one penalty stroke.",
+        title: "Wrong Order",
+        body: (
+          <>
+            Contacting or disturbing a solid before all stripes are pocketed is a foul
+            and results in one penalty stroke{" "}
+            <B>(added to the stroke attempt = +2)</B>. Play resumes where the balls lay.
+          </>
+        ),
       },
       {
         icon: ArrowUpToLine,
-        title: "Ball Off the Table  +1 per ball",
-        body: "Each ball that leaves the table counts as pocketed and adds one penalty stroke.",
-      },
-      {
-        icon: AlertCircle,
-        title: "Scratch  +1",
-        body: "Pocketing the cue ball costs one penalty stroke, but the player continues with ball in hand.",
+        title: "Off Table",
+        body: (
+          <>
+            An <B>object ball</B> that comes off the table is considered pocketed, but
+            results in a one stroke penalty{" "}
+            <B>(added to the stroke attempt = +2)</B>.
+          </>
+        ),
       },
       {
         icon: ListChecks,
-        title: "Fouls Stack",
-        body: "Multiple penalties on a single shot all apply and are counted after all balls stop moving.",
+        body: (
+          <>
+            Scratches, Wrong Order, and Off-Table penalties can only be assessed once per
+            stroke but are stacked when applicable.
+          </>
+        ),
       },
+    ],
+  },
+  {
+    label: "Mercy",
+    gradient: "linear-gradient(135deg, #92400e 0%, #d97706 100%)",
+    iconColor: "#fcd34d",
+    pillBg: "rgba(245,158,11,0.12)",
+    rules: [
       {
         icon: Heart,
-        title: "Mercy Rule",
-        body: "If a player reaches 5 strokes over par for a hole, they may pick up and record Par + 5.",
+        body: (
+          <>
+            A player whose score exceeds 5 over par may declare{" "}
+            <B>"mercy"</B> and accept a score of +5 over par (regardless of the number
+            of strokes or balls still on the table).
+          </>
+        ),
       },
     ],
   },
@@ -116,8 +151,11 @@ const SECTIONS: Section[] = [
     rules: [
       {
         icon: Trophy,
-        title: "Lowest Score Wins",
-        body: "After all holes are played, the player with the fewest total strokes wins. Ties are broken by the most holes at or under par.",
+        body: (
+          <>
+            The lowest score at the end of the game (strokes + penalties) is the winner!
+          </>
+        ),
       },
     ],
   },
@@ -155,12 +193,12 @@ export function TutorialCarousel({ onClose }: TutorialCarouselProps) {
             </div>
 
             <div className="space-y-2">
-              {section.rules.map((rule) => (
+              {section.rules.map((rule, idx) => (
                 <div
-                  key={rule.title}
+                  key={idx}
                   className="flex gap-3 items-start rounded-md p-3"
                   style={{ background: section.pillBg }}
-                  data-testid={`rule-${rule.title.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "")}`}
+                  data-testid={`rule-${section.label.toLowerCase()}-${idx}`}
                 >
                   <div className="shrink-0 mt-0.5">
                     <rule.icon
@@ -169,7 +207,9 @@ export function TutorialCarousel({ onClose }: TutorialCarouselProps) {
                     />
                   </div>
                   <div>
-                    <p className="font-semibold text-sm leading-snug mb-0.5">{rule.title}</p>
+                    {rule.title && (
+                      <p className="font-bold text-sm leading-snug mb-1">{rule.title}</p>
+                    )}
                     <p className="text-sm text-muted-foreground leading-relaxed">{rule.body}</p>
                   </div>
                 </div>
