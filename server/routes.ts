@@ -1,5 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import path from "path";
+import fs from "fs";
 import Stripe from "stripe";
 import { GoogleAuth } from "google-auth-library";
 import rateLimit from "express-rate-limit";
@@ -56,6 +58,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
   if (stripeSecretKey) {
     stripe = new Stripe(stripeSecretKey);
   }
+
+  // Explicit route for Digital Asset Links (required for TWA / Play Store association).
+  // google-auth-library (direct REST) is used instead of the googleapis package for
+  // simplicity — it avoids the heavier googleapis dependency while achieving the same result.
+  app.get("/.well-known/assetlinks.json", (_req, res) => {
+    const cwd = process.cwd();
+    const candidates = [
+      path.join(cwd, "dist/public/.well-known/assetlinks.json"), // production build
+      path.join(cwd, "client/public/.well-known/assetlinks.json"), // development source
+    ];
+    const filePath = candidates.find(p => fs.existsSync(p));
+    if (!filePath) {
+      return res.status(404).json({ error: "assetlinks.json not found" });
+    }
+    res.setHeader("Content-Type", "application/json");
+    res.sendFile(filePath);
+  });
 
   app.get("/privacy", (_req, res) => {
     res.send(`<!DOCTYPE html>
