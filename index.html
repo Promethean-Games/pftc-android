@@ -2109,16 +2109,20 @@ function resizeEmulatorCanvas(){
   const wrap=document.getElementById('emulator-canvas-wrap');
   const overlay=document.getElementById('emulator-overlay');
   if(!canvas||!wrap||!overlay) return;
-  const totalH=overlay.clientHeight;
-  const headerH=overlay.querySelector('.emulator-header').offsetHeight;
-  const controlsH=Math.min(350,totalH*0.45);
-  const canvasH=Math.max(150,totalH-headerH-controlsH);
-  const canvasW=overlay.clientWidth;
-  wrap.style.height=canvasH+'px';
-  wrap.style.width=canvasW+'px';
   const dpr=window.devicePixelRatio||1;
-  canvas.width=canvasW*dpr;
-  canvas.height=canvasH*dpr;
+  const canvasW=overlay.clientWidth;
+  // Derive canvas height from the table's 2:1 aspect ratio so no empty
+  // black space appears below the table. Add rail margins on all sides.
+  const rail=36;
+  const tableScale=(canvasW-rail*2)/BP.TABLE_W;
+  const tableH=BP.TABLE_H*tableScale;
+  // Cap at 60% of viewport height so controls always have room
+  const maxH=window.innerHeight*0.60;
+  const canvasH=Math.min(maxH, tableH+rail*2);
+  wrap.style.width=canvasW+'px';
+  wrap.style.height=canvasH+'px';
+  canvas.width=Math.round(canvasW*dpr);
+  canvas.height=Math.round(canvasH*dpr);
   canvas.style.width=canvasW+'px';
   canvas.style.height=canvasH+'px';
   emRedraw();
