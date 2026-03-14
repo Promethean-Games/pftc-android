@@ -7,7 +7,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LOGO_URL } from "@/lib/constants";
+import { LOGO_URL, APP_VERSION } from "@/lib/constants";
 import { TutorialCarousel } from "./TutorialCarousel";
 import { TableLeveler } from "./TableLeveler";
 import { CueingEmulator } from "./CueingEmulator";
@@ -106,6 +106,8 @@ export function SplashScreen({ onNewGame, onLoadGame }: SplashScreenProps) {
           Privacy Policy & Terms
         </Button>
       </div>
+
+      <p className="mt-6 text-xs text-muted-foreground" data-testid="text-app-version">{APP_VERSION}</p>
 
       {showTutorial && (
         <TutorialCarousel onClose={() => setShowTutorial(false)} />
