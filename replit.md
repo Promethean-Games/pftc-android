@@ -62,6 +62,17 @@ The server only handles two Stripe endpoints for the paywall. Development uses V
   - Scoring rate (strokes/minute)
 - **Standalone**: Same analytics (except line chart) rendered in standalone HTML
 
+### GitHub Pages Standalone (`index.html`)
+- **Root-level `index.html`**: Complete self-contained standalone game file at the project root for GitHub Pages / static hosting deployment
+  - All CSS, JS, and HTML embedded inline — no build step required; works by opening in any browser
+  - Card images loaded from `cards/` folder relative paths (e.g. `cards/2-01.png`, `cards/back.png`)
+  - Root-level `cards/` directory is a copy of `standalone/cards/` (copy with `cp -r standalone/cards cards`)
+  - Full physics engine ported to vanilla JS inside a `BP` IIFE module, matching `billiards-physics.ts` constants exactly
+  - Full Cueing Emulator (canvas rendering + ball management + accordion settings + physics simulation)
+  - Table Leveler, Privacy Policy, all game screens, save/load, Stripe paywall all included
+  - Theme toggle (dark/light), left-handed mode, auto-save all functional
+  - Stripe paywall: holes 1-3 free; holes 4-18 locked behind `https://buy.stripe.com/7sYeVc82N7czdPqaQ20Jq00`; unlock stored in `localStorage.pftc_unlocked = "true"`
+
 ### CueMaster Tools
 - **Cueing Emulator**: Canvas-based billiards shot simulator accessible from the wrench icon dropdown on the splash screen
   - Top-down 9-foot pool table rendered on HTML5 Canvas with green felt, wood rails, 6 pockets, and diamond sights
