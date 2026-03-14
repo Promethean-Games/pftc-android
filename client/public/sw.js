@@ -1,58 +1,141 @@
-const CACHE_NAME = "pftc-v1";
+// Bump CACHE_VERSION with every production deployment so stale caches clear
+// automatically and users always receive fresh assets.
+const CACHE_VERSION = "pftc-v3";
+const STATIC_CACHE  = `${CACHE_VERSION}-static`;
+const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
+
 const PRECACHE_URLS = [
   "/",
+  "/manifest.json",
   "/favicon.png",
   "/icon-192x192.png",
   "/icon-512x512.png",
   "/apple-touch-icon-180x180.png",
-  "/manifest.json"
+  "/apple-touch-icon-167x167.png",
 ];
 
+// ── Install: pre-cache shell ──────────────────────────────────────────────────
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE_URLS))
+    caches
+      .open(STATIC_CACHE)
+      .then((cache) => cache.addAll(PRECACHE_URLS))
+      .then(() => self.skipWaiting())
   );
-  self.skipWaiting();
 });
 
+// ── Activate: purge old caches, notify clients ────────────────────────────────
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then((keys) =>
-      Promise.all(keys.filter((k) => k !== CACHE_NAME).map((k) => caches.delete(k)))
-    )
+    caches
+      .keys()
+      .then((keys) =>
+        Promise.all(
+          keys
+            .filter((k) => k !== STATIC_CACHE && k !== DYNAMIC_CACHE)
+            .map((k) => caches.delete(k))
+        )
+      )
+      .then(() => self.clients.claim())
+      .then(() =>
+        self.clients
+          .matchAll({ includeUncontrolled: true })
+          .then((clients) =>
+            clients.forEach((c) => c.postMessage({ type: "SW_UPDATED" }))
+          )
+      )
   );
-  self.clients.claim();
 });
 
+// ── Fetch: tiered strategy per resource type ──────────────────────────────────
 self.addEventListener("fetch", (event) => {
-  const url = new URL(event.request.url);
+  const { request } = event;
+  const url = new URL(request.url);
 
-  if (url.pathname.startsWith("/api/")) {
+  // Never intercept API calls
+  if (url.pathname.startsWith("/api/")) return;
+
+  // Only handle GET
+  if (request.method !== "GET") return;
+
+  // Google Fonts: cache-first (immutable once fetched)
+  if (
+    url.hostname === "fonts.googleapis.com" ||
+    url.hostname === "fonts.gstatic.com"
+  ) {
+    event.respondWith(cacheFirst(request, STATIC_CACHE));
     return;
   }
 
-  if (event.request.mode === "navigate") {
-    event.respondWith(
-      fetch(event.request)
-        .then((response) => {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put("/", clone));
-          return response;
-        })
-        .catch(() => caches.match("/"))
-    );
+  // Versioned JS/CSS/font bundles (Vite content-hashed /assets/*): cache-first
+  if (url.pathname.startsWith("/assets/")) {
+    event.respondWith(cacheFirst(request, DYNAMIC_CACHE));
     return;
   }
 
-  event.respondWith(
-    fetch(event.request)
-      .then((response) => {
-        if (response.ok && event.request.method === "GET") {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
-        }
-        return response;
-      })
-      .catch(() => caches.match(event.request))
-  );
+  // Static images & icons: cache-first
+  if (url.pathname.match(/\.(png|jpg|jpeg|svg|webp|gif|ico|woff2?)$/)) {
+    event.respondWith(cacheFirst(request, DYNAMIC_CACHE));
+    return;
+  }
+
+  // HTML / navigation: network-first → cached shell fallback
+  if (request.mode === "navigate") {
+    event.respondWith(networkFirst(request));
+    return;
+  }
+
+  // Everything else: stale-while-revalidate
+  event.respondWith(staleWhileRevalidate(request, DYNAMIC_CACHE));
 });
+
+// ── Strategy helpers ──────────────────────────────────────────────────────────
+
+async function cacheFirst(request, cacheName) {
+  const cached = await caches.match(request);
+  if (cached) return cached;
+  try {
+    const response = await fetch(request);
+    if (response.ok) {
+      const cache = await caches.open(cacheName);
+      cache.put(request, response.clone());
+    }
+    return response;
+  } catch {
+    return new Response("Offline", { status: 503, statusText: "Offline" });
+  }
+}
+
+async function networkFirst(request) {
+  try {
+    const response = await fetch(request);
+    if (response.ok) {
+      const cache = await caches.open(DYNAMIC_CACHE);
+      cache.put(request, response.clone());
+    }
+    return response;
+  } catch {
+    const cached =
+      (await caches.match(request)) || (await caches.match("/"));
+    return (
+      cached ||
+      new Response("Offline", { status: 503, statusText: "Offline" })
+    );
+  }
+}
+
+async function staleWhileRevalidate(request, cacheName) {
+  const cache = await caches.open(cacheName);
+  const cached = await cache.match(request);
+  const networkPromise = fetch(request)
+    .then((response) => {
+      if (response.ok) cache.put(request, response.clone());
+      return response;
+    })
+    .catch(() => null);
+  return (
+    cached ||
+    (await networkPromise) ||
+    new Response("Offline", { status: 503, statusText: "Offline" })
+  );
+}

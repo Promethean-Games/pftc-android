@@ -261,6 +261,14 @@ function GameApp() {
 }
 
 export default function App() {
+  const [updateReady, setUpdateReady] = useState(false);
+
+  useEffect(() => {
+    const handler = () => setUpdateReady(true);
+    window.addEventListener("swUpdateReady", handler);
+    return () => window.removeEventListener("swUpdateReady", handler);
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
@@ -272,6 +280,20 @@ export default function App() {
           </UnlockProvider>
         </ThemeProvider>
         <Toaster />
+        {updateReady && (
+          <div
+            className="fixed inset-x-0 bottom-0 z-[9999] flex items-center justify-between gap-3 bg-emerald-600 px-4 py-3 text-sm font-semibold text-white shadow-lg"
+            style={{ paddingBottom: "calc(0.75rem + env(safe-area-inset-bottom))" }}
+          >
+            <span>A new version is ready.</span>
+            <button
+              onClick={() => window.location.reload()}
+              className="rounded bg-white/20 px-3 py-1 text-xs font-bold transition-colors hover:bg-white/30 active:bg-white/40"
+            >
+              Refresh
+            </button>
+          </div>
+        )}
       </TooltipProvider>
     </QueryClientProvider>
   );

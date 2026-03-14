@@ -1,203 +1,1639 @@
- gap-2 mb-4">
-      <input class="input flex-1" id="saveSlot" placeholder="Save slot name" value="Game ${new Date().toLocaleDateString()}" data-testid="input-save-name">
-      <button class="btn btn-primary" onclick="const n=document.getElementById('saveSlot').value.trim();if(n){saveGame(n);render()}" data-testid="button-save">Save</button>
-    </div>
-    ${items}
-    <div class="flex flex-col gap-2 mt-4">
-      <button class="btn btn-destructive w-full" onclick="saveHist();const now=Date.now();const g=S.game;const as=g.isPaused?0:(now-g.lastResumedAt);g.totalPlayTimeMs=(g.totalPlayTimeMs||0)+as;const cp=g.players[g.pi];if(cp){if(!g.turnTimes)g.turnTimes=[];g.turnTimes.push({playerId:cp.id,hole:g.hole,startTime:g.currentTurnStart||now,endTime:now});}g.gameEndTime=now;g.done=true;g.isPaused=true;g.lastResumedAt=0;S.tab='summary';render()" data-testid="button-end-game">End Game</button>
-      <button class="btn btn-outline w-full" onclick="S.game=defGame();S.game.deck=shuffleDeck();S.viewOnly=false;S.screen='setup';render()" data-testid="button-new-game-save">New Game</button>
-    </div>
-  </div>`;
-}
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Par for the Course - Billiards Training Game</title>
+    <meta name="description" content="A unique billiards training game. Track strokes, scratches, and penalties for up to 8 players across 18 cards.">
+    <meta property="og:title" content="Par for the Course - Billiards Training Game">
+    <meta property="og:description" content="A unique billiards training card game for up to 8 players across 18 cards.">
+    <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{--bg:#0a0a0a;--bg2:#171717;--card:#1c1c1c;--card-border:#2a2a2a;--fg:#fafafa;--fg2:#a1a1aa;--fg3:#71717a;--primary:#22c55e;--primary-fg:#fff;--destructive:#d11111;--destructive-fg:#fff;--border:#27272a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif}
+    body{background:var(--bg);color:var(--fg);min-height:100dvh;-webkit-tap-highlight-color:transparent;overflow-x:hidden}
+    .light{--bg:#fff;--bg2:#f4f4f5;--card:#fff;--card-border:#e4e4e7;--fg:#09090b;--fg2:#71717a;--fg3:#a1a1aa;--border:#e4e4e7}
+    button{font-family:inherit;cursor:pointer;border:none;outline:none;-webkit-appearance:none}
+    input,select{font-family:inherit;outline:none}
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border-radius:6px;font-weight:600;transition:opacity .15s;min-height:36px;padding:0 16px;font-size:14px}
+    .btn:active{opacity:.8}
+    .btn-primary{background:var(--primary);color:var(--primary-fg)}
+    .btn-destructive{background:var(--destructive);color:var(--destructive-fg)}
+    .btn-outline{background:transparent;border:1px solid var(--border);color:var(--fg)}
+    .btn-ghost{background:transparent;color:var(--fg2)}
+    .btn-lg{min-height:44px;padding:0 24px;font-size:16px}
+    .btn-xl{min-height:56px;padding:0 32px;font-size:18px;width:100%}
+    .btn-icon{min-height:36px;width:36px;padding:0}
+    .card{background:var(--card);border:1px solid var(--card-border);border-radius:8px;padding:16px}
+    .screen{padding:16px;padding-bottom:72px;min-height:100dvh}
+    .text-center{text-align:center}
+    .text-muted{color:var(--fg2)}
+    .text-sm{font-size:13px}
+    .text-xs{font-size:11px}
+    .text-lg{font-size:18px}
+    .text-xl{font-size:20px}
+    .text-2xl{font-size:24px}
+    .text-3xl{font-size:30px}
+    .font-bold{font-weight:700}
+    .font-extrabold{font-weight:800}
+    .mb-1{margin-bottom:4px}.mb-2{margin-bottom:8px}.mb-3{margin-bottom:12px}.mb-4{margin-bottom:16px}.mb-6{margin-bottom:24px}
+    .mt-1{margin-top:4px}.mt-2{margin-top:8px}.mt-4{margin-top:16px}
+    .gap-1{gap:4px}.gap-2{gap:8px}.gap-3{gap:12px}.gap-4{gap:16px}
+    .flex{display:flex}.flex-col{flex-direction:column}.flex-1{flex:1}.items-center{align-items:center}.justify-center{justify-content:center}.justify-between{justify-content:space-between}.flex-wrap{flex-wrap:wrap}
+    .grid{display:grid}.grid-2{grid-template-columns:1fr 1fr}.grid-3{grid-template-columns:1fr 1fr 1fr}
+    .w-full{width:100%}
+    .hidden{display:none!important}
+    .truncate{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .color-dot{width:16px;height:16px;border-radius:50%;flex-shrink:0}
+    #bottom-nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:var(--bg2);border-top:1px solid var(--border);z-index:40;height:56px}
+    #bottom-nav button{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;background:none;color:var(--fg3);font-size:10px;gap:2px;border:none}
+    #bottom-nav button.active{color:var(--primary)}
+    #bottom-nav button svg{width:20px;height:20px}
+    .dialog-overlay{position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:50;display:flex;align-items:center;justify-content:center;padding:16px}
+    .dialog-content{background:var(--card);border:1px solid var(--card-border);border-radius:12px;padding:24px;width:100%;max-width:400px;max-height:90vh;overflow-y:auto}
+    table{width:100%;border-collapse:collapse;font-size:13px}
+    th,td{padding:6px 8px;text-align:center;border-bottom:1px solid var(--border)}
+    th{font-weight:600;color:var(--fg2);font-size:11px;text-transform:uppercase}
+    td.player-cell{text-align:left;font-weight:600}
+    .score-under{color:#22c55e;font-weight:600}
+    .score-over{color:#d11111}
+    .leaderboard-item{display:flex;align-items:center;gap:8px;padding:12px;border-radius:8px;border:1px solid var(--border)}
+    .leaderboard-item.gold{border-color:#eab308;border-width:2px;background:rgba(234,179,8,.05)}
+    .leaderboard-item.silver{border-color:#9ca3af;border-width:2px;background:rgba(156,163,175,.05)}
+    .leaderboard-item.bronze{border-color:#b45309;border-width:2px;background:rgba(180,83,9,.05)}
+    .input{background:var(--bg2);color:var(--fg);border:1px solid var(--border);border-radius:6px;padding:8px 12px;font-size:16px;min-height:44px;width:100%}
+    .input:focus{border-color:var(--primary)}
+    .lock-icon{display:flex;align-items:center;justify-content:center}
+    .lock-icon svg{width:12px;height:12px;color:var(--fg3);opacity:.5}
+    .pulse{animation:pulse 1.5s infinite}
+    @keyframes pulse{0%,100%{opacity:1}50%{opacity:.7}}
+    .save-item{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:12px;border:1px solid var(--border);border-radius:8px}
+    .card-img{width:100%;max-width:240px;border-radius:8px;display:block;margin:0 auto}
+    .card-img-sm{width:100%;max-width:140px;border-radius:6px;display:block;margin:0 auto}
+    .card-flip-container{perspective:800px;width:240px;height:336px;margin:0 auto;cursor:pointer}
+    .card-flip-inner{position:relative;width:100%;height:100%;transition:transform .6s;transform-style:preserve-3d}
+    .card-flip-inner.flipped{transform:rotateY(180deg)}
+    .card-flip-front,.card-flip-back{position:absolute;width:100%;height:100%;backface-visibility:hidden;border-radius:10px;overflow:hidden}
+    .card-flip-front{z-index:2}
+    .card-flip-back{transform:rotateY(180deg)}
+    .card-flip-front img,.card-flip-back img{width:100%;height:100%;object-fit:cover;border-radius:10px}
+    .select-wrap{position:relative;display:inline-block}
+    .select-wrap select{appearance:none;background:var(--bg2);color:var(--fg);border:1px solid var(--border);border-radius:6px;padding:8px 32px 8px 12px;font-size:16px;min-height:44px;cursor:pointer}
+    .select-wrap::after{content:"";position:absolute;right:12px;top:50%;transform:translateY(-50%);border-left:5px solid transparent;border-right:5px solid transparent;border-top:6px solid var(--fg2);pointer-events:none}
+    .tools-dropdown{position:absolute;top:100%;right:0;margin-top:4px;background:var(--card);border:1px solid var(--card-border);border-radius:8px;min-width:180px;z-index:60;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,.3)}
+    .tools-dropdown button{display:flex;align-items:center;gap:8px;width:100%;padding:10px 14px;background:none;color:var(--fg);font-size:14px;text-align:left;border:none;cursor:pointer}
+    .tools-dropdown button:active{background:var(--bg2)}
+    .leveler-overlay{position:fixed;inset:0;z-index:50;background:var(--bg);display:flex;flex-direction:column}
+    .fixed-overlay{position:fixed;inset:0;z-index:50}
+    .leveler-header{display:flex;align-items:center;justify-content:space-between;padding:16px;border-bottom:1px solid var(--border)}
+    .leveler-body{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:16px;gap:24px;overflow-y:auto}
+    .level-container{position:relative;border-radius:50%;transition:box-shadow .3s}
+    .level-bubble{position:absolute;border-radius:50%;transition:background-color .3s;box-shadow:inset 0 -2px 4px rgba(0,0,0,.2),inset 0 2px 4px rgba(255,255,255,.3)}
+    .preset-tabs{display:flex;gap:4px;padding:4px;border-radius:8px;background:var(--bg2)}
+    .preset-tab{flex:1;padding:8px 12px;border-radius:6px;font-size:13px;font-weight:600;background:none;color:var(--fg2);cursor:pointer;border:none;transition:all .15s}
+    .preset-tab.active{background:var(--card);color:var(--fg);box-shadow:0 1px 2px rgba(0,0,0,.1)}
+    </style>
+    </head>
+    <body>
+    <div id="app"></div>
+    <script>
+    const STRIPE_LINK = "https://buy.stripe.com/7sYeVc82N7czdPqaQ20Jq00";
+    const COLORS = ["#d11111","#3b82f6","#22c55e","#f59e0b","#a855f7","#ec4899","#14b8a6","#f97316"];
+    const MAX_HOLES = 18;
+    const MAX_PLAYERS = 8;
+    const FREE_HOLES = 3;
+    const LOGO = "https://prometheangamescom.wordpress.com/wp-content/uploads/2025/08/400x400.png";
+    const LEADER_ICON = "https://prometheangamescom.wordpress.com/wp-content/uploads/2025/08/unnamed-file.png";
 
-function rLoadScreen(app){
-  const games=getSaved();
-  const auto=games['__autosave__'];
-  const slots=Object.entries(games).filter(([k])=>k!=='__autosave__');
+    const ALL_CARDS = [
+      {id:'2-01',par:2,img:'cards/2-01.png',joker:false},
+      {id:'2-02',par:2,img:'cards/2-02.png',joker:false},
+      {id:'2-03',par:2,img:'cards/2-03.png',joker:false},
+      {id:'3-01',par:3,img:'cards/3-01.png',joker:false},
+      {id:'3-02',par:3,img:'cards/3-02.png',joker:false},
+      {id:'3-03',par:3,img:'cards/3-03.png',joker:false},
+      {id:'3-04',par:3,img:'cards/3-04.png',joker:false},
+      {id:'4-01',par:4,img:'cards/4-01.png',joker:false},
+      {id:'4-02',par:4,img:'cards/4-02.png',joker:false},
+      {id:'4-03',par:4,img:'cards/4-03.png',joker:false},
+      {id:'4-04',par:4,img:'cards/4-04.png',joker:false},
+      {id:'4-05',par:4,img:'cards/4-05.png',joker:false},
+      {id:'5-01',par:5,img:'cards/5-01.png',joker:false},
+      {id:'5-02',par:5,img:'cards/5-02.png',joker:false},
+      {id:'5-03',par:5,img:'cards/5-03.png',joker:false},
+      {id:'6-01',par:6,img:'cards/6-01.png',joker:false},
+      {id:'joker-1',par:null,img:'cards/joker.png',joker:true},
+      {id:'joker-2',par:null,img:'cards/joker.png',joker:true},
+    ];
+    const CARD_BACK = 'cards/back.png';
 
-  let autoHtml='';
-  if(auto){
-    const d=auto.updatedAt?new Date(auto.updatedAt).toLocaleString():'';
-    autoHtml=`<div class="card mb-3" style="border-style:dashed" data-testid="slot-autosave">
-      <div class="flex items-center gap-2 mb-2 flex-wrap">
-        <span class="font-bold">Autosave</span>
-        <span class="text-xs text-muted" style="margin-left:auto">${d}</span>
-      </div>
-      <p class="text-sm text-muted mb-2">${auto.players?.length||0} players, Hole ${auto.hole||auto.currentHole||1}</p>
-      <button class="btn btn-outline w-full" style="min-height:44px" onclick="loadGame('__autosave__');S.viewOnly=false;S.screen='game';S.tab='game';resumeTimer();render()" data-testid="button-load-autosave">Load Autosave</button>
-    </div>`;
-  }
+    const I = {
+      lock: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>',
+      unlock: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg>',
+      chevL: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>',
+      chevR: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></svg>',
+      undo: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11"/></svg>',
+      home: '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>',
+      game: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>',
+      chart: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/></svg>',
+      save: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>',
+      gear: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>',
+      x: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>',
+      trash: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>',
+      up: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m18 15-6-6-6 6"/></svg>',
+      down: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>',
+      eye: '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>',
+      book: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>',
+      chevLsm: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>',
+      chevRsm: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 18 6-6-6-6"/></svg>',
+      wrench: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>',
+      cart: '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>',
+      rotateCcw: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>',
+      plus: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>',
+      target: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>',
+      chevD: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>',
+      grid: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M3 15h18"/><path d="M9 3v18"/><path d="M15 3v18"/></svg>',
+      move: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20"/><path d="m15 19-3 3-3-3"/><path d="m19 15 3-3-3-3"/><path d="M2 12h20"/><path d="m5 9-3 3 3 3"/><path d="m9 5 3-3 3 3"/></svg>',
+    };
 
-  let items=slots.map(([n,g])=>{
-    const d=g.updatedAt?new Date(g.updatedAt).toLocaleDateString():'';
-    return`<div class="card mb-3" data-testid="load-item-${esc(n)}">
-      <div class="flex items-center justify-between gap-2 mb-2">
-        <span class="font-bold">${esc(n)}</span>
-        <div class="flex items-center gap-2">
-          <span class="text-xs text-muted">${d}</span>
-          <button class="btn btn-ghost btn-icon" style="color:var(--destructive)" onclick="delSlot('${esc(n)}');render()" data-testid="button-delete-load-${esc(n)}">${I.trash}</button>
+    const TUTORIAL_SLIDES = [
+      {t:"Par for the Course",b:"Par for the Course turns the pool table into a golf course. Each card creates a new layout (\u201Chole\u201D). Players try to clear the table\u2014stripes first, then solids\u2014in fewer strokes than the hole\u2019s par."},
+      {t:"Draw a Course Card",b:"The tallest player draws a card to determine the ball layout. A Joker allows that player to design a custom layout or replay a previous card."},
+      {t:"Set Up the Balls",b:"Arrange the balls exactly as shown on the card, typically aligned with table diamonds, cushions, pockets, or other balls."},
+      {t:"Determine Par",b:"Par = total number of balls in the layout."},
+      {t:"Tee Off",b:"Players shoot tallest to shortest on the first hole. Each player starts with ball in hand."},
+      {t:"Clear the Table",b:"Stripes must be pocketed first. Solids come after all stripes are gone. Every shot attempt counts as one stroke."},
+      {t:"No Called Shots",b:"Players do not need to call balls or pockets."},
+      {t:"Penalty \u2014 Wrong Ball Order",b:"Contacting or disturbing solids before stripes are cleared: +1 stroke."},
+      {t:"Penalty \u2014 Ball Off the Table",b:"Counts as pocketed and adds +1 stroke per ball."},
+      {t:"Penalty \u2014 Scratch",b:"Pocketing the cue ball costs +1 stroke, but the player continues with ball in hand."},
+      {t:"Multiple Fouls Stack",b:"Penalties apply after all balls stop moving."},
+      {t:"Mercy Rule",b:"If a player reaches 5 strokes over par, they may stop the hole and record Par + 5."},
+      {t:"Winning",b:"After all holes are played, the player with the fewest total strokes wins."},
+    ];
+
+    let S = {
+      screen: 'splash',
+      tab: 'game',
+      viewOnly: false,
+      game: null,
+      hist: [],
+      drawPhase: null,
+      drawnCard: null,
+      showFinish: false,
+      showCardView: false,
+      showTutorial: false,
+      tutorialIdx: 0,
+      jokerPar: null,
+      showToolsMenu: false,
+      showLeveler: false,
+      showEmulator: false,
+      showEmulatorWarning: false,
+      showLevelerTutorial: false,
+      levelerTutorialIdx: 0,
+    };
+
+    function defGame() {
+      return {
+        players:[], hole:1, pi:0, scores:{}, done:false,
+        deck:[], drawnCards:{},
+        settings:{theme:'dark',lhm:false,autoSave:true},
+        turnTimes:[], gameStartTime:0, gameEndTime:null, currentTurnStart:0,
+        totalPlayTimeMs:0, isPaused:true, lastResumedAt:0
+      };
+    }
+
+    function shuffleDeck() {
+      const d = [...ALL_CARDS];
+      for(let i=d.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[d[i],d[j]]=[d[j],d[i]];}
+      return d;
+    }
+
+    function init() {
+      const p = new URLSearchParams(location.search);
+      if(p.get('unlock')==='success'){localStorage.setItem('pftc_unlocked','true');history.replaceState({},'',location.pathname);}
+      else if(p.get('unlock')==='cancelled'){history.replaceState({},'',location.pathname);}
+      const sv = localStorage.getItem('currentGame');
+      if(sv){try{S.game=JSON.parse(sv)}catch(e){}}
+      if(!S.game) S.game=defGame();
+      if(!S.game.deck) S.game.deck=[];
+      if(!S.game.drawnCards) S.game.drawnCards={};
+      if(S.game.totalPlayTimeMs===undefined) S.game.totalPlayTimeMs=0;
+      S.game.isPaused=true;S.game.lastResumedAt=0;
+      const ss=localStorage.getItem('appScreen');
+      if(ss&&['game','summary'].includes(ss)&&S.game.players.length>0) S.screen=ss;
+      S.viewOnly=localStorage.getItem('appViewOnly')==='true';
+      applyTheme();
+      document.addEventListener('visibilitychange',function(){
+        if(document.hidden){pauseTimer();}
+        else if(S.screen==='game'&&S.tab==='game'&&!S.game.done){resumeTimer();}
+      });
+      if(S.screen==='game'&&S.tab==='game'&&!S.game.done) resumeTimer();
+      render();
+    }
+
+    function unlocked(){return localStorage.getItem('pftc_unlocked')==='true'}
+    function applyTheme(){document.body.className=S.game?.settings?.theme==='light'?'light':''}
+    function persist(){
+      localStorage.setItem('appScreen',S.screen);
+      localStorage.setItem('appViewOnly',S.viewOnly?'true':'false');
+      if(S.game.settings.autoSave&&S.game.players.length>0){
+        localStorage.setItem('currentGame',JSON.stringify(S.game));
+        const g=JSON.parse(localStorage.getItem('savedGames')||'{}');
+        g['__autosave__']={id:'auto',...S.game,updatedAt:new Date().toISOString()};
+        localStorage.setItem('savedGames',JSON.stringify(g));
+      }
+    }
+    function saveHist(){S.hist=[...S.hist.slice(-9),JSON.parse(JSON.stringify(S.game))];}
+    function undo(){if(S.hist.length>0){S.game=S.hist.pop();render();}}
+
+    function calcT(sc){return(sc||[]).reduce((a,s)=>({ts:a.ts+s.strokes+s.scratches+s.penalties,sc:a.sc+s.scratches,pn:a.pn+s.penalties}),{ts:0,sc:0,pn:0})}
+    function getLB(){return S.game.players.map(p=>({p,t:calcT(S.game.scores[p.id]).ts})).sort((a,b)=>a.t-b.t)}
+    function callout(st,par){const d=st-par;if(d===-4)return'Condor';if(d===-3)return'Albatross';if(d===-2)return'Eagle';if(d===-1)return'Birdie';if(d===0)return'Par';if(d===1)return'Bogey';if(d===2)return'Dbl Bogey';if(d===3)return'Trp Bogey';return`+${d}`}
+    function isLdr(pid){const lb=getLB();return lb.length>0&&lb[0].p.id===pid}
+
+    function addPlayer(name){
+      const p={id:crypto.randomUUID(),name,color:COLORS[S.game.players.length%COLORS.length],order:S.game.players.length};
+      S.game.players.push(p);S.game.scores[p.id]=[];render();
+    }
+    function removePlayer(id){
+      saveHist();const idx=S.game.players.findIndex(p=>p.id===id);
+      S.game.players=S.game.players.filter(p=>p.id!==id);
+      S.game.players.forEach((p,i)=>p.order=i);
+      if(!S.game.players.length)S.game.pi=0;
+      else if(idx<=S.game.pi)S.game.pi=Math.max(0,S.game.pi-1);
+      if(S.game.pi>=S.game.players.length)S.game.pi=0;
+      render();
+    }
+    function updScore(pid,hole,u){
+      if(hole>MAX_HOLES)return;saveHist();
+      const ps=S.game.scores[pid]||[];const hi=ps.findIndex(s=>s.hole===hole);
+      if(hi>=0)Object.assign(ps[hi],u);
+      else ps.push({hole,par:u.par??3,strokes:u.strokes??0,scratches:u.scratches??0,penalties:u.penalties??0});
+      S.game.scores[pid]=ps;
+    }
+    function setParAll(hole,par){
+      saveHist();
+      S.game.players.forEach(p=>{
+        const ps=S.game.scores[p.id]||[];const hi=ps.findIndex(s=>s.hole===hole);
+        if(hi>=0)ps[hi].par=par;else ps.push({hole,par,strokes:0,scratches:0,penalties:0});
+        S.game.scores[p.id]=ps;
+      });
+    }
+
+    function sortByPrev(prev){
+      if(prev<1)return;
+      S.game.players.sort((a,b)=>{
+        const as=S.game.scores[a.id]?.find(s=>s.hole===prev);
+        const bs=S.game.scores[b.id]?.find(s=>s.hole===prev);
+        const at=as?as.strokes+as.scratches+as.penalties:Infinity;
+        const bt=bs?bs.strokes+bs.scratches+bs.penalties:Infinity;
+        if(at!==bt)return at-bt;
+        return calcT(S.game.scores[a.id]).ts-calcT(S.game.scores[b.id]).ts;
+      });
+      S.game.players.forEach((p,i)=>p.order=i);
+    }
+
+    function drawCard(){
+      if(S.game.deck.length===0) S.game.deck=shuffleDeck();
+      return S.game.deck.shift();
+    }
+
+    function nextCard(){
+      saveHist();
+      const now=Date.now();
+      const g=S.game;
+      const activeSince=g.isPaused?0:(now-g.lastResumedAt);
+      g.totalPlayTimeMs=(g.totalPlayTimeMs||0)+activeSince;
+      const cp=g.players[g.pi];
+      if(cp){
+        if(!g.turnTimes)g.turnTimes=[];
+        g.turnTimes.push({playerId:cp.id,hole:g.hole,startTime:g.currentTurnStart||now,endTime:now});
+      }
+      g.currentTurnStart=now;g.lastResumedAt=now;
+      const ni=(g.pi+1)%g.players.length;
+      const adv=ni===0;
+      if(adv&&g.hole>=MAX_HOLES){g.done=true;g.gameEndTime=now;g.isPaused=true;g.lastResumedAt=0;S.viewOnly=true;S.tab='summary';render();return;}
+      if(adv){sortByPrev(g.hole);g.pi=0;g.hole++;}
+      else{g.pi=ni;}
+      render();
+    }
+    function pauseTimer(){
+      const g=S.game;if(!g||g.isPaused||g.done)return;
+      const now=Date.now();g.totalPlayTimeMs=(g.totalPlayTimeMs||0)+(now-g.lastResumedAt);
+      g.isPaused=true;g.lastResumedAt=0;
+    }
+    function resumeTimer(){
+      const g=S.game;if(!g||!g.isPaused||g.done)return;
+      const now=Date.now();g.isPaused=false;g.lastResumedAt=now;g.currentTurnStart=now;
+    }
+
+    function saveGame(slot){
+      const g=JSON.parse(localStorage.getItem('savedGames')||'{}');
+      g[slot]={id:crypto.randomUUID(),...S.game,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
+      localStorage.setItem('savedGames',JSON.stringify(g));
+    }
+    function loadGame(slot){
+      const g=JSON.parse(localStorage.getItem('savedGames')||'{}');
+      if(g[slot]){const d=g[slot];S.game={players:d.players,hole:d.hole||d.currentHole||1,pi:d.pi||d.currentPlayerIndex||0,scores:d.scores,done:d.done||d.isComplete||false,deck:d.deck||[],drawnCards:d.drawnCards||{},settings:d.settings||{theme:'dark',lhm:false,autoSave:true},turnTimes:d.turnTimes||[],gameStartTime:d.gameStartTime||0,gameEndTime:d.gameEndTime||null,currentTurnStart:d.currentTurnStart||Date.now(),totalPlayTimeMs:d.totalPlayTimeMs||0,isPaused:true,lastResumedAt:0};applyTheme();}
+    }
+    function getSaved(){return JSON.parse(localStorage.getItem('savedGames')||'{}')}
+    function delSlot(slot){const g=getSaved();delete g[slot];localStorage.setItem('savedGames',JSON.stringify(g));}
+
+    function render(){
+      persist();
+      const app=document.getElementById('app');
+      if(S.screen==='splash'){rSplash(app);return;}
+      if(S.screen==='load'){rLoadScreen(app);return;}
+      if(S.screen==='setup'){rSetup(app);return;}
+      let c='';
+      if(S.tab==='game'&&S.game.players.length>0)c=rGame();
+      else if(S.tab==='summary')c=rSummary();
+      else if(S.tab==='save')c=rSaveTab();
+      else if(S.tab==='settings')c=rSettings();
+      app.innerHTML=`<div style="padding-bottom:64px">${c}</div>${rNav()}`;
+    }
+
+    function rSplash(app){
+      app.innerHTML=`
+        <div class="screen flex flex-col items-center justify-center" style="min-height:100dvh;gap:24px;position:relative" data-testid="splash-screen">
+          <div style="position:absolute;top:16px;right:16px;z-index:10">
+            <div style="position:relative">
+              <button class="btn btn-ghost btn-icon" onclick="S.showToolsMenu=!S.showToolsMenu;render()" data-testid="button-tools-menu">${I.wrench}</button>
+              ${S.showToolsMenu?`<div class="tools-dropdown" data-testid="tools-dropdown">
+                <button onclick="S.showToolsMenu=false;S.showEmulatorWarning=true;render()" data-testid="button-cueing-emulator">${I.target||I.game} Cueing Emulator</button>
+                <button onclick="S.showToolsMenu=false;S.showLeveler=true;initLeveler();render()" data-testid="button-table-leveler">${I.game} Table Leveler</button>
+              </div>`:''}
+            </div>
+          </div>
+          <img src="${LOGO}" alt="Par for the Course" style="width:100%;max-width:280px;height:auto" data-testid="img-logo">
+          <div class="flex flex-col gap-3 w-full" style="max-width:280px">
+            <button class="btn btn-primary btn-xl" data-testid="button-new-game" onclick="S.game=defGame();S.game.deck=shuffleDeck();S.viewOnly=false;S.screen='setup';render()">${unlocked()?'New Game':'Start Demo'}</button>
+            <button class="btn btn-outline btn-xl" data-testid="button-load-game" onclick="S.screen='load';render()">Load Game</button>
+            ${!unlocked()?`<button class="btn btn-xl" data-testid="button-buy-now" onclick="window.location.href='${STRIPE_LINK}'" style="background:linear-gradient(to right,#059669,#22c55e);border:none;color:#fff;font-weight:bold;box-shadow:0 4px 14px rgba(34,197,94,0.35)">${I.cart||'🛒'} Buy Now — Unlock All 18 Courses</button>`:''}
+            <button class="btn btn-ghost btn-xl" data-testid="button-how-to-play" onclick="S.showTutorial=true;S.tutorialIdx=0;render()">${I.book} How to Play</button>
+          </div>
+        </div>${S.showEmulatorWarning?`<div style="position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5)" data-testid="dialog-emulator-warning">
+          <div style="background:var(--bg,#1a1a2e);border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:32px;max-width:400px;width:90%;text-align:center">
+            <h1 style="font-size:1.5rem;font-weight:bold;margin:0 0 12px" data-testid="text-coming-soon">Coming Soon!</h1>
+            <h3 style="font-size:0.95rem;color:rgba(255,255,255,0.6);margin:0 0 24px;font-weight:normal;line-height:1.5" data-testid="text-warning-message">This feature is not fully developed and may not function properly or at all. Updates are published automatically on a regular basis.</h3>
+            <div style="display:flex;gap:12px;justify-content:center">
+              <button class="btn btn-ghost" onclick="S.showEmulatorWarning=false;render()" data-testid="button-go-back" style="min-width:100px">Go Back</button>
+              <button class="btn" onclick="S.showEmulatorWarning=false;S.showEmulator=true;initEmulator();render();setTimeout(drawEmulatorCanvas,50)" data-testid="button-continue-anyways" style="min-width:100px">Continue Anyways</button>
+            </div>
+          </div>
+        </div>`:''}${S.showTutorial?rTutorial():''}${S.showLeveler?rLeveler():''}${S.showEmulator?rEmulator():''}`;
+      if(S.showToolsMenu){setTimeout(()=>document.addEventListener('click',closeToolsMenu,{once:true}),0);}
+      if(S.showEmulator){setTimeout(drawEmulatorCanvas,50);}
+    }
+
+    function closeToolsMenu(e){
+      const btn=document.querySelector('[data-testid="button-tools-menu"]');
+      const dd=document.querySelector('[data-testid="tools-dropdown"]');
+      if(btn&&btn.contains(e.target))return;
+      if(dd&&dd.contains(e.target))return;
+      S.showToolsMenu=false;render();
+    }
+
+    const LEVELER={
+      radius:120,bubbleR:18,maxOff:98,deadzone:0.5,warn:2,danger:5,
+      rawBeta:0,rawGamma:0,preset:'home',calibration:null,permGranted:null,needsPerm:false,listener:null
+    };
+    const LEVEL_PRESETS={home:'pftc_level_home',league:'pftc_level_league',tournament:'pftc_level_tournament'};
+    const LEVEL_LABELS={home:'Home',league:'League',tournament:'Tournament'};
+
+    function loadLevelCal(preset){try{const r=localStorage.getItem(LEVEL_PRESETS[preset]);if(r)return JSON.parse(r);}catch(e){}return null;}
+    function saveLevelCal(preset,data){localStorage.setItem(LEVEL_PRESETS[preset],JSON.stringify(data));}
+
+    function initLeveler(){
+      LEVELER.preset='home';
+      LEVELER.calibration=loadLevelCal('home');
+      LEVELER.rawBeta=0;LEVELER.rawGamma=0;
+      LEVELER.permGranted=null;LEVELER.needsPerm=false;
+      S.levelerTutorialIdx=0;
+      S.showLevelerTutorial=localStorage.getItem('pftc_leveler_tutorial_seen')!=='true';
+      const DOE=window.DeviceOrientationEvent;
+      if(DOE&&typeof DOE.requestPermission==='function'){
+        LEVELER.needsPerm=true;
+      }else{
+        startLevelerListener();
+      }
+    }
+
+    function startLevelerListener(){
+      if(LEVELER.listener){window.removeEventListener('deviceorientation',LEVELER.listener);}
+      LEVELER.sensorActive=false;LEVELER.receivedData=false;
+      LEVELER.listener=function(e){
+        if(e.beta!==null||e.gamma!==null){
+          if(!LEVELER.receivedData){
+            LEVELER.receivedData=true;LEVELER.sensorActive=true;
+            if(LEVELER.sensorTimeout){clearTimeout(LEVELER.sensorTimeout);LEVELER.sensorTimeout=null;}
+            render();
+          }
+          if(e.beta!==null)LEVELER.rawBeta=e.beta;
+          if(e.gamma!==null)LEVELER.rawGamma=e.gamma;
+          updateLevelerBubble();
+        }
+      };
+      window.addEventListener('deviceorientation',LEVELER.listener);
+      LEVELER.permGranted=true;
+      LEVELER.sensorTimeout=setTimeout(function(){
+        if(!LEVELER.receivedData){
+          LEVELER.sensorActive=false;LEVELER.permGranted=false;
+          window.removeEventListener('deviceorientation',LEVELER.listener);
+          LEVELER.listener=null;render();
+        }
+      },1500);
+    }
+
+    function stopLevelerListener(){
+      if(LEVELER.listener){window.removeEventListener('deviceorientation',LEVELER.listener);LEVELER.listener=null;}
+      if(LEVELER.sensorTimeout){clearTimeout(LEVELER.sensorTimeout);LEVELER.sensorTimeout=null;}
+    }
+
+    function requestLevelerPerm(){
+      const DOE=window.DeviceOrientationEvent;
+      if(typeof DOE.requestPermission==='function'){
+        DOE.requestPermission().then(function(r){
+          if(r==='granted'){startLevelerListener();render();}
+          else{LEVELER.permGranted=false;render();}
+        }).catch(function(){LEVELER.permGranted=false;render();});
+      }else{startLevelerListener();render();}
+    }
+
+    function updateLevelerBubble(){
+      const cal=LEVELER.calibration;
+      const tiltX=LEVELER.rawGamma-(cal?cal.gamma:0);
+      const tiltY=LEVELER.rawBeta-(cal?cal.beta:0);
+      const maxOff=LEVELER.maxOff;
+      const bx=Math.max(-maxOff,Math.min(maxOff,(tiltX/15)*maxOff));
+      const by=Math.max(-maxOff,Math.min(maxOff,(tiltY/15)*maxOff));
+      const absTilt=Math.sqrt(tiltX*tiltX+tiltY*tiltY);
+      let color;
+      if(absTilt<=LEVELER.deadzone)color='#22c55e';
+      else if(absTilt<=LEVELER.warn)color='#4ade80';
+      else if(absTilt<=LEVELER.danger)color='#facc15';
+      else color='#ef4444';
+      let ringColor;
+      if(absTilt<=LEVELER.deadzone)ringColor='rgba(34,197,94,.3)';
+      else if(absTilt<=LEVELER.warn)ringColor='rgba(74,222,128,.2)';
+      else if(absTilt<=LEVELER.danger)ringColor='rgba(250,204,21,.2)';
+      else ringColor='rgba(239,68,68,.2)';
+
+      const bubble=document.getElementById('level-bubble');
+      const container=document.getElementById('level-container');
+      const tiltXEl=document.getElementById('tilt-x-val');
+      const tiltYEl=document.getElementById('tilt-y-val');
+      if(bubble){
+        bubble.style.left=(LEVELER.radius+bx-LEVELER.bubbleR)+'px';
+        bubble.style.top=(LEVELER.radius+by-LEVELER.bubbleR)+'px';
+        bubble.style.background=color;
+      }
+      if(container){container.style.boxShadow='0 0 0 8px '+ringColor;}
+      if(tiltXEl)tiltXEl.textContent=tiltX.toFixed(1)+'\u00B0';
+      if(tiltYEl)tiltYEl.textContent=tiltY.toFixed(1)+'\u00B0';
+    }
+
+    function closeLeveler(){stopLevelerListener();S.showLeveler=false;render();}
+
+    function setLevelerPreset(p){
+      LEVELER.preset=p;LEVELER.calibration=loadLevelCal(p);render();
+    }
+
+    function calibrateLeveler(){
+      const data={beta:LEVELER.rawBeta,gamma:LEVELER.rawGamma};
+      saveLevelCal(LEVELER.preset,data);LEVELER.calibration=data;render();
+    }
+
+    function resetLevelerCal(){
+      localStorage.removeItem(LEVEL_PRESETS[LEVELER.preset]);LEVELER.calibration=null;render();
+    }
+
+    const LEVELER_TUTORIAL=[
+      {t:"Place Your Device",icon:'<svg width="48" height="48" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2"><rect x="12" y="4" width="24" height="40" rx="4"/><line x1="20" y1="38" x2="28" y2="38"/><line x1="24" y1="10" x2="24" y2="30" stroke-dasharray="2 3" opacity=".4"/></svg>',b:"Lay your phone flat on the pool table surface. The leveler works best when the device is centered on the table."},
+      {t:"Read the Bubble",icon:'<svg width="48" height="48" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2"><circle cx="24" cy="24" r="18"/><circle cx="24" cy="24" r="10" opacity=".3"/><circle cx="24" cy="24" r="5" fill="currentColor" opacity=".6"/></svg>',b:"The bubble shows how level the surface is. Green means level, yellow means slightly off, and red means the table needs adjustment."},
+      {t:"Calibrate a Preset",icon:'<svg width="48" height="48" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2"><circle cx="24" cy="24" r="18"/><line x1="24" y1="6" x2="24" y2="14"/><line x1="24" y1="34" x2="24" y2="42"/><line x1="6" y1="24" x2="14" y2="24"/><line x1="34" y1="24" x2="42" y2="24"/><circle cx="24" cy="24" r="3" fill="currentColor"/></svg>',b:"Choose Home, League, or Tournament. Place your device on a known-level surface and tap Calibrate to set that preset\u2019s zero point."},
+      {t:"Switch Presets",icon:'<svg width="48" height="48" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="18" width="12" height="12" rx="2"/><rect x="18" y="18" width="12" height="12" rx="2" fill="currentColor" opacity=".2"/><rect x="32" y="18" width="12" height="12" rx="2"/><line x1="10" y1="34" x2="10" y2="38"/><line x1="24" y1="34" x2="24" y2="38"/><line x1="38" y1="34" x2="38" y2="38"/></svg>',b:"Each preset saves its own calibration. Switch between them when you move to a different table or venue."},
+      {t:"Tilt Readout",icon:'<svg width="48" height="48" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="10" width="36" height="28" rx="3"/><text x="14" y="28" font-size="10" fill="currentColor" font-family="monospace">0.3\u00B0</text></svg>',b:"The L/R and F/B values show exact tilt in degrees. Aim for less than 0.5\u00B0 in both directions for a truly level table."},
+    ];
+
+    function rLevelerTutorial(){
+      const s=LEVELER_TUTORIAL[S.levelerTutorialIdx];
+      const total=LEVELER_TUTORIAL.length;
+      const dots=LEVELER_TUTORIAL.map((_,i)=>`<button style="width:${i===S.levelerTutorialIdx?10:8}px;height:${i===S.levelerTutorialIdx?10:8}px;border-radius:50%;background:${i===S.levelerTutorialIdx?'var(--primary)':'var(--fg3)'};opacity:${i===S.levelerTutorialIdx?1:0.3};transition:all .2s;padding:0" onclick="S.levelerTutorialIdx=${i};render()" data-testid="button-leveler-tutorial-dot-${i}"></button>`).join('');
+      return`<div style="position:fixed;inset:0;z-index:70;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:24px" data-testid="leveler-tutorial">
+        <div class="card" style="max-width:340px;padding:24px;position:relative">
+          <button class="btn btn-ghost btn-icon" style="position:absolute;top:8px;right:8px" onclick="localStorage.setItem('pftc_leveler_tutorial_seen','true');S.showLevelerTutorial=false;render()" data-testid="button-close-leveler-tutorial">${I.x}</button>
+          <div class="text-center" style="padding-top:8px">
+            <div style="color:var(--primary);margin-bottom:12px">${s.icon}</div>
+            <h3 class="text-lg font-bold" style="margin-bottom:8px" data-testid="text-leveler-tutorial-title">${s.t}</h3>
+            <p class="text-sm text-muted" style="line-height:1.6;margin-bottom:24px">${s.b}</p>
+          </div>
+          <div class="flex items-center justify-center gap-2" style="margin-bottom:16px;gap:6px" data-testid="leveler-tutorial-dots">${dots}</div>
+          <div class="flex gap-2">
+            <button class="btn btn-outline flex-1" onclick="S.levelerTutorialIdx=Math.max(0,S.levelerTutorialIdx-1);render()" ${S.levelerTutorialIdx===0?'disabled':''} data-testid="button-leveler-tutorial-prev">${I.chevLsm} Back</button>
+            ${S.levelerTutorialIdx<total-1
+              ?`<button class="btn btn-primary flex-1" onclick="S.levelerTutorialIdx++;render()" data-testid="button-leveler-tutorial-next">Next ${I.chevRsm}</button>`
+              :`<button class="btn btn-primary flex-1" onclick="localStorage.setItem('pftc_leveler_tutorial_seen','true');S.showLevelerTutorial=false;render()" data-testid="button-leveler-tutorial-done">Got It</button>`}
+          </div>
+        </div></div>`;
+    }
+
+    function rLeveler(){
+      const R=LEVELER.radius,BR=LEVELER.bubbleR;
+      const cal=LEVELER.calibration;
+      const calText=cal?`Calibrated (offset: ${cal.gamma.toFixed(1)}\u00B0, ${cal.beta.toFixed(1)}\u00B0)`:'Not calibrated \u2014 place device on table and tap Calibrate';
+      const presetBtns=['home','league','tournament'].map(p=>`<button class="preset-tab ${LEVELER.preset===p?'active':''}" onclick="setLevelerPreset('${p}')" data-testid="button-preset-${p}">${LEVEL_LABELS[p]}</button>`).join('');
+
+      let body='';
+      if(LEVELER.needsPerm&&LEVELER.permGranted===null){
+        body=`<div class="card text-center" style="max-width:320px;padding:24px">
+          <p class="text-sm text-muted" style="margin-bottom:16px">This tool needs access to your device's motion sensors to detect table tilt.</p>
+          <button class="btn btn-primary" onclick="requestLevelerPerm()" data-testid="button-request-permission">Enable Motion Sensors</button>
+        </div>`;
+      }else if(LEVELER.permGranted===false){
+        body=`<div class="card text-center" style="max-width:320px;padding:24px">
+          <p class="text-sm text-muted">Motion sensors are not available on this device. The Table Leveler requires a mobile device with an accelerometer.</p>
+        </div>`;
+      }else if(LEVELER.permGranted===true&&!LEVELER.sensorActive){
+        body=`<div class="card text-center" style="max-width:320px;padding:24px">
+          <p class="text-sm text-muted">Detecting motion sensors...</p>
+        </div>`;
+      }else{
+        body=`
+          <div id="level-container" class="level-container" style="width:${R*2}px;height:${R*2}px;background:radial-gradient(circle,var(--bg2) 0%,rgba(23,23,23,.3) 100%)" data-testid="level-container">
+            <div style="position:absolute;width:${R*2-8}px;height:${R*2-8}px;top:4px;left:4px;border-radius:50%;border:1px solid var(--border)"></div>
+            <div style="position:absolute;width:${R}px;height:${R}px;top:${R/2}px;left:${R/2}px;border-radius:50%;border:1px solid var(--border);opacity:.5"></div>
+            <div style="position:absolute;width:12px;height:1px;background:var(--fg3);opacity:.3;top:${R}px;left:${R-6}px"></div>
+            <div style="position:absolute;width:1px;height:12px;background:var(--fg3);opacity:.3;left:${R}px;top:${R-6}px"></div>
+            <div id="level-bubble" class="level-bubble" style="width:${BR*2}px;height:${BR*2}px;left:${R-BR}px;top:${R-BR}px;background:#22c55e" data-testid="level-bubble"></div>
+          </div>
+          <div class="flex gap-4 text-center" style="gap:24px" data-testid="tilt-values">
+            <div>
+              <div class="text-xs text-muted" style="text-transform:uppercase;letter-spacing:.05em">L/R Tilt</div>
+              <div class="text-2xl font-bold" style="font-family:monospace" id="tilt-x-val">0.0\u00B0</div>
+            </div>
+            <div>
+              <div class="text-xs text-muted" style="text-transform:uppercase;letter-spacing:.05em">F/B Tilt</div>
+              <div class="text-2xl font-bold" style="font-family:monospace" id="tilt-y-val">0.0\u00B0</div>
+            </div>
+          </div>
+          <div style="width:100%;max-width:320px">
+            <div class="preset-tabs mb-3" data-testid="preset-tabs">${presetBtns}</div>
+            <div class="text-center text-xs text-muted mb-3">${calText}</div>
+            <div class="flex gap-2">
+              <button class="btn btn-primary flex-1" onclick="calibrateLeveler()" data-testid="button-calibrate">Calibrate ${LEVEL_LABELS[LEVELER.preset]}</button>
+              ${cal?`<button class="btn btn-outline btn-icon" onclick="resetLevelerCal()" data-testid="button-reset-calibration">${I.rotateCcw}</button>`:''}
+            </div>
+          </div>`;
+      }
+
+      return`<div class="leveler-overlay" data-testid="table-leveler">
+        <div class="leveler-header">
+          <h2 class="text-lg font-bold" data-testid="text-leveler-title">Table Leveler</h2>
+          <div class="flex items-center" style="gap:4px">
+            <button class="btn btn-ghost btn-icon" onclick="S.levelerTutorialIdx=0;S.showLevelerTutorial=true;render()" data-testid="button-leveler-help"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></button>
+            <button class="btn btn-ghost btn-icon" onclick="closeLeveler()" data-testid="button-close-leveler">${I.x}</button>
+          </div>
         </div>
-      </div>
-      <p class="text-sm text-muted mb-2">${g.players?.length||0} players, Hole ${g.hole||g.currentHole||1}</p>
-      <button class="btn btn-primary w-full" style="min-height:44px" onclick="loadGame('${esc(n)}');S.viewOnly=false;S.screen='game';S.tab='game';resumeTimer();render()" data-testid="button-load-${esc(n)}">Load</button>
-    </div>`;
-  }).join('');
+        <div class="leveler-body">${body}</div>
+        ${S.showLevelerTutorial?rLevelerTutorial():''}
+      </div>`;
+    }
 
-  if(!auto&&!slots.length)items='<p class="text-muted text-center" style="padding:32px 0">No saved games yet</p>';
+    const EMU={
+      balls:[],preShotBalls:null,selectedId:null,trajectories:[],
+      aimAngle:0,hasAimLine:false,isAiming:false,aimStart:null,dragBall:null,
+      shotSpeed:5,angleFine:0,englishX:0,englishY:0,
+      tableSpeed:'medium',equipment:'average',rails:'medium',
+      snapToGrid:true,moveCueBall:false,showSettings:false,shotHistory:[],
+      TW:100,TH:50,BR:1.125,PR:2.25,
+      POCKETS:[{x:0,y:0},{x:50,y:0},{x:100,y:0},{x:0,y:50},{x:50,y:50},{x:100,y:50}],
+      ROLL_F:{slow:0.015,medium:0.010,fast:0.005},
+      SLIDE_F:{slow:0.30,medium:0.20,fast:0.15},
+      RAIL_R:{soft:0.55,medium:0.72,firm:0.85},
+      THROW_F:{dirty:0.050,average:0.035,clean:0.020},
+      expandedSections:{},
+      idCounter:0
+    };
 
-  app.innerHTML=`
-    <div class="screen" data-testid="load-screen">
-      <div class="flex items-center gap-2 mb-4">
-        <button class="btn btn-ghost" onclick="S.screen='splash';render()" data-testid="button-back-to-splash">${I.chevL} Back</button>
-        <h1 class="text-xl font-bold flex-1">Saved Games</h1>
-      </div>
-      ${autoHtml}
-      ${slots.length>0?'<h3 class="text-sm text-muted font-bold mb-3" style="text-transform:uppercase">Manual Saves</h3>':''}
-      ${items}
-    </div>`;
-}
+    function emuId(){return'eb'+(EMU.idCounter++);}
+    function emuBall(id,type,x,y){return{id,type,pos:{x,y},vel:{x:0,y:0},spin:{x:0,y:0},pocketed:false};}
 
-function rSettings(){
-  const s=S.game.settings;
-  return`<div class="screen" data-testid="settings-screen">
-    <h2 class="text-xl font-bold mb-4">Settings</h2>
-    <div class="card mb-4">
-      <h3 class="font-bold mb-3">Display</h3>
-      <div class="flex justify-between items-center gap-2 mb-3">
-        <span>Theme</span>
-        <div class="flex gap-2">
-          <button class="btn ${s.theme==='dark'?'btn-primary':'btn-outline'}" onclick="S.game.settings.theme='dark';applyTheme();render()" data-testid="button-theme-dark">Dark</button>
-          <button class="btn ${s.theme==='light'?'btn-primary':'btn-outline'}" onclick="S.game.settings.theme='light';applyTheme();render()" data-testid="button-theme-light">Light</button>
+    const COURSE_PRESETS=[
+      {id:"2-01",par:2,balls:[{t:"stripe",x:50,y:2},{t:"stripe",x:50,y:48}]},
+      {id:"2-02",par:2,balls:[{t:"stripe",x:12.5,y:37.5},{t:"stripe",x:87.5,y:12.5}]},
+      {id:"2-03",par:2,balls:[{t:"stripe",x:87.5,y:37.5},{t:"stripe",x:62.5,y:12.5}]},
+      {id:"3-01",par:3,balls:[{t:"stripe",x:62.5,y:25},{t:"stripe",x:75,y:12.5},{t:"solid",x:87.5,y:12.5}]},
+      {id:"3-02",par:3,balls:[{t:"stripe",x:25,y:25},{t:"solid",x:50,y:25},{t:"stripe",x:75,y:25}]},
+      {id:"3-03",par:3,balls:[{t:"stripe",x:50,y:12.5},{t:"solid",x:50,y:25},{t:"stripe",x:50,y:37.5}]},
+      {id:"3-04",par:3,balls:[{t:"solid",x:75,y:25},{t:"stripe",x:87.5,y:2}]},
+      {id:"4-01",par:4,balls:[{t:"stripe",x:25,y:25},{t:"solid",x:50,y:12.5},{t:"solid",x:50,y:37.5},{t:"stripe",x:75,y:25}]},
+      {id:"4-02",par:4,balls:[{t:"solid",x:37.5,y:25},{t:"stripe",x:50,y:25},{t:"stripe",x:62.5,y:25},{t:"stripe",x:75,y:25}]},
+      {id:"4-03",par:4,balls:[{t:"stripe",x:25,y:25},{t:"stripe",x:62.5,y:12.5},{t:"solid",x:87.5,y:37.5}]},
+      {id:"4-04",par:4,balls:[{t:"stripe",x:37.5,y:37.5},{t:"stripe",x:50,y:25},{t:"stripe",x:75,y:12.5},{t:"solid",x:75,y:25}]},
+      {id:"4-05",par:4,balls:[{t:"solid",x:50,y:12.5},{t:"stripe",x:50,y:25},{t:"solid",x:50,y:37.5},{t:"stripe",x:62.5,y:12.5}]},
+      {id:"5-01",par:5,balls:[{t:"solid",x:62.5,y:12.5},{t:"solid",x:62.5,y:37.5},{t:"stripe",x:75,y:25},{t:"solid",x:87.5,y:2},{t:"solid",x:87.5,y:48}]},
+      {id:"5-02",par:5,balls:[{t:"solid",x:12.5,y:25},{t:"stripe",x:25,y:12.5},{t:"solid",x:25,y:25},{t:"stripe",x:25,y:37.5},{t:"solid",x:37.5,y:25}]},
+      {id:"5-03",par:5,balls:[{t:"stripe",x:25,y:12.5},{t:"stripe",x:25,y:37.5},{t:"solid",x:50,y:25},{t:"stripe",x:75,y:12.5},{t:"stripe",x:75,y:37.5}]},
+      {id:"6-01",par:6,balls:[{t:"stripe",x:2,y:2},{t:"stripe",x:2,y:48},{t:"stripe",x:50,y:2},{t:"stripe",x:50,y:48},{t:"stripe",x:98,y:2},{t:"stripe",x:98,y:48}]},
+    ];
+
+    function findCuePos(presetBalls){
+      const dx=25,dy=25,br=1.125,md=br*3;
+      const occ=(cx,cy)=>presetBalls.some(b=>Math.abs(b.x-cx)<md&&Math.abs(b.y-cy)<md);
+      if(!occ(dx,dy))return{x:dx,y:dy};
+      const gx=[12.5,25,37.5,50,62.5,75,87.5],gy=[12.5,25,37.5];
+      let best={x:dx,y:dy},bd=Infinity;
+      for(const x of gx)for(const y of gy){if(occ(x,y))continue;const d=Math.hypot(x-dx,y-dy);if(d<bd){bd=d;best={x,y};}}
+      return best;
+    }
+
+    function loadCoursePreset(id){
+      const preset=COURSE_PRESETS.find(p=>p.id===id);
+      if(!preset)return;
+      const cp=findCuePos(preset.balls);
+      EMU.balls=[emuBall('cue','cue',cp.x,cp.y),...preset.balls.map((b,i)=>emuBall(id+'-'+b.t+'-'+i,b.t,b.x,b.y))];
+      EMU.selectedId=null;EMU.trajectories=[];EMU.hasAimLine=false;EMU.shotHistory=[];EMU.preShotBalls=null;
+      render();setTimeout(drawEmulatorCanvas,50);
+    }
+
+    function initEmulator(){
+      EMU.balls=[emuBall('cue','cue',25,25)];
+      EMU.preShotBalls=null;EMU.selectedId=null;EMU.trajectories=[];
+      EMU.aimAngle=0;EMU.hasAimLine=false;EMU.isAiming=false;
+      EMU.shotSpeed=5;EMU.angleFine=0;EMU.englishX=0;EMU.englishY=0;
+      EMU.tableSpeed='medium';EMU.equipment='average';EMU.rails='medium';
+      EMU.snapToGrid=true;EMU.moveCueBall=false;EMU.showSettings=false;EMU.shotHistory=[];
+      EMU.expandedSections={speed:true,english:true};
+    }
+    function emuSnapPos(x,y){
+      if(!EMU.snapToGrid)return{x,y};
+      const gx=EMU.TW/8,gy=EMU.TH/4;
+      const sc=EMU._sc||1;const buf=5/sc;
+      const nx=Math.round(x/gx)*gx,ny=Math.round(y/gy)*gy;
+      return{x:Math.abs(x-nx)<=buf?nx:x,y:Math.abs(y-ny)<=buf?ny:y};
+    }
+
+    function emuSimulate(){
+      const DT=0.002,MAX=30000,THRESH=0.05,SPEED_SCALE=10,BB_REST=0.95,SQUIRT=0.005,SWERVE=0.00015,GG=386.4;
+      const balls=EMU.balls.filter(b=>!b.pocketed).map(b=>({...b,pos:{...b.pos},vel:{...b.vel},spin:{...b.spin}}));
+      const cue=balls.find(b=>b.type==='cue');
+      if(!cue)return{trajectories:[],finalBalls:balls};
+      const totalAngle=EMU.aimAngle+(EMU.angleFine*Math.PI/180);
+      const squirtAngle=-EMU.englishX*SQUIRT*EMU.shotSpeed;
+      const fAngle=totalAngle+squirtAngle;
+      const spd=EMU.shotSpeed*SPEED_SCALE;
+      cue.vel={x:Math.cos(fAngle)*spd,y:Math.sin(fAngle)*spd};
+      const vd=vNorm(cue.vel);
+      const nrx=vd.x*spd,nry=vd.y*spd;
+      const sideMag=EMU.englishX*spd*0.25;
+      const px=-vd.y,py=vd.x;
+      const topDraw=-EMU.englishY;
+      const rollF=topDraw*1.5;
+      cue.spin={x:nrx*(1+rollF)+px*sideMag,y:nry*(1+rollF)+py*sideMag};
+      const rFric=EMU.ROLL_F[EMU.tableSpeed],sFric=EMU.SLIDE_F[EMU.tableSpeed];
+      const railR=EMU.RAIL_R[EMU.rails],throwF=EMU.THROW_F[EMU.equipment];
+      const trajMap={};balls.forEach(b=>{trajMap[b.id]=[{x:b.pos.x,y:b.pos.y}];});
+      let rc=0;
+      function vLen(v){return Math.sqrt(v.x*v.x+v.y*v.y);}
+      function vNorm(v){const l=vLen(v);return l<1e-10?{x:0,y:0}:{x:v.x/l,y:v.y/l};}
+      for(let step=0;step<MAX;step++){
+        for(const b of balls){if(b.pocketed)continue;b.pos.x+=b.vel.x*DT;b.pos.y+=b.vel.y*DT;}
+        for(let i=0;i<balls.length;i++){for(let j=i+1;j<balls.length;j++){
+          if(balls[i].pocketed||balls[j].pocketed)continue;
+          const dx=balls[j].pos.x-balls[i].pos.x,dy=balls[j].pos.y-balls[i].pos.y;
+          const dist=Math.sqrt(dx*dx+dy*dy);
+          if(dist<EMU.BR*2&&dist>1e-10){
+            const nx=dx/dist,ny=dy/dist;
+            const overlap=EMU.BR*2-dist;
+            if(overlap>0){balls[i].pos.x-=nx*overlap/2;balls[i].pos.y-=ny*overlap/2;balls[j].pos.x+=nx*overlap/2;balls[j].pos.y+=ny*overlap/2;}
+            const rvx=balls[i].vel.x-balls[j].vel.x,rvy=balls[i].vel.y-balls[j].vel.y;
+            const ns=rvx*nx+rvy*ny;
+            if(ns>0){
+              const imp=ns*(1+BB_REST)/2;
+              balls[i].vel.x-=nx*imp;balls[i].vel.y-=ny*imp;
+              balls[j].vel.x+=nx*imp;balls[j].vel.y+=ny*imp;
+              const tx=-ny,ty=nx;const ts=rvx*tx+rvy*ty;const ti=ts*throwF;
+              balls[j].vel.x+=tx*ti;balls[j].vel.y+=ty*ti;
+              balls[i].vel.x-=tx*ti*0.5;balls[i].vel.y-=ty*ti*0.5;
+            }
+          }
+        }}
+        for(const b of balls){
+          if(b.pocketed)continue;
+          let railHit=false;
+          if(b.pos.x-EMU.BR<0){b.pos.x=EMU.BR;b.vel.x=Math.abs(b.vel.x)*railR;b.vel.y+=b.spin.y*0.15;b.spin.y*=0.7;railHit=true;}
+          if(b.pos.x+EMU.BR>EMU.TW){b.pos.x=EMU.TW-EMU.BR;b.vel.x=-Math.abs(b.vel.x)*railR;b.vel.y+=-b.spin.y*0.15;b.spin.y*=0.7;railHit=true;}
+          if(b.pos.y-EMU.BR<0){b.pos.y=EMU.BR;b.vel.y=Math.abs(b.vel.y)*railR;b.vel.x+=b.spin.x*0.15;b.spin.x*=0.7;railHit=true;}
+          if(b.pos.y+EMU.BR>EMU.TH){b.pos.y=EMU.TH-EMU.BR;b.vel.y=-Math.abs(b.vel.y)*railR;b.vel.x+=-b.spin.x*0.15;b.spin.x*=0.7;railHit=true;}
+          if(railHit){const rsp=vLen(b.vel);if(rsp>1e-10){const rd=vNorm(b.vel);const rp={x:-rd.y,y:rd.x};const sc=b.spin.x*rp.x+b.spin.y*rp.y;b.spin={x:rd.x*rsp+rp.x*sc,y:rd.y*rsp+rp.y*sc};}}
+        }
+        for(const b of balls){
+          if(b.pocketed)continue;
+          const sp=vLen(b.vel);
+          if(sp<THRESH*0.5&&vLen(b.spin)<THRESH*0.5){b.vel={x:0,y:0};b.spin={x:0,y:0};continue;}
+          const spnM=vLen(b.spin);
+          const slpX=b.spin.x-b.vel.x,slpY=b.spin.y-b.vel.y;
+          const slpM=Math.sqrt(slpX*slpX+slpY*slpY);
+          if(slpM>THRESH*0.1){
+            const slpD=slpM>1e-10?{x:slpX/slpM,y:slpY/slpM}:{x:0,y:0};
+            const fa=sFric*GG*DT;
+            const vd=Math.min(fa,slpM*(2/7));
+            b.vel.x+=slpD.x*vd;b.vel.y+=slpD.y*vd;
+            const sd=Math.min(fa*2.5,slpM*(5/7));
+            b.spin.x-=slpD.x*sd;b.spin.y-=slpD.y*sd;
+          }else{
+            if(sp<1e-10){b.vel={x:0,y:0};b.spin={x:0,y:0};continue;}
+            const vDir=vNorm(b.vel);
+            b.spin={x:b.vel.x,y:b.vel.y};
+            const rDec=rFric*GG*DT;
+            const newSp=Math.max(0,sp-rDec);
+            b.vel={x:vDir.x*newSp,y:vDir.y*newSp};
+            b.spin={x:vDir.x*newSp,y:vDir.y*newSp};
+          }
+          if(b.type==='cue'){
+            const csp=vLen(b.vel);
+            if(csp>THRESH){
+              const cvd=vNorm(b.vel);
+              const cnrx=cvd.x*csp,cnry=cvd.y*csp;
+              const crx=b.spin.x-cnrx,cry=b.spin.y-cnry;
+              const sideCmp=crx*cvd.y-cry*cvd.x;
+              if(Math.abs(sideCmp)>0.01){
+                const cpx=-cvd.y,cpy=cvd.x;
+                const swF=sideCmp*SWERVE;
+                b.vel.x+=cpx*swF*DT*100;
+                b.vel.y+=cpy*swF*DT*100;
+              }
+            }
+          }
+        }
+        for(const b of balls){
+          if(b.pocketed)continue;
+          for(const p of EMU.POCKETS){
+            const d=Math.sqrt((b.pos.x-p.x)**2+(b.pos.y-p.y)**2);
+            if(d<EMU.PR){b.pocketed=true;trajMap[b.id].push({x:b.pos.x,y:b.pos.y});b.vel={x:0,y:0};b.spin={x:0,y:0};break;}
+          }
+        }
+        rc++;if(rc>=3){rc=0;for(const b of balls){if(!b.pocketed&&(vLen(b.vel)>THRESH*0.5||vLen(b.spin)>THRESH)){trajMap[b.id].push({x:b.pos.x,y:b.pos.y});}}}
+        let allStop=true;for(const b of balls){if(!b.pocketed&&(vLen(b.vel)>THRESH||vLen(b.spin)>THRESH)){allStop=false;break;}}
+        if(allStop)break;
+      }
+      for(const b of balls){if(!b.pocketed){if(vLen(b.vel)>0){b.vel={x:0,y:0};b.spin={x:0,y:0};}trajMap[b.id].push({x:b.pos.x,y:b.pos.y});}}
+      return{trajectories:balls.map(b=>({ballId:b.id,ballType:b.type,points:trajMap[b.id]||[]})),finalBalls:balls};
+    }
+
+    function drawEmulatorCanvas(){
+      const c=document.getElementById('emu-canvas');if(!c)return;
+      const ctx=c.getContext('2d');if(!ctx)return;
+      const dpr=window.devicePixelRatio||1;
+      const rect=c.parentElement.getBoundingClientRect();
+      c.width=rect.width*dpr;c.height=rect.height*dpr;
+      c.style.width=rect.width+'px';c.style.height=rect.height+'px';
+      const pad=40;const scX=(c.width-pad*2)/EMU.TW;const scY=(c.height-pad*2)/EMU.TH;
+      const sc=Math.min(scX,scY);const tw=EMU.TW*sc;const th=EMU.TH*sc;
+      const ox=(c.width-tw)/2;const oy=(c.height-th)/2;
+      EMU._sc=sc;EMU._ox=ox;EMU._oy=oy;EMU._cw=c.width;EMU._ch=c.height;
+      function t2c(tx,ty){return{x:ox+tx*sc,y:oy+ty*sc};}
+      if(EMU.hasAimLine&&!EMU._shooting){const r=emuSimulate();EMU.trajectories=r.trajectories;}
+      const rw=Math.max(16,EMU.PR*sc+4);
+      ctx.clearRect(0,0,c.width,c.height);
+      ctx.fillStyle='#5a3825';ctx.fillRect(ox-rw,oy-rw,tw+rw*2,th+rw*2);
+      ctx.fillStyle='#1a7a3a';ctx.fillRect(ox,oy,tw,th);
+      if(EMU.snapToGrid){
+        ctx.strokeStyle='rgba(0,0,0,0.25)';ctx.lineWidth=1;ctx.setLineDash([]);
+        const gx=EMU.TW/8,gy=EMU.TH/4;
+        for(let i=1;i<8;i++){const p1=t2c(i*gx,0),p2=t2c(i*gx,EMU.TH);ctx.beginPath();ctx.moveTo(p1.x,p1.y);ctx.lineTo(p2.x,p2.y);ctx.stroke();}
+        for(let j=1;j<4;j++){const p1=t2c(0,j*gy),p2=t2c(EMU.TW,j*gy);ctx.beginPath();ctx.moveTo(p1.x,p1.y);ctx.lineTo(p2.x,p2.y);ctx.stroke();}
+      }
+      ctx.strokeStyle='#2d8a4a';ctx.lineWidth=0.5;ctx.setLineDash([4,4]);
+      const hs=t2c(EMU.TW*0.25,0);const hs2=t2c(EMU.TW*0.25,EMU.TH);
+      ctx.beginPath();ctx.moveTo(hs.x,hs.y);ctx.lineTo(hs2.x,hs2.y);ctx.stroke();ctx.setLineDash([]);
+      for(const p of EMU.POCKETS){const pp=t2c(p.x,p.y);ctx.beginPath();ctx.arc(pp.x,pp.y,EMU.PR*sc,0,Math.PI*2);ctx.fillStyle='#111';ctx.fill();}
+      ctx.fillStyle='#d4a853';
+      [1/8,2/8,3/8,5/8,6/8,7/8].forEach(f=>{const tp=t2c(EMU.TW*f,0);ddm(ctx,tp.x,oy-rw/2,3);const bp=t2c(EMU.TW*f,EMU.TH);ddm(ctx,bp.x,oy+th+rw/2,3);});
+      [0.25,0.5,0.75].forEach(f=>{const lp=t2c(0,EMU.TH*f);ddm(ctx,ox-rw/2,lp.y,3);const rp=t2c(EMU.TW,EMU.TH*f);ddm(ctx,ox+tw+rw/2,rp.y,3);});
+      const tColors={cue:'#60a5fa',solid:'#eab308',stripe:'#22c55e'};
+      for(const tr of EMU.trajectories){
+        if(tr.points.length<2)continue;
+        ctx.beginPath();ctx.strokeStyle=tColors[tr.ballType]||'#fff';ctx.lineWidth=1.5;ctx.globalAlpha=0.7;
+        const f=t2c(tr.points[0].x,tr.points[0].y);ctx.moveTo(f.x,f.y);
+        for(let i=1;i<tr.points.length;i++){const p=t2c(tr.points[i].x,tr.points[i].y);ctx.lineTo(p.x,p.y);}
+        ctx.stroke();ctx.globalAlpha=1;
+      }
+      const bFill={cue:'#ffffff',solid:'#eab308',stripe:'#ffffff'};
+      for(const b of EMU.balls){
+        if(b.pocketed)continue;
+        const bp=t2c(b.pos.x,b.pos.y);const br=EMU.BR*sc;
+        ctx.beginPath();ctx.arc(bp.x+1,bp.y+1,br,0,Math.PI*2);ctx.fillStyle='rgba(0,0,0,0.25)';ctx.fill();
+        ctx.beginPath();ctx.arc(bp.x,bp.y,br,0,Math.PI*2);ctx.fillStyle=bFill[b.type];ctx.fill();ctx.strokeStyle='#333';ctx.lineWidth=0.5;ctx.stroke();
+        if(b.type==='stripe'){ctx.save();ctx.beginPath();ctx.arc(bp.x,bp.y,br,0,Math.PI*2);ctx.clip();ctx.fillStyle='#16a34a';ctx.fillRect(bp.x-br,bp.y-br*0.35,br*2,br*0.7);ctx.restore();ctx.beginPath();ctx.arc(bp.x,bp.y,br,0,Math.PI*2);ctx.strokeStyle='#333';ctx.lineWidth=0.5;ctx.stroke();}
+        if(b.type==='cue'){const g=ctx.createRadialGradient(bp.x-br*0.3,bp.y-br*0.3,br*0.1,bp.x,bp.y,br);g.addColorStop(0,'rgba(255,255,255,0.6)');g.addColorStop(1,'rgba(255,255,255,0)');ctx.beginPath();ctx.arc(bp.x,bp.y,br,0,Math.PI*2);ctx.fillStyle=g;ctx.fill();}
+        if(b.id===EMU.selectedId){ctx.beginPath();ctx.arc(bp.x,bp.y,br+3,0,Math.PI*2);ctx.strokeStyle='#60a5fa';ctx.lineWidth=2;ctx.stroke();}
+      }
+      if(EMU.hasAimLine){
+        const cb=EMU.balls.find(b=>b.type==='cue'&&!b.pocketed);
+        if(cb){const ta=EMU.aimAngle+(EMU.angleFine*Math.PI/180);const cp=t2c(cb.pos.x,cb.pos.y);const ll=Math.max(tw,th);
+          ctx.beginPath();ctx.setLineDash([6,4]);ctx.strokeStyle='rgba(255,255,255,0.5)';ctx.lineWidth=1;
+          ctx.moveTo(cp.x,cp.y);ctx.lineTo(cp.x+Math.cos(ta)*ll,cp.y+Math.sin(ta)*ll);ctx.stroke();ctx.setLineDash([]);
+          ctx.beginPath();ctx.arc(cp.x+Math.cos(ta)*20,cp.y+Math.sin(ta)*20,3,0,Math.PI*2);ctx.fillStyle='rgba(255,255,255,0.8)';ctx.fill();
+        }
+      }
+    }
+    function ddm(ctx,x,y,s){ctx.beginPath();ctx.moveTo(x,y-s);ctx.lineTo(x+s,y);ctx.lineTo(x,y+s);ctx.lineTo(x-s,y);ctx.closePath();ctx.fill();}
+
+    function emuCanvasPos(e){
+      const c=document.getElementById('emu-canvas');if(!c)return null;
+      const rect=c.getBoundingClientRect();const dpr=window.devicePixelRatio||1;
+      let cx,cy;
+      if(e.touches&&e.touches.length>0){cx=(e.touches[0].clientX-rect.left)*dpr;cy=(e.touches[0].clientY-rect.top)*dpr;}
+      else{cx=(e.clientX-rect.left)*dpr;cy=(e.clientY-rect.top)*dpr;}
+      const sc=EMU._sc||1;const ox=EMU._ox||0;const oy=EMU._oy||0;
+      return{cx,cy,tx:(cx-ox)/sc,ty:(cy-oy)/sc};
+    }
+    function emuFindBall(tx,ty){
+      const sc=EMU._sc||1;const hr=EMU.BR+4/sc;
+      for(let i=EMU.balls.length-1;i>=0;i--){const b=EMU.balls[i];if(b.pocketed)continue;const dx=tx-b.pos.x,dy=ty-b.pos.y;if(Math.sqrt(dx*dx+dy*dy)<hr)return b;}
+      return null;
+    }
+    function emuPointerDown(e){
+      e.preventDefault();const p=emuCanvasPos(e);if(!p)return;
+      const hit=emuFindBall(p.tx,p.ty);
+      if(hit){
+        if(hit.type==='cue'&&!EMU.moveCueBall){EMU.isAiming=true;EMU.aimStart=p;EMU.selectedId='cue';}
+        else{EMU.selectedId=hit.id;EMU.dragBall={id:hit.id,ox:hit.pos.x-p.tx,oy:hit.pos.y-p.ty};}
+      }else{EMU.selectedId=null;}
+      drawEmulatorCanvas();
+    }
+    function emuPointerMove(e){
+      e.preventDefault();const p=emuCanvasPos(e);if(!p)return;
+      if(EMU.isAiming){
+        const cb=EMU.balls.find(b=>b.type==='cue'&&!b.pocketed);
+        if(cb){const sc=EMU._sc||1;const ox=EMU._ox||0;const oy=EMU._oy||0;
+          const cpx=ox+cb.pos.x*sc;const cpy=oy+cb.pos.y*sc;
+          const dx=p.cx-cpx;const dy=p.cy-cpy;
+          if(Math.sqrt(dx*dx+dy*dy)>10){EMU.aimAngle=Math.atan2(dy,dx);EMU.hasAimLine=true;}
+        }
+      }
+      if(EMU.dragBall){
+        let rx=p.tx+EMU.dragBall.ox;let ry=p.ty+EMU.dragBall.oy;
+        const sn=emuSnapPos(rx,ry);rx=sn.x;ry=sn.y;
+        const nx=Math.max(EMU.BR,Math.min(EMU.TW-EMU.BR,rx));
+        const ny=Math.max(EMU.BR,Math.min(EMU.TH-EMU.BR,ry));
+        const b=EMU.balls.find(bl=>bl.id===EMU.dragBall.id);if(b){b.pos.x=nx;b.pos.y=ny;}
+      }
+      drawEmulatorCanvas();
+    }
+    function emuPointerUp(){EMU.isAiming=false;EMU.aimStart=null;EMU.dragBall=null;}
+    function emuAddBall(type){
+      const id=emuId();const cx=60+Math.random()*20;const cy=15+Math.random()*20;
+      EMU.balls.push(emuBall(id,type,cx,cy));drawEmulatorCanvas();
+    }
+    function emuRemoveSelected(){
+      if(!EMU.selectedId||EMU.selectedId==='cue')return;
+      EMU.balls=EMU.balls.filter(b=>b.id!==EMU.selectedId);EMU.selectedId=null;drawEmulatorCanvas();
+    }
+    function emuShoot(){
+      if(!EMU.hasAimLine)return;
+      EMU.shotHistory.push(EMU.balls.map(b=>({...b,pos:{...b.pos},vel:{...b.vel},spin:{...b.spin}})));
+      EMU._shooting=true;
+      const r=emuSimulate();EMU.trajectories=r.trajectories;EMU.balls=r.finalBalls;EMU.hasAimLine=false;EMU.selectedId=null;
+      EMU._shooting=false;
+      drawEmulatorCanvas();
+    }
+    function emuUndo(){
+      if(EMU.shotHistory.length===0)return;
+      EMU.balls=EMU.shotHistory.pop();
+      EMU.trajectories=[];EMU.hasAimLine=false;drawEmulatorCanvas();
+    }
+    function emuSnapEng(v){return Math.round(v/0.25)*0.25;}
+    function emuEngClick(e){
+      const el=e.currentTarget;const rect=el.getBoundingClientRect();
+      const x=((e.clientX-rect.left)/rect.width)*3-1.5;
+      const y=((e.clientY-rect.top)/rect.height)*3-1.5;
+      EMU.englishX=emuSnapEng(Math.max(-1.5,Math.min(1.5,x)));
+      EMU.englishY=emuSnapEng(Math.max(-1.5,Math.min(1.5,y)));
+      drawEmulatorCanvas();render();
+    }
+    function emuToggleSection(s){EMU.expandedSections[s]=!EMU.expandedSections[s];render();}
+
+    function emuGetCutAngle(){
+      if(!EMU.hasAimLine)return null;
+      const cue=EMU.balls.find(b=>b.type==='cue'&&!b.pocketed);
+      if(!cue)return null;
+      const totalAngle=EMU.aimAngle+(EMU.angleFine*Math.PI)/180;
+      const dirX=Math.cos(totalAngle),dirY=Math.sin(totalAngle);
+      const br2=EMU.BR*2;
+      let closestDist=Infinity,closestBall=null;
+      for(const b of EMU.balls){
+        if(b.type==='cue'||b.pocketed)continue;
+        const dx=b.pos.x-cue.pos.x,dy=b.pos.y-cue.pos.y;
+        const proj=dx*dirX+dy*dirY;
+        if(proj<=0)continue;
+        const px=dx-proj*dirX,py=dy-proj*dirY;
+        const pd=Math.sqrt(px*px+py*py);
+        if(pd<br2&&proj<closestDist){closestDist=proj;closestBall=b;}
+      }
+      if(!closestBall)return null;
+      const dx=closestBall.pos.x-cue.pos.x,dy=closestBall.pos.y-cue.pos.y;
+      const centerAngle=Math.atan2(dy,dx);
+      let cutAngle=Math.abs(totalAngle-centerAngle);
+      if(cutAngle>Math.PI)cutAngle=2*Math.PI-cutAngle;
+      const cutDeg=(cutAngle*180)/Math.PI;
+      const fullness=1-Math.sin(cutAngle);
+      let label;
+      if(fullness>=0.875)label='Full ball';
+      else if(fullness>=0.625)label='3/4 ball';
+      else if(fullness>=0.375)label='1/2 ball';
+      else if(fullness>=0.125)label='1/4 ball';
+      else label='Thin cut';
+      return{angle:Math.round(cutDeg*100)/100,label};
+    }
+
+    function rEmulator(){
+      const selNotCue=EMU.selectedId&&EMU.selectedId!=='cue';
+      const accStyle='cursor:pointer;padding:8px 0;border-bottom:1px solid var(--border);display:flex;justify-between;align-items:center;gap:4px;font-size:14px;font-weight:600';
+      const accContent='padding:8px 0 12px';
+
+      function secHead(key,label){
+        const open=EMU.expandedSections[key];
+        return`<div style="${accStyle}" onclick="emuToggleSection('${key}')"><span>${label}</span><span style="transition:transform .2s;transform:rotate(${open?180:0}deg)">${I.chevD}</span></div>`;
+      }
+
+      const engCx=60+(EMU.englishX/1.5)*58;
+      const engCy=60+(EMU.englishY/1.5)*58;
+      const engTipR=Math.max(6,58/3);
+
+      const toggleBtn=(group,val,label)=>`<button class="btn ${EMU[group]===val?'btn-primary':'btn-outline'}" style="flex:1;min-height:32px;font-size:12px" onclick="EMU.${group}='${val}';render();setTimeout(drawEmulatorCanvas,50)">${label}</button>`;
+
+      return`<div class="fixed-overlay" style="display:flex;flex-direction:column;background:var(--bg)" data-testid="cueing-emulator">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:4px;padding:8px;border-bottom:1px solid var(--border);flex-wrap:wrap">
+          <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap">
+            <span class="font-bold" style="font-size:14px">Cueing Emulator</span>
+            <button class="btn btn-outline" style="font-size:12px;min-height:32px" onclick="emuAddBall('solid')" data-testid="button-add-solid">${I.plus} Solid</button>
+            <button class="btn btn-outline" style="font-size:12px;min-height:32px" onclick="emuAddBall('stripe')" data-testid="button-add-stripe">${I.plus} Stripe</button>
+            ${selNotCue?`<button class="btn btn-outline" style="font-size:12px;min-height:32px" onclick="emuRemoveSelected()" data-testid="button-remove-ball">${I.trash} Remove</button>`:''}
+            <button class="btn ${EMU.snapToGrid?'btn-primary':'btn-outline'}" style="font-size:12px;min-height:32px" onclick="EMU.snapToGrid=!EMU.snapToGrid;render();setTimeout(drawEmulatorCanvas,50)" data-testid="button-snap-grid">${I.grid} Snap</button>
+            <button class="btn ${EMU.moveCueBall?'btn-primary':'btn-outline'}" style="font-size:12px;min-height:32px" onclick="EMU.moveCueBall=!EMU.moveCueBall;render();setTimeout(drawEmulatorCanvas,50)" data-testid="button-move-cue">${I.move} Move Cue</button>
+          </div>
+          <div style="display:flex;align-items:center;gap:4px">
+            <button class="btn btn-primary" style="font-size:12px;min-height:32px" onclick="emuShoot()" ${EMU.hasAimLine?'':'disabled'} data-testid="button-shoot">${I.target||'⊕'} Shoot</button>
+            ${EMU.shotHistory.length>0?`<button class="btn btn-outline" style="font-size:12px;min-height:32px" onclick="emuUndo();render();setTimeout(drawEmulatorCanvas,50)" data-testid="button-undo">${I.rotateCcw} Undo</button>`:''}
+            <button class="btn ${EMU.showSettings?'btn-primary':'btn-ghost'} btn-icon" onclick="EMU.showSettings=!EMU.showSettings;render();setTimeout(drawEmulatorCanvas,50)" data-testid="button-toggle-settings">${I.gear}</button>
+            <button class="btn btn-ghost btn-icon" onclick="S.showEmulator=false;render()" data-testid="button-close-emulator">${I.x}</button>
+          </div>
         </div>
+        ${(()=>{const ci=emuGetCutAngle();return ci?`<div style="display:flex;align-items:center;gap:12px;padding:4px 12px;border-bottom:1px solid var(--border);background:var(--muted);font-size:14px" data-testid="cut-angle-info"><span style="color:var(--muted-fg)">Cut Angle:</span><span style="font-family:monospace;font-weight:bold" data-testid="text-cut-angle">${ci.angle.toFixed(2)}\u00B0</span><span style="color:var(--muted-fg)">(${ci.label})</span></div>`:''})()}
+        <div style="flex:1;min-height:0;position:relative;overflow:hidden">
+          <div style="position:absolute;inset:0;background:#1a1a2e;touch-action:none" id="emu-canvas-wrap">
+            <canvas id="emu-canvas" style="width:100%;height:100%;display:block"
+              onmousedown="emuPointerDown(event)" onmousemove="emuPointerMove(event)" onmouseup="emuPointerUp()" onmouseleave="emuPointerUp()"
+              ontouchstart="emuPointerDown(event)" ontouchmove="emuPointerMove(event)" ontouchend="emuPointerUp()"
+              data-testid="canvas-table"></canvas>
+          </div>
+          <div style="position:absolute;top:0;right:0;bottom:0;width:280px;background:var(--bg);border-left:1px solid var(--border);overflow-y:auto;transition:transform .2s;z-index:10;transform:translateX(${EMU.showSettings?'0':'100%'})" data-testid="settings-sidebar">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:12px;border-bottom:1px solid var(--border)">
+              <span class="font-bold" style="font-size:14px">Settings</span>
+              <button class="btn btn-ghost btn-icon" onclick="EMU.showSettings=false;render();setTimeout(drawEmulatorCanvas,50)" data-testid="button-close-settings">${I.x}</button>
+            </div>
+            <div style="padding:12px">
+              ${secHead('speed','Shot Speed: '+EMU.shotSpeed)}
+              ${EMU.expandedSections.speed?`<div style="${accContent}">
+                <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted-fg);margin-bottom:4px"><span>Soft</span><span>Power</span></div>
+                <input type="range" min="1" max="10" step="1" value="${EMU.shotSpeed}" oninput="EMU.shotSpeed=+this.value;drawEmulatorCanvas()" style="width:100%" data-testid="slider-speed">
+              </div>`:''}
+              ${secHead('angle','Fine-Tune Angle: '+(EMU.angleFine>0?'+':'')+EMU.angleFine.toFixed(1)+'°')}
+              ${EMU.expandedSections.angle?`<div style="${accContent}">
+                <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted-fg);margin-bottom:4px"><span>-5°</span><span>+5°</span></div>
+                <input type="range" min="-5" max="5" step="0.1" value="${EMU.angleFine}" oninput="EMU.angleFine=+(Math.round(+this.value*10)/10);drawEmulatorCanvas()" style="width:100%" data-testid="slider-angle">
+              </div>`:''}
+              ${secHead('english','English: H '+(EMU.englishX>0?'+':'')+EMU.englishX.toFixed(1)+', V '+(EMU.englishY>0?'+':'')+EMU.englishY.toFixed(1))}
+              ${EMU.expandedSections.english?`<div style="${accContent}">
+                <div onclick="emuEngClick(event)" style="width:120px;height:120px;position:relative;cursor:pointer;margin:0 auto 12px" data-testid="english-diagram">
+                  <svg width="120" height="120" viewBox="0 0 120 120">
+                    <circle cx="60" cy="60" r="58" fill="white" stroke="#ccc" stroke-width="1"/>
+                    <circle cx="60" cy="60" r="58" fill="none" stroke="#ef4444" stroke-width="1" stroke-dasharray="4 3" opacity="0.5"/>
+                    <line x1="60" y1="2" x2="60" y2="118" stroke="rgba(0,0,0,0.15)" stroke-width="0.5"/>
+                    <line x1="2" y1="60" x2="118" y2="60" stroke="rgba(0,0,0,0.15)" stroke-width="0.5"/>
+                    ${[-1.5,-1.25,-1,-0.75,-0.5,-0.25,0,0.25,0.5,0.75,1,1.25,1.5].map(vx=>[-1.5,-1.25,-1,-0.75,-0.5,-0.25,0,0.25,0.5,0.75,1,1.25,1.5].map(vy=>`<circle cx="${60+(vx/1.5)*58}" cy="${60+(vy/1.5)*58}" r="1.5" fill="rgba(0,0,0,0.12)"/>`).join('')).join('')}
+                    <circle cx="${engCx}" cy="${engCy}" r="${engTipR}" fill="rgba(59,130,246,0.25)" stroke="#3b82f6" stroke-width="1.5"/>
+                    <circle cx="${engCx}" cy="${engCy}" r="3" fill="#3b82f6"/>
+                  </svg>
+                  <span style="position:absolute;font-size:8px;bottom:-2px;right:0;opacity:0.6;color:var(--muted-fg)">miscue limit</span>
+                </div>
+                <div style="margin-bottom:8px">
+                  <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted-fg);margin-bottom:2px"><span>-1.5</span><span>0</span><span>+1.5</span></div>
+                  <input type="range" min="-1.5" max="1.5" step="0.05" value="${EMU.englishX}" oninput="EMU.englishX=+this.value;drawEmulatorCanvas()" style="width:100%" data-testid="slider-english-x">
+                  <span style="font-size:11px;color:var(--muted-fg)">Horizontal (side spin)</span>
+                </div>
+                <div style="margin-bottom:8px">
+                  <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted-fg);margin-bottom:2px"><span>-1.5</span><span>0</span><span>+1.5</span></div>
+                  <input type="range" min="-1.5" max="1.5" step="0.05" value="${EMU.englishY}" oninput="EMU.englishY=+this.value;drawEmulatorCanvas()" style="width:100%" data-testid="slider-english-y">
+                  <span style="font-size:11px;color:var(--muted-fg)">Vertical (top/draw)</span>
+                </div>
+                <button class="btn btn-ghost" style="font-size:12px" onclick="EMU.englishX=0;EMU.englishY=0;drawEmulatorCanvas();render()" data-testid="button-reset-english">Center</button>
+              </div>`:''}
+              ${secHead('physics','Table Physics')}
+              ${EMU.expandedSections.physics?`<div style="${accContent}">
+                <div style="margin-bottom:8px"><span style="font-size:11px;color:var(--muted-fg);display:block;margin-bottom:4px">Table Speed</span><div class="flex gap-1">${toggleBtn('tableSpeed','slow','Slow')}${toggleBtn('tableSpeed','medium','Medium')}${toggleBtn('tableSpeed','fast','Fast')}</div></div>
+                <div style="margin-bottom:8px"><span style="font-size:11px;color:var(--muted-fg);display:block;margin-bottom:4px">Equipment</span><div class="flex gap-1">${toggleBtn('equipment','dirty','Dirty')}${toggleBtn('equipment','average','Average')}${toggleBtn('equipment','clean','Clean')}</div></div>
+                <div style="margin-bottom:8px"><span style="font-size:11px;color:var(--muted-fg);display:block;margin-bottom:4px">Rails</span><div class="flex gap-1">${toggleBtn('rails','soft','Soft')}${toggleBtn('rails','medium','Medium')}${toggleBtn('rails','firm','Firm')}</div></div>
+              </div>`:''}
+              ${secHead('presets','Course Layouts')}
+              ${EMU.expandedSections.presets?`<div style="${accContent};max-height:200px;overflow-y:auto">
+                ${[2,3,4,5,6].map(par=>{
+                  const grp=COURSE_PRESETS.filter(p=>p.par===par);
+                  if(!grp.length)return'';
+                  return`<div><span style="font-size:11px;color:var(--muted-fg);display:block;margin:8px 0 4px">Par ${par}</span><div class="flex gap-1" style="flex-wrap:wrap">${grp.map(p=>`<button class="btn btn-ghost" style="font-size:11px;padding:2px 8px" data-testid="button-preset-${p.id}" onclick="loadCoursePreset('${p.id}')">${p.id}</button>`).join('')}</div></div>`;
+                }).join('')}
+              </div>`:''}
+            </div>
+          </div>
+        </div>
+      </div>`;
+    }
+
+    function rTutorial(){
+      const s=TUTORIAL_SLIDES[S.tutorialIdx];
+      const total=TUTORIAL_SLIDES.length;
+      const dots=TUTORIAL_SLIDES.map((_,i)=>`<div style="width:${i===S.tutorialIdx?'20px':'8px'};height:8px;border-radius:4px;background:${i===S.tutorialIdx?'var(--primary)':'var(--border)'};transition:all .2s"></div>`).join('');
+      return`<div class="dialog-overlay" onclick="if(event.target===this){S.showTutorial=false;render()}" data-testid="tutorial-overlay">
+        <div class="dialog-content" style="max-width:360px">
+          <div class="flex justify-between items-center mb-4 gap-2">
+            <h2 class="text-lg font-bold">How to Play</h2>
+            <button class="btn btn-ghost btn-icon" onclick="S.showTutorial=false;render()" data-testid="button-close-tutorial">${I.x}</button>
+          </div>
+          <div class="text-center" style="min-height:140px">
+            <div class="text-xs text-muted mb-2" style="text-transform:uppercase">Rule ${S.tutorialIdx+1} of ${total}</div>
+            <h3 class="text-xl font-bold mb-3">${s.t}</h3>
+            <p class="text-muted" style="font-size:14px;line-height:1.5">${s.b}</p>
+          </div>
+          <div class="flex items-center justify-center gap-1 mb-4 mt-4" style="flex-wrap:wrap">${dots}</div>
+          <div class="flex gap-2">
+            <button class="btn btn-outline flex-1" onclick="S.tutorialIdx=Math.max(0,S.tutorialIdx-1);render()" ${S.tutorialIdx===0?'disabled':''} data-testid="button-tutorial-prev">${I.chevLsm} Previous</button>
+            ${S.tutorialIdx<total-1?
+              `<button class="btn btn-primary flex-1" onclick="S.tutorialIdx++;render()" data-testid="button-tutorial-next">Next ${I.chevRsm}</button>`:
+              `<button class="btn btn-primary flex-1" onclick="S.showTutorial=false;render()" data-testid="button-tutorial-done">Got it!</button>`}
+          </div>
+        </div></div>`;
+    }
+
+    function rSetup(app){
+      const ps=S.game.players;
+      let list=ps.map((p,i)=>`
+        <div class="flex items-center gap-2 mb-2" style="padding:8px;border:1px solid var(--border);border-radius:8px" data-testid="card-player-${i}">
+          <div class="color-dot" style="background:${p.color};cursor:pointer" onclick="cycleCol('${p.id}')" data-testid="button-color-${i}"></div>
+          <span class="flex-1 font-bold truncate" data-testid="text-player-name-${i}">${esc(p.name)}</span>
+          <button class="btn btn-ghost btn-icon" onclick="moveP('${p.id}','up')" ${i===0?'disabled':''} data-testid="button-move-up-${i}">${I.up}</button>
+          <button class="btn btn-ghost btn-icon" onclick="moveP('${p.id}','down')" ${i===ps.length-1?'disabled':''} data-testid="button-move-down-${i}">${I.down}</button>
+          <button class="btn btn-ghost btn-icon" onclick="removePlayer('${p.id}')" style="color:var(--destructive)" data-testid="button-remove-${i}">${I.x}</button>
+        </div>`).join('');
+      app.innerHTML=`
+        <div class="screen" data-testid="setup-screen">
+          <div class="flex items-center gap-2 mb-4">
+            <button class="btn btn-ghost" onclick="S.screen='splash';render()" data-testid="button-back">Back</button>
+            <h1 class="text-xl font-bold flex-1">Player Setup</h1>
+          </div>
+          ${list}
+          <div class="flex gap-2 mb-4 mt-2">
+            <input class="input flex-1" id="pname" placeholder="Player name" maxlength="20" onkeydown="if(event.key==='Enter')addP()" data-testid="input-player-name">
+            <button class="btn btn-primary" onclick="addP()" ${ps.length>=MAX_PLAYERS?'disabled':''} data-testid="button-add-player">Add</button>
+          </div>
+          <button class="btn btn-primary btn-xl" onclick="startGame()" ${ps.length===0?'disabled':''} data-testid="button-start-game">Start Game (${ps.length} player${ps.length!==1?'s':''})</button>
+        </div>`;
+    }
+
+    function rGame(){
+      const g=S.game,cp=g.players[g.pi];
+      if(!cp)return'<p class="text-center text-muted" style="padding:40px">No players</p>';
+      const cs=g.scores[cp.id]?.find(s=>s.hole===g.hole)||{hole:g.hole,par:0,strokes:0,scratches:0,penalties:0};
+      const st=calcT(g.scores[cp.id]||[]);
+      const ldr=isLdr(cp.id);
+      const locked=!unlocked()&&g.hole>FREE_HOLES;
+      const allDone=g.players.every(p=>{const s=g.scores[p.id]?.find(s=>s.hole===g.hole);return s&&s.strokes>0;});
+      const canAdv=cs.par>0&&cs.strokes>0&&allDone;
+      const fin=g.hole>=MAX_HOLES&&g.players.indexOf(cp)===g.players.length-1&&allDone;
+      const rem=g.players.filter(p=>{const s=g.scores[p.id]?.find(s=>s.hole===g.hole);return!s||s.strokes===0;}).length;
+      const lhm=g.settings.lhm;
+      const dc=g.drawnCards[g.hole];
+
+      if(locked){
+        return`<div class="screen" data-testid="game-locked">
+          ${rPlayerHeader(cp,ldr,st)}
+          <div style="height:2px;background:${cp.color}" class="mb-4"></div>
+          <div class="flex justify-between items-center mb-3"><div class="text-lg font-bold">Hole ${g.hole}</div></div>
+          <div style="padding:32px 0" class="text-center">
+            <div style="margin-bottom:16px">${I.lock}</div>
+            <h2 class="text-2xl font-bold mb-2">Cards 4-18 Locked</h2>
+            <p class="text-muted mb-4">You've played the first 3 free cards. Unlock all 18 to continue.</p>
+            <button class="btn btn-primary btn-xl mb-2" onclick="location.href='${STRIPE_LINK}'" data-testid="button-unlock">${I.unlock} Unlock All 18 Cards</button>
+            <p class="text-xs text-muted mt-2">One-time purchase. Permanent on this device.</p>
+          </div></div>`;
+      }
+
+      if(cs.par===0&&!S.drawPhase){S.drawPhase='back';S.drawnCard=null;}
+
+      let drawOvl='';
+      if(S.drawPhase==='back')drawOvl=rDrawBack();
+      else if(S.drawPhase==='reveal')drawOvl=rDrawReveal();
+      else if(S.drawPhase==='joker-select')drawOvl=rJokerSelect();
+
+      let finDlg='';if(S.showFinish)finDlg=rFinishDlg();
+      let cardViewDlg='';if(S.showCardView&&dc)cardViewDlg=rCardViewDlg(dc);
+
+      const tot=cs.strokes+cs.scratches+cs.penalties;
+      const co=cs.par>0&&cs.strokes>0?callout(tot,cs.par):'';
+      const bd=(cs.scratches>0||cs.penalties>0)?`<div class="text-xs text-muted">${cs.strokes}${cs.scratches>0?' + '+cs.scratches+'S':''}${cs.penalties>0?' + '+cs.penalties+'P':''}</div>`:'';
+
+      const isJokerHole=dc&&dc.joker;
+      return`<div class="screen" style="position:relative" data-testid="game-screen">
+        ${isJokerHole?`<div style="position:absolute;inset:0;pointer-events:none;z-index:-1;background:url('cards/joker-bg.png') no-repeat center center;background-size:60%;opacity:0.12" data-testid="joker-background"></div>`:''}
+        ${rPlayerHeader(cp,ldr,st)}
+        <div style="height:2px;background:${cp.color}" class="mb-4"></div>
+        <div class="flex justify-between items-center mb-3 gap-2">
+          <div class="text-lg font-bold" data-testid="text-hole-number">Hole ${g.hole}</div>
+          ${dc?`<button class="btn btn-ghost text-sm" onclick="S.showCardView=true;render()" data-testid="button-view-card">${I.eye} View Card</button>`:''}
+          <div class="text-sm text-muted" data-testid="text-shooters-left">${rem} shooter${rem!==1?'s':''} left</div>
+        </div>
+        ${cs.par>0?`<div class="flex items-center gap-3 mb-3" ${lhm?'style="flex-direction:row-reverse"':''}><span class="font-bold" data-testid="text-par-value">Par ${cs.par}</span>${cs.strokes>=cs.par+5?`<button class="btn btn-outline" onclick="setMercy()" data-testid="button-mercy">Mercy (+5)</button>`:''}</div>`
+        :`<button class="w-full mb-3" style="padding:16px;border:2px dashed var(--primary);border-radius:8px;background:none;color:var(--primary);text-align:center" onclick="S.drawPhase='back';render()" data-testid="button-draw-card">
+          <span class="text-lg font-bold">Tap to Draw Card</span><br><span class="text-sm text-muted">Draw a card to set the course</span></button>`}
+        <div class="flex gap-3 mb-4" ${lhm?'style="flex-direction:row-reverse"':''}>
+          <button class="btn btn-destructive flex-1" style="min-height:48px" onclick="addScratch()" data-testid="button-scratch">Scratch (+1)</button>
+          <button class="btn btn-destructive flex-1" style="min-height:48px" onclick="addPenalty()" data-testid="button-penalty">Penalty (+1)</button>
+        </div>
+        <div class="flex gap-4 items-center mb-4" ${lhm?'style="flex-direction:row-reverse"':''}>
+          <div class="flex-1 text-center">
+            <div style="font-size:72px;line-height:1" class="font-extrabold" data-testid="text-score">${tot}</div>
+            ${bd}
+            <div class="text-sm font-bold mt-1" style="min-height:20px" data-testid="text-callout">${co}</div>
+          </div>
+          <div class="flex flex-col gap-3" style="width:100px">
+            <button class="btn btn-primary" style="height:72px;font-size:28px" onclick="addStroke()" data-testid="button-stroke-up">&#9650;</button>
+            <button class="btn btn-primary" style="height:72px;font-size:28px" onclick="subStroke()" data-testid="button-stroke-down">&#9660;</button>
+          </div>
+        </div>
+        <div class="flex gap-3" ${lhm?'style="flex-direction:row-reverse"':''}>
+          <button class="btn btn-destructive flex-1" style="min-height:48px" onclick="undo()" data-testid="button-undo">${I.undo} Undo</button>
+          <button class="btn btn-primary flex-1 ${canAdv&&cs.par>0&&cs.strokes>0?'pulse':''}" style="min-height:48px" onclick="onNext()" ${!canAdv?'disabled':''} data-testid="button-next-card">${fin?'Finish Game':'Next Card'}</button>
+        </div>
+      </div>${drawOvl}${finDlg}${cardViewDlg}`;
+    }
+
+    function rPlayerHeader(cp,ldr,st){
+      return`<div class="flex items-center gap-3 mb-4">
+        <button class="btn btn-outline" style="width:64px;min-height:44px" onclick="prevP()" data-testid="button-prev-player">${I.chevL}</button>
+        <div class="flex-1 flex items-center justify-center gap-2" style="padding:8px 12px;border:2px solid ${cp.color};border-radius:8px;min-width:0">
+          ${ldr?`<img src="${LEADER_ICON}" style="width:20px;height:20px;flex-shrink:0">`:''}<span class="text-xl font-bold truncate" data-testid="text-current-player">${esc(cp.name)}</span>
+        </div>
+        <button class="btn btn-outline" style="width:64px;min-height:44px" onclick="nextP()" data-testid="button-next-player">${I.chevR}</button>
       </div>
-      <div class="flex justify-between items-center gap-2">
-        <span>Left-handed</span>
-        <button class="btn ${s.lhm?'btn-primary':'btn-outline'}" onclick="S.game.settings.lhm=!S.game.settings.lhm;render()" data-testid="button-lhm">${s.lhm?'On':'Off'}</button>
-      </div>
-    </div>
-    <div class="card mb-4">
-      <h3 class="font-bold mb-3">Game</h3>
-      <div class="flex justify-between items-center gap-2 mb-3">
-        <span>Auto-save</span>
-        <button class="btn ${s.autoSave?'btn-primary':'btn-outline'}" onclick="S.game.settings.autoSave=!S.game.settings.autoSave;render()" data-testid="button-autosave">${s.autoSave?'On':'Off'}</button>
-      </div>
-    </div>
-    <div class="card mb-4">
-      <h3 class="font-bold mb-3">Add Player Mid-Game</h3>
-      <div class="flex gap-2">
-        <input class="input flex-1" id="midP" placeholder="Player name" maxlength="20" onkeydown="if(event.key==='Enter')addMid()" data-testid="input-mid-player">
-        <button class="btn btn-primary" onclick="addMid()" ${S.game.players.length>=MAX_PLAYERS?'disabled':''} data-testid="button-add-mid">Add</button>
-      </div>
-    </div>
-    <button class="btn btn-outline w-full mb-3" onclick="goHome()" data-testid="button-home">${I.home} Home</button>
-    <button class="btn btn-destructive w-full" onclick="goHome()" data-testid="button-exit">End Game & Exit</button>
-  </div>`;
-}
+      <div class="grid grid-3 gap-4 mb-4 text-center">
+        <div><div class="text-xs text-muted font-bold" style="text-transform:uppercase">Scratches</div><div class="text-2xl font-bold" data-testid="text-scratches">${st.sc}</div></div>
+        <div><div class="text-xs text-muted font-bold" style="text-transform:uppercase">Total</div><div class="text-2xl font-bold" data-testid="text-total">${st.ts}</div></div>
+        <div><div class="text-xs text-muted font-bold" style="text-transform:uppercase">Penalties</div><div class="text-2xl font-bold" data-testid="text-penalties">${st.pn}</div></div>
+      </div>`;
+    }
 
-function rNav(){
-  const t=S.tab,vo=S.viewOnly;
-  return`<div id="bottom-nav" data-testid="bottom-nav">
-    <button class="${t==='game'?'active':''}" onclick="if(!${vo})setTab('game')" ${vo?'style="opacity:.4"':''} data-testid="nav-game">${I.game}<span>Game</span></button>
-    <button class="${t==='summary'?'active':''}" onclick="setTab('summary')" data-testid="nav-summary">${I.chart}<span>Leaderboard</span></button>
-    <button class="${t==='save'?'active':''}" onclick="if(!${vo})setTab('save')" ${vo?'style="opacity:.4"':''} data-testid="nav-save">${I.save}<span>Save</span></button>
-    <button class="${t==='settings'?'active':''}" onclick="setTab('settings')" data-testid="nav-settings">${I.gear}<span>Settings</span></button>
-  </div>`;
-}
+    function rDrawBack(){
+      return`<div class="dialog-overlay" data-testid="draw-dialog-back">
+        <div class="dialog-content text-center">
+          <h2 class="text-2xl font-extrabold mb-2">DRAW!</h2>
+          ${S.game.hole===1?'<p class="text-muted mb-2">The tallest player tees off first.</p>':''}
+          <p class="text-muted mb-4">Tap the card to draw</p>
+          <div class="card-flip-container" onclick="flipCard()" data-testid="button-flip-card">
+            <div class="card-flip-inner" id="flipInner">
+              <div class="card-flip-front"><img src="${CARD_BACK}" alt="Card Back"></div>
+              <div class="card-flip-back"><img id="flipFace" src="" alt="Course Card"></div>
+            </div>
+          </div>
+          <p class="text-xs text-muted mt-4">Tap card to flip</p>
+        </div></div>`;
+    }
 
-function setTab(t){
-  if(S.tab==='game'&&t!=='game')pauseTimer();
-  if(t==='game'&&S.tab!=='game'&&!S.game.done)resumeTimer();
-  S.tab=t;render();
-}
-function prevP(){const g=S.game;g.pi=g.pi===0?g.players.length-1:g.pi-1;render();}
-function nextP(){const g=S.game;g.pi=(g.pi+1)%g.players.length;render();}
+    function rDrawReveal(){
+      const c=S.drawnCard;
+      if(!c)return'';
+      if(c.joker){
+        return`<div class="dialog-overlay" data-testid="draw-dialog-reveal">
+          <div class="dialog-content text-center">
+            <h2 class="text-xl font-bold mb-1">Hole ${S.game.hole}</h2>
+            <p class="text-2xl font-extrabold mb-3" style="color:var(--primary)" data-testid="text-drawn-par">JOKER!</p>
+            <img src="${c.img}" alt="Joker Card" class="card-img mb-4" data-testid="img-drawn-card">
+            <p class="text-muted text-sm mb-3">You drew a Joker! Choose your own par and create a custom layout.</p>
+            <button class="btn btn-primary btn-xl" onclick="S.drawPhase='joker-select';render()" data-testid="button-choose-par">Choose Par</button>
+          </div></div>`;
+      }
+      return`<div class="dialog-overlay" data-testid="draw-dialog-reveal">
+        <div class="dialog-content text-center">
+          <h2 class="text-xl font-bold mb-1">Hole ${S.game.hole}</h2>
+          <p class="text-2xl font-extrabold mb-3" style="color:var(--primary)" data-testid="text-drawn-par">Par ${c.par}</p>
+          <img src="${c.img}" alt="Par ${c.par} Course" class="card-img mb-4" data-testid="img-drawn-card">
+          <p class="text-muted text-sm mb-4">Set up your table to match the course below.</p>
+          <button class="btn btn-primary btn-xl" onclick="confirmDraw()" data-testid="button-continue-draw">Click to Continue</button>
+        </div></div>`;
+    }
 
-function addP(){
-  const inp=document.getElementById('pname');
-  const n=inp?.value?.trim();
-  if(n&&S.game.players.length<MAX_PLAYERS){addPlayer(n);inp.value='';inp.focus();}
-}
-function addMid(){
-  const inp=document.getElementById('midP');
-  const n=inp?.value?.trim();
-  if(n&&S.game.players.length<MAX_PLAYERS){addPlayer(n);inp.value='';render();}
-}
-function moveP(id,dir){
-  const ps=S.game.players;const i=ps.findIndex(p=>p.id===id);
-  const ni=dir==='up'?i-1:i+1;
-  if(ni<0||ni>=ps.length)return;
-  [ps[i],ps[ni]]=[ps[ni],ps[i]];
-  ps.forEach((p,j)=>p.order=j);render();
-}
-function cycleCol(id){
-  const p=S.game.players.find(pl=>pl.id===id);
-  if(p){const ci=COLORS.indexOf(p.color);p.color=COLORS[(ci+1)%COLORS.length];render();}
-}
-function startGame(){
-  const now=Date.now();
-  S.game.hole=1;S.game.pi=0;S.game.done=false;
-  if(!S.game.deck||!S.game.deck.length)S.game.deck=shuffleDeck();
-  S.game.drawnCards={};
-  S.game.turnTimes=[];S.game.gameStartTime=now;S.game.gameEndTime=null;S.game.currentTurnStart=now;
-  S.game.totalPlayTimeMs=0;S.game.isPaused=false;S.game.lastResumedAt=now;
-  S.screen='game';S.tab='game';render();
-}
+    function rJokerSelect(){
+      const c=S.drawnCard;
+      if(!c)return'';
+      const jp=S.jokerPar;
+      const parOpts=Array.from({length:15},(_,i)=>i+1).map(p=>`<option value="${p}" ${p===jp?'selected':''}>${p}</option>`).join('');
+      const hasSelection=jp!==null;
+      return`<div class="dialog-overlay" data-testid="joker-select-dialog">
+        <div class="dialog-content text-center">
+          <h2 class="text-3xl font-bold mb-3" data-testid="text-joker-select-title">JOKER!</h2>
+          <img src="${c.img}" alt="Joker" class="card-img mb-4" data-testid="img-joker-select">
+          <p class="text-muted text-sm mb-3">Select a par for this hole.</p>
+          <div class="flex items-center justify-center gap-3 mb-4">
+            <span class="font-bold">Par:</span>
+            <div class="select-wrap"><select onchange="S.jokerPar=parseInt(this.value);render()" data-testid="select-joker-par">
+              <option value="" ${!hasSelection?'selected':''} disabled>Select par</option>
+              ${parOpts}
+            </select></div>
+          </div>
+          <button class="btn btn-primary btn-xl" onclick="confirmJokerDraw()" ${!hasSelection?'disabled':''} data-testid="button-confirm-joker-par">Confirm Par${hasSelection?' '+jp:''}</button>
+        </div></div>`;
+    }
 
-function getCS(){
-  const g=S.game,cp=g.players[g.pi];
-  return g.scores[cp.id]?.find(s=>s.hole===g.hole)||{hole:g.hole,par:0,strokes:0,scratches:0,penalties:0};
-}
-function setCS(u){const g=S.game,cp=g.players[g.pi];updScore(cp.id,g.hole,u);render();}
-function addStroke(){const c=getCS();setCS({...c,strokes:c.strokes+1});}
-function subStroke(){const c=getCS();setCS({...c,strokes:Math.max(0,c.strokes-1)});}
-function addScratch(){const c=getCS();setCS({...c,scratches:c.scratches+1});}
-function addPenalty(){const c=getCS();setCS({...c,penalties:c.penalties+1});}
-function setMercy(){const c=getCS();if(c.par>0){setCS({...c,strokes:c.par+5});setTimeout(()=>nextCard(),300);}}
 
-let flipping=false;
-function flipCard(){
-  if(flipping)return;
-  flipping=true;
-  const card=drawCard();
-  S.drawnCard=card;
-  const face=document.getElementById('flipFace');
-  if(face)face.src=card.img;
-  const inner=document.getElementById('flipInner');
-  if(inner)inner.classList.add('flipped');
-  setTimeout(()=>{flipping=false;S.drawPhase='reveal';render();},700);
-}
+    function rFinishDlg(){
+      return`<div class="dialog-overlay" data-testid="finish-dialog">
+        <div class="dialog-content text-center">
+          <h2 class="text-xl font-bold mb-2">Finish Game</h2>
+          <p class="text-muted mb-4">Finalize scores? This cannot be undone.</p>
+          <div class="flex gap-2">
+            <button class="btn btn-ghost flex-1" onclick="S.showFinish=false;render()" data-testid="button-finish-cancel">Go Back</button>
+            <button class="btn btn-primary flex-1" onclick="S.showFinish=false;nextCard()" data-testid="button-finish-confirm">Continue</button>
+          </div>
+        </div></div>`;
+    }
 
-function confirmDraw(){
-  if(S.drawnCard){
-    S.game.drawnCards[S.game.hole]=S.drawnCard;
-    setParAll(S.game.hole,S.drawnCard.par);
-  }
-  S.drawPhase=null;S.drawnCard=null;render();
-}
+    function rCardViewDlg(dc){
+      const label=dc.joker?`Hole ${S.game.hole} - Joker (Par ${dc.par})`:`Hole ${S.game.hole} - Par ${dc.par}`;
+      return`<div style="position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;flex-direction:column" data-testid="card-view-dialog">
+        <div class="flex justify-between items-center" style="padding:12px 16px;border-bottom:1px solid var(--border)">
+          <h2 class="text-lg font-bold">${label}</h2>
+          <button class="btn btn-ghost btn-icon" onclick="S.showCardView=false;render()" data-testid="button-close-card-view">${I.x}</button>
+        </div>
+        <div style="flex:1;display:flex;align-items:center;justify-content:center;padding:16px;overflow:hidden">
+          <img src="${dc.img}" alt="${dc.joker?'Joker':'Par '+dc.par} Course" style="max-width:100%;max-height:100%;object-fit:contain;border-radius:12px" data-testid="img-card-view">
+        </div></div>`;
+    }
 
-function confirmJokerDraw(){
-  if(S.drawnCard){
-    const par=S.jokerPar||3;
-    S.game.drawnCards[S.game.hole]={...S.drawnCard,par};
-    setParAll(S.game.hole,par);
-  }
-  S.drawPhase=null;S.drawnCard=null;S.jokerPar=null;render();
-}
+    function fmtDur(ms){
+      if(ms<=0)return'0s';
+      const s=Math.floor(ms/1000),h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sec=s%60;
+      if(h>0)return`${h}h ${m}m ${sec}s`;
+      if(m>0)return`${m}m ${sec}s`;
+      return`${sec}s`;
+    }
 
-function onNext(){
-  const g=S.game;
-  const allDone=g.players.every(p=>{const s=g.scores[p.id]?.find(s=>s.hole===g.hole);return s&&s.strokes>0;});
-  const fin=g.hole>=MAX_HOLES&&g.players.indexOf(g.players[g.pi])===g.players.length-1&&allDone;
-  if(fin){S.showFinish=true;render();}
-  else{nextCard();}
-}
-function goHome(){
-  S.game.done=true;S.viewOnly=false;S.tab='game';S.screen='splash';S.hist=[];render();
-}
+    function rTimeAnalytics(g){
+      const tt=g.turnTimes||[];
+      if(!tt.length||!g.players.length)return`<div class="card mb-4"><h3 class="font-bold mb-2">${I.clock||'⏱'} Time Analytics</h3><p class="text-sm text-muted">No timing data available.</p></div>`;
 
-function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+      const sumTT=tt.reduce((s,t)=>s+(t.endTime-t.startTime),0);
+      const totalTime=(g.totalPlayTimeMs||0)>0?g.totalPlayTimeMs:sumTT>0?sumTT:(g.gameEndTime||Date.now())-g.gameStartTime;
+      const ptm={},ptbh={},htm={};
+      for(const t of tt){
+        const d=t.endTime-t.startTime;
+        ptm[t.playerId]=(ptm[t.playerId]||0)+d;
+        if(!ptbh[t.playerId])ptbh[t.playerId]={};
+        ptbh[t.playerId][t.hole]=d;
+        htm[t.hole]=(htm[t.hole]||0)+d;
+      }
 
-init();
-</script>
-</body>
-</html>
+      const playerTimeRows=g.players.map(p=>`<div class="flex justify-between gap-2" style="border-bottom:1px dashed var(--border);padding-bottom:8px"><span class="flex items-center gap-1"><div class="color-dot" style="background:${p.color};width:10px;height:10px"></div>${esc(p.name)}:</span><span class="font-bold">${fmtDur(ptm[p.id]||0)}</span></div>`).join('');
+
+      let gFast={h:0,t:Infinity},gSlow={h:0,t:-1};
+      for(const[h,t]of Object.entries(htm)){if(t<gFast.t)gFast={h:Number(h),t};if(t>gSlow.t)gSlow={h:Number(h),t};}
+
+      const speedRows=g.players.map(p=>{
+        const turns=ptbh[p.id];if(!turns)return'';
+        let fast={h:0,t:Infinity},slow={h:0,t:-1};
+        const vals=[];
+        for(const[h,t]of Object.entries(turns)){vals.push(t);if(t<fast.t)fast={h:Number(h),t};if(t>slow.t)slow={h:Number(h),t};}
+        const avg=vals.length?vals.reduce((a,b)=>a+b,0)/vals.length:0;
+        return`<div style="padding:8px;border:1px solid var(--border);border-radius:8px;margin-bottom:8px">
+          <div class="flex items-center gap-2 mb-1"><div class="color-dot" style="background:${p.color};width:10px;height:10px"></div><span class="font-bold">${esc(p.name)}</span></div>
+          <div class="grid grid-3 gap-2 text-xs text-muted">
+            <div>Fastest: Hole ${fast.h} (${fmtDur(fast.t)})</div>
+            <div>Slowest: Hole ${slow.h} (${fmtDur(slow.t)})</div>
+            <div>Avg: ${fmtDur(avg)}</div>
+          </div></div>`;
+      }).join('');
+
+      const streaks=g.players.map(p=>{
+        const ps=(g.scores[p.id]||[]).sort((a,b)=>a.hole-b.hole);
+        let best=0,cur=0;
+        for(const s of ps){if(s.strokes+s.scratches+s.penalties<=s.par){cur++;best=Math.max(best,cur);}else cur=0;}
+        return{p,best};
+      });
+      const bestStreak=streaks.reduce((a,b)=>b.best>a.best?b:a,{p:null,best:0});
+
+      const spmRows=g.players.map(p=>{
+        const t=ptm[p.id]||0;
+        const ps=g.scores[p.id]||[];
+        const tot=ps.reduce((a,s)=>a+s.strokes+s.scratches+s.penalties,0);
+        const spm=t>0?(tot/(t/60000)).toFixed(1):'--';
+        const sps=t>0&&tot>0?((t/1000)/tot).toFixed(2):'--';
+        return`<div style="padding:8px;border:1px dashed var(--border);border-radius:8px;margin-bottom:8px">
+          <div class="flex items-center gap-2 mb-1"><div class="color-dot" style="background:${p.color};width:10px;height:10px"></div><span class="font-bold">${esc(p.name)}</span></div>
+          <div class="flex justify-between gap-4 text-xs text-muted"><span>${sps} sec/stroke</span><span>${spm} strokes/min</span></div></div>`;
+      }).join('');
+
+      return`<div class="card mb-4"><h3 class="font-bold mb-3">Time Summary</h3>
+        <div class="grid grid-2 gap-4 text-sm">
+          <div class="flex justify-between gap-2" style="border-bottom:1px dashed var(--border);padding-bottom:8px"><span>Total Game Time:</span><span class="font-bold">${fmtDur(totalTime)}</span></div>
+          <div class="flex justify-between gap-2" style="border-bottom:1px dashed var(--border);padding-bottom:8px"><span>Cards Played:</span><span class="font-bold">${[...new Set(tt.map(t=>t.hole))].length}</span></div>
+          ${playerTimeRows}
+        </div></div>
+      <div class="card mb-4"><h3 class="font-bold mb-3">Speed Records</h3>
+        <div class="text-sm" style="margin-bottom:12px">
+          <div class="flex justify-between gap-2" style="padding:8px;border:1px dashed var(--border);border-radius:8px;margin-bottom:8px"><span>Fastest Hole (Group):</span><span class="font-bold">Hole ${gFast.h} (${fmtDur(gFast.t)})</span></div>
+          <div class="flex justify-between gap-2" style="padding:8px;border:1px dashed var(--border);border-radius:8px;margin-bottom:8px"><span>Slowest Hole (Group):</span><span class="font-bold">Hole ${gSlow.h} (${fmtDur(gSlow.t)})</span></div>
+        </div>${speedRows}</div>
+      <div class="card mb-4"><h3 class="font-bold mb-3">Performance Insights</h3>
+        <div class="text-sm">
+          ${bestStreak.p&&bestStreak.best>1?`<div class="flex justify-between gap-2" style="padding:8px;border:1px dashed var(--border);border-radius:8px;margin-bottom:8px"><span>Best Par Streak:</span><span class="font-bold flex items-center gap-1"><div class="color-dot" style="background:${bestStreak.p.color};width:10px;height:10px"></div>${esc(bestStreak.p.name)} (${bestStreak.best} cards)</span></div>`:''}
+          ${spmRows}
+        </div></div>`;
+    }
+
+    function rSummary(){
+      const g=S.game,lb=getLB();
+      const leader=lb[0];
+      const allH=[...new Set(Object.values(g.scores).flat().map(s=>s.hole))].sort((a,b)=>a-b);
+      const tot=Object.values(g.scores).reduce((a,ps)=>{const t=calcT(ps);return{ts:a.ts+t.ts,sc:a.sc+t.sc,pn:a.pn+t.pn}},{ts:0,sc:0,pn:0});
+      const ul=unlocked();
+
+      let lbH=lb.map((e,i)=>{
+        const s=calcT(g.scores[e.p.id]||[]);
+        const ppar=(g.scores[e.p.id]||[]).reduce((a,sc)=>a+(sc.par||0),0);
+        const vp=e.t-ppar;
+        const vpStr=vp===0?'E':vp>0?'+'+vp:vp;
+        const vpCls=vp<0?'color:#22c55e':vp>0?'color:#d11111':'';
+        return`<div class="leaderboard-item ${i===0?'gold':i===1?'silver':i===2?'bronze':''} mb-2" data-testid="leaderboard-item-${i}">
+          <div class="flex items-center gap-2 flex-1" style="min-width:0"><div class="color-dot" style="background:${e.p.color}"></div><span class="font-bold truncate">${esc(e.p.name)}</span></div>
+          <div class="text-center text-sm" style="flex-shrink:0"><div class="font-bold">${e.t}</div><div class="text-xs text-muted">Total</div></div>
+          <div class="text-center text-sm" style="flex-shrink:0;${vpCls}"><div class="font-bold">${vpStr}</div><div class="text-xs text-muted">vs Par</div></div>
+          <div class="text-center text-sm" style="flex-shrink:0"><div>${s.sc}</div><div class="text-xs text-muted">Scratch</div></div>
+          <div class="text-center text-sm" style="flex-shrink:0"><div>${s.pn}</div><div class="text-xs text-muted">Penalty</div></div>
+        </div>`;
+      }).join('');
+
+      let tRows=lb.map((e,i)=>{
+        const ps=g.scores[e.p.id]||[];
+        const cells=allH.map(h=>{
+          if(!ul&&h>FREE_HOLES)return`<td><div class="lock-icon">${I.lock}</div></td>`;
+          const hs=ps.find(s=>s.hole===h);
+          if(!hs)return'<td>-</td>';
+          const d=(hs.strokes+hs.scratches+hs.penalties)-hs.par;
+          return`<td class="${d<0?'score-under':d>0?'score-over':''}">${hs.strokes+hs.scratches+hs.penalties}</td>`;
+        }).join('');
+        return`<tr><td class="player-cell"><div class="flex items-center gap-2"><div class="color-dot" style="background:${e.p.color};width:12px;height:12px"></div>${esc(e.p.name)}</div></td>${cells}<td class="font-bold">${e.t}</td></tr>`;
+      }).join('');
+
+      let banner='';
+      if(!ul&&allH.some(h=>h>FREE_HOLES)){
+        banner=`<div class="card mb-4" style="border-style:dashed;border-color:var(--primary)">
+          <div class="flex items-center gap-3 flex-wrap">
+            <div style="flex-shrink:0">${I.lock}</div>
+            <div class="flex-1" style="min-width:120px"><p class="font-bold text-sm">Cards 4-18 locked</p><p class="text-xs text-muted">Unlock to view full scores</p></div>
+            <button class="btn btn-primary" onclick="location.href='${STRIPE_LINK}'" data-testid="button-unlock-summary">${I.unlock} Unlock</button>
+          </div></div>`;
+      }
+
+      return`<div class="screen" data-testid="summary-screen">
+        <h1 class="text-3xl font-bold text-center mb-2">Session Summary</h1>
+        ${leader?`<p class="text-center text-muted mb-4">${g.done?'Winner':'Leader'}: <span class="font-bold" style="color:${leader.p.color}">${esc(leader.p.name)}</span> (${leader.t} strokes)</p>`:''}
+        <div class="card mb-4">${(()=>{const fps=(Object.values(g.scores)[0]||[]);const cpar=fps.reduce((a,s)=>a+(s.par||0),0);return`<div class="grid grid-2 gap-4 text-sm">
+          <div class="flex justify-between gap-2" style="border-bottom:1px dashed var(--border);padding-bottom:8px"><span>Players:</span><span class="font-bold">${g.players.length}</span></div>
+          <div class="flex justify-between gap-2" style="border-bottom:1px dashed var(--border);padding-bottom:8px"><span>Cards:</span><span class="font-bold">${allH.length}</span></div>
+          <div class="flex justify-between gap-2" style="border-bottom:1px dashed var(--border);padding-bottom:8px"><span>Course Par:</span><span class="font-bold">${cpar}</span></div>
+          <div class="flex justify-between gap-2" style="border-bottom:1px dashed var(--border);padding-bottom:8px"><span>Strokes:</span><span class="font-bold">${tot.ts}</span></div>
+          <div class="flex justify-between gap-2" style="border-bottom:1px dashed var(--border);padding-bottom:8px"><span>Scratches:</span><span class="font-bold">${tot.sc}</span></div>
+        </div>`;})()}</div>
+        <div class="card mb-4"><h3 class="font-bold mb-3">Leaderboard</h3>${lbH}</div>
+        <div class="card mb-4"><h3 class="font-bold mb-3">Box Score</h3>
+        <div style="overflow-x:auto"><table><thead><tr><th style="text-align:left;min-width:90px">Player</th>${allH.map(h=>`<th>H${h}</th>`).join('')}<th>Total</th></tr></thead><tbody>${tRows}</tbody></table></div></div>
+        ${rTimeAnalytics(g)}
+        ${banner}
+      </div>`;
+    }
+
+    function rSaveTab(){
+      const games=getSaved();
+      const slots=Object.entries(games).filter(([k])=>k!=='__autosave__');
+      let items=slots.map(([n,g])=>`
+        <div class="save-item mb-2" data-testid="save-item-${n}">
+          <div class="flex-1"><div class="font-bold">${esc(n)}</div><div class="text-xs text-muted">${g.players?.length||0} players, Hole ${g.hole||g.currentHole||1}</div></div>
+          <button class="btn btn-ghost btn-icon" style="color:var(--destructive)" onclick="delSlot('${esc(n)}');render()" data-testid="button-delete-save-${n}">${I.trash}</button>
+        </div>`).join('');
+      if(!slots.length)items='<p class="text-muted text-center mb-4">No saved games</p>';
+
+      return`<div class="screen" data-testid="save-screen">
+        <h2 class="text-xl font-bold mb-4">Save Game</h2>
+        <div class="flex gap-2 mb-4">
+          <input class="input flex-1" id="saveSlot" placeholder="Save slot name" value="Game ${new Date().toLocaleDateString()}" data-testid="input-save-name">
+          <button class="btn btn-primary" onclick="const n=document.getElementById('saveSlot').value.trim();if(n){saveGame(n);render()}" data-testid="button-save">Save</button>
+        </div>
+        ${items}
+        <div class="flex flex-col gap-2 mt-4">
+          <button class="btn btn-destructive w-full" onclick="saveHist();const now=Date.now();const g=S.game;const as=g.isPaused?0:(now-g.lastResumedAt);g.totalPlayTimeMs=(g.totalPlayTimeMs||0)+as;const cp=g.players[g.pi];if(cp){if(!g.turnTimes)g.turnTimes=[];g.turnTimes.push({playerId:cp.id,hole:g.hole,startTime:g.currentTurnStart||now,endTime:now});}g.gameEndTime=now;g.done=true;g.isPaused=true;g.lastResumedAt=0;S.tab='summary';render()" data-testid="button-end-game">End Game</button>
+          <button class="btn btn-outline w-full" onclick="S.game=defGame();S.game.deck=shuffleDeck();S.viewOnly=false;S.screen='setup';render()" data-testid="button-new-game-save">New Game</button>
+        </div>
+      </div>`;
+    }
+
+    function rLoadScreen(app){
+      const games=getSaved();
+      const auto=games['__autosave__'];
+      const slots=Object.entries(games).filter(([k])=>k!=='__autosave__');
+
+      let autoHtml='';
+      if(auto){
+        const d=auto.updatedAt?new Date(auto.updatedAt).toLocaleString():'';
+        autoHtml=`<div class="card mb-3" style="border-style:dashed" data-testid="slot-autosave">
+          <div class="flex items-center gap-2 mb-2 flex-wrap">
+            <span class="font-bold">Autosave</span>
+            <span class="text-xs text-muted" style="margin-left:auto">${d}</span>
+          </div>
+          <p class="text-sm text-muted mb-2">${auto.players?.length||0} players, Hole ${auto.hole||auto.currentHole||1}</p>
+          <button class="btn btn-outline w-full" style="min-height:44px" onclick="loadGame('__autosave__');S.viewOnly=false;S.screen='game';S.tab='game';resumeTimer();render()" data-testid="button-load-autosave">Load Autosave</button>
+        </div>`;
+      }
+
+      let items=slots.map(([n,g])=>{
+        const d=g.updatedAt?new Date(g.updatedAt).toLocaleDateString():'';
+        return`<div class="card mb-3" data-testid="load-item-${esc(n)}">
+          <div class="flex items-center justify-between gap-2 mb-2">
+            <span class="font-bold">${esc(n)}</span>
+            <div class="flex items-center gap-2">
+              <span class="text-xs text-muted">${d}</span>
+              <button class="btn btn-ghost btn-icon" style="color:var(--destructive)" onclick="delSlot('${esc(n)}');render()" data-testid="button-delete-load-${esc(n)}">${I.trash}</button>
+            </div>
+          </div>
+          <p class="text-sm text-muted mb-2">${g.players?.length||0} players, Hole ${g.hole||g.currentHole||1}</p>
+          <button class="btn btn-primary w-full" style="min-height:44px" onclick="loadGame('${esc(n)}');S.viewOnly=false;S.screen='game';S.tab='game';resumeTimer();render()" data-testid="button-load-${esc(n)}">Load</button>
+        </div>`;
+      }).join('');
+
+      if(!auto&&!slots.length)items='<p class="text-muted text-center" style="padding:32px 0">No saved games yet</p>';
+
+      app.innerHTML=`
+        <div class="screen" data-testid="load-screen">
+          <div class="flex items-center gap-2 mb-4">
+            <button class="btn btn-ghost" onclick="S.screen='splash';render()" data-testid="button-back-to-splash">${I.chevL} Back</button>
+            <h1 class="text-xl font-bold flex-1">Saved Games</h1>
+          </div>
+          ${autoHtml}
+          ${slots.length>0?'<h3 class="text-sm text-muted font-bold mb-3" style="text-transform:uppercase">Manual Saves</h3>':''}
+          ${items}
+        </div>`;
+    }
+
+    function rSettings(){
+      const s=S.game.settings;
+      return`<div class="screen" data-testid="settings-screen">
+        <h2 class="text-xl font-bold mb-4">Settings</h2>
+        <div class="card mb-4">
+          <h3 class="font-bold mb-3">Display</h3>
+          <div class="flex justify-between items-center gap-2 mb-3">
+            <span>Theme</span>
+            <div class="flex gap-2">
+              <button class="btn ${s.theme==='dark'?'btn-primary':'btn-outline'}" onclick="S.game.settings.theme='dark';applyTheme();render()" data-testid="button-theme-dark">Dark</button>
+              <button class="btn ${s.theme==='light'?'btn-primary':'btn-outline'}" onclick="S.game.settings.theme='light';applyTheme();render()" data-testid="button-theme-light">Light</button>
+            </div>
+          </div>
+          <div class="flex justify-between items-center gap-2">
+            <span>Left-handed</span>
+            <button class="btn ${s.lhm?'btn-primary':'btn-outline'}" onclick="S.game.settings.lhm=!S.game.settings.lhm;render()" data-testid="button-lhm">${s.lhm?'On':'Off'}</button>
+          </div>
+        </div>
+        <div class="card mb-4">
+          <h3 class="font-bold mb-3">Game</h3>
+          <div class="flex justify-between items-center gap-2 mb-3">
+            <span>Auto-save</span>
+            <button class="btn ${s.autoSave?'btn-primary':'btn-outline'}" onclick="S.game.settings.autoSave=!S.game.settings.autoSave;render()" data-testid="button-autosave">${s.autoSave?'On':'Off'}</button>
+          </div>
+        </div>
+        <div class="card mb-4">
+          <h3 class="font-bold mb-3">Add Player Mid-Game</h3>
+          <div class="flex gap-2">
+            <input class="input flex-1" id="midP" placeholder="Player name" maxlength="20" onkeydown="if(event.key==='Enter')addMid()" data-testid="input-mid-player">
+            <button class="btn btn-primary" onclick="addMid()" ${S.game.players.length>=MAX_PLAYERS?'disabled':''} data-testid="button-add-mid">Add</button>
+          </div>
+        </div>
+        <button class="btn btn-outline w-full mb-3" onclick="goHome()" data-testid="button-home">${I.home} Home</button>
+        <button class="btn btn-destructive w-full" onclick="goHome()" data-testid="button-exit">End Game & Exit</button>
+      </div>`;
+    }
+
+    function rNav(){
+      const t=S.tab,vo=S.viewOnly;
+      return`<div id="bottom-nav" data-testid="bottom-nav">
+        <button class="${t==='game'?'active':''}" onclick="if(!${vo})setTab('game')" ${vo?'style="opacity:.4"':''} data-testid="nav-game">${I.game}<span>Game</span></button>
+        <button class="${t==='summary'?'active':''}" onclick="setTab('summary')" data-testid="nav-summary">${I.chart}<span>Leaderboard</span></button>
+        <button class="${t==='save'?'active':''}" onclick="if(!${vo})setTab('save')" ${vo?'style="opacity:.4"':''} data-testid="nav-save">${I.save}<span>Save</span></button>
+        <button class="${t==='settings'?'active':''}" onclick="setTab('settings')" data-testid="nav-settings">${I.gear}<span>Settings</span></button>
+      </div>`;
+    }
+
+    function setTab(t){
+      if(S.tab==='game'&&t!=='game')pauseTimer();
+      if(t==='game'&&S.tab!=='game'&&!S.game.done)resumeTimer();
+      S.tab=t;render();
+    }
+    function prevP(){const g=S.game;g.pi=g.pi===0?g.players.length-1:g.pi-1;render();}
+    function nextP(){const g=S.game;g.pi=(g.pi+1)%g.players.length;render();}
+
+    function addP(){
+      const inp=document.getElementById('pname');
+      const n=inp?.value?.trim();
+      if(n&&S.game.players.length<MAX_PLAYERS){addPlayer(n);inp.value='';inp.focus();}
+    }
+    function addMid(){
+      const inp=document.getElementById('midP');
+      const n=inp?.value?.trim();
+      if(n&&S.game.players.length<MAX_PLAYERS){addPlayer(n);inp.value='';render();}
+    }
+    function moveP(id,dir){
+      const ps=S.game.players;const i=ps.findIndex(p=>p.id===id);
+      const ni=dir==='up'?i-1:i+1;
+      if(ni<0||ni>=ps.length)return;
+      [ps[i],ps[ni]]=[ps[ni],ps[i]];
+      ps.forEach((p,j)=>p.order=j);render();
+    }
+    function cycleCol(id){
+      const p=S.game.players.find(pl=>pl.id===id);
+      if(p){const ci=COLORS.indexOf(p.color);p.color=COLORS[(ci+1)%COLORS.length];render();}
+    }
+    function startGame(){
+      const now=Date.now();
+      S.game.hole=1;S.game.pi=0;S.game.done=false;
+      if(!S.game.deck||!S.game.deck.length)S.game.deck=shuffleDeck();
+      S.game.drawnCards={};
+      S.game.turnTimes=[];S.game.gameStartTime=now;S.game.gameEndTime=null;S.game.currentTurnStart=now;
+      S.game.totalPlayTimeMs=0;S.game.isPaused=false;S.game.lastResumedAt=now;
+      S.screen='game';S.tab='game';render();
+    }
+
+    function getCS(){
+      const g=S.game,cp=g.players[g.pi];
+      return g.scores[cp.id]?.find(s=>s.hole===g.hole)||{hole:g.hole,par:0,strokes:0,scratches:0,penalties:0};
+    }
+    function setCS(u){const g=S.game,cp=g.players[g.pi];updScore(cp.id,g.hole,u);render();}
+    function addStroke(){const c=getCS();setCS({...c,strokes:c.strokes+1});}
+    function subStroke(){const c=getCS();setCS({...c,strokes:Math.max(0,c.strokes-1)});}
+    function addScratch(){const c=getCS();setCS({...c,scratches:c.scratches+1});}
+    function addPenalty(){const c=getCS();setCS({...c,penalties:c.penalties+1});}
+    function setMercy(){const c=getCS();if(c.par>0){setCS({...c,strokes:c.par+5});setTimeout(()=>nextCard(),300);}}
+
+    let flipping=false;
+    function flipCard(){
+      if(flipping)return;
+      flipping=true;
+      const card=drawCard();
+      S.drawnCard=card;
+      const face=document.getElementById('flipFace');
+      if(face)face.src=card.img;
+      const inner=document.getElementById('flipInner');
+      if(inner)inner.classList.add('flipped');
+      setTimeout(()=>{flipping=false;S.drawPhase='reveal';render();},700);
+    }
+
+    function confirmDraw(){
+      if(S.drawnCard){
+        S.game.drawnCards[S.game.hole]=S.drawnCard;
+        setParAll(S.game.hole,S.drawnCard.par);
+      }
+      S.drawPhase=null;S.drawnCard=null;render();
+    }
+
+    function confirmJokerDraw(){
+      if(S.drawnCard){
+        const par=S.jokerPar||3;
+        S.game.drawnCards[S.game.hole]={...S.drawnCard,par};
+        setParAll(S.game.hole,par);
+      }
+      S.drawPhase=null;S.drawnCard=null;S.jokerPar=null;render();
+    }
+
+    function onNext(){
+      const g=S.game;
+      const allDone=g.players.every(p=>{const s=g.scores[p.id]?.find(s=>s.hole===g.hole);return s&&s.strokes>0;});
+      const fin=g.hole>=MAX_HOLES&&g.players.indexOf(g.players[g.pi])===g.players.length-1&&allDone;
+      if(fin){S.showFinish=true;render();}
+      else{nextCard();}
+    }
+    function goHome(){
+      S.game.done=true;S.viewOnly=false;S.tab='game';S.screen='splash';S.hist=[];render();
+    }
+
+    function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+
+    init();
+    </script>
+    </body>
+    </html>
