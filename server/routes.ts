@@ -1,9 +1,12 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import Stripe from "stripe";
+import { GoogleAuth } from "google-auth-library";
 import rateLimit from "express-rate-limit";
 
 const STRIPE_SESSION_ID_PATTERN = /^cs_(test_|live_)[a-zA-Z0-9]{10,300}$/;
+const PLAY_PURCHASE_TOKEN_PATTERN = /^[a-zA-Z0-9._-]{20,500}$/;
+const PLAY_PRODUCT_ID_PATTERN = /^[a-z][a-z0-9_.]{0,99}$/;
 
 const checkoutLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -21,9 +24,33 @@ const statusLimiter = rateLimit({
   message: { error: "Too many status checks, please try again later" },
 });
 
+const playVerifyLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many verification requests, please try again later" },
+});
+
+function getGoogleAuth(): GoogleAuth | null {
+  const serviceAccountJson = process.env.GOOGLE_SERVICE_ACCOUNT_JSON;
+  if (!serviceAccountJson) return null;
+  try {
+    const credentials = JSON.parse(serviceAccountJson);
+    return new GoogleAuth({
+      credentials,
+      scopes: ["https://www.googleapis.com/auth/androidpublisher"],
+    });
+  } catch {
+    console.error("Failed to parse GOOGLE_SERVICE_ACCOUNT_JSON");
+    return null;
+  }
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
   const stripePriceId = process.env.STRIPE_PRICE_ID;
+  const playPackageName = process.env.GOOGLE_PLAY_PACKAGE_NAME || "com.prometheangames.parforcourse";
 
   let stripe: Stripe | null = null;
   if (stripeSecretKey) {
@@ -125,6 +152,89 @@ a{color:#93c5fd;text-decoration:underline}
     } catch (error) {
       console.error("Error checking unlock status:", error);
       res.status(500).json({ error: "Failed to check unlock status" });
+    }
+  });
+
+  app.post("/api/verify-play-purchase", playVerifyLimiter, async (req, res) => {
+    const googleAuth = getGoogleAuth();
+    if (!googleAuth) {
+      return res.status(500).json({ error: "Google Play verification is not configured" });
+    }
+
+    try {
+      const { purchaseToken, productId } = req.body;
+
+      if (!purchaseToken || typeof purchaseToken !== "string") {
+        return res.status(400).json({ error: "Missing or invalid purchaseToken" });
+      }
+      if (!productId || typeof productId !== "string") {
+        return res.status(400).json({ error: "Missing or invalid productId" });
+      }
+      if (!PLAY_PURCHASE_TOKEN_PATTERN.test(purchaseToken)) {
+        return res.status(400).json({ error: "Invalid purchaseToken format" });
+      }
+      if (!PLAY_PRODUCT_ID_PATTERN.test(productId)) {
+        return res.status(400).json({ error: "Invalid productId format" });
+      }
+
+      const ALLOWED_PRODUCT_IDS = ["full_unlock"];
+      if (!ALLOWED_PRODUCT_IDS.includes(productId)) {
+        return res.status(403).json({ error: "Product not eligible for unlock" });
+      }
+
+      const client = await googleAuth.getClient();
+      const accessToken = await client.getAccessToken();
+
+      const verifyUrl =
+        `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/` +
+        `${encodeURIComponent(playPackageName)}/purchases/products/` +
+        `${encodeURIComponent(productId)}/tokens/${encodeURIComponent(purchaseToken)}`;
+
+      const verifyRes = await fetch(verifyUrl, {
+        headers: { Authorization: `Bearer ${accessToken.token}` },
+      });
+
+      if (!verifyRes.ok) {
+        const errorBody = await verifyRes.text();
+        console.error("Play API verify error:", verifyRes.status, errorBody);
+        return res.status(502).json({ error: "Failed to verify purchase with Google Play" });
+      }
+
+      const purchase = (await verifyRes.json()) as {
+        purchaseState: number;
+        acknowledgementState: number;
+        consumptionState: number;
+      };
+
+      // purchaseState: 0 = Purchased, 1 = Canceled, 2 = Pending
+      if (purchase.purchaseState !== 0) {
+        return res.json({ unlocked: false });
+      }
+
+      // Acknowledge the purchase if not yet acknowledged (required by Google
+      // within 3 days or the purchase is automatically refunded)
+      if (purchase.acknowledgementState === 0) {
+        const ackUrl = `${verifyUrl}:acknowledge`;
+        const ackRes = await fetch(ackUrl, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${accessToken.token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({}),
+        });
+
+        if (!ackRes.ok) {
+          const ackError = await ackRes.text();
+          console.error("Play API acknowledge error:", ackRes.status, ackError);
+          return res.status(502).json({ error: "Purchase verified but acknowledgement failed. Please try again." });
+        }
+      }
+
+      res.json({ unlocked: true });
+    } catch (error) {
+      console.error("Error verifying Play purchase:", error);
+      res.status(500).json({ error: "Failed to verify purchase" });
     }
   });
 

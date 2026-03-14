@@ -33,18 +33,32 @@ The server only handles two Stripe endpoints for the paywall. Development uses V
   - `pftc_unlocked` - Set to `"true"` after Stripe payment to unlock all 18 holes
   - `appScreen`, `appActiveTab`, `appViewOnly` - UI state persistence
 
-### Stripe Paywall
+### Payment & Unlock (Dual-Path)
 - **Free Tier**: Holes 1-3 are always playable for free
-- **Paid Unlock**: Holes 4-18 require a one-time Stripe payment
-- **Unlock Flow**:
-  1. User reaches hole 4 and sees unlock overlay in GameScreen
-  2. Clicking "Unlock All 18 Cards" calls `POST /api/create-checkout-session`
-  3. User is redirected to Stripe Checkout
-  4. On success, redirected back to `/?unlock=success&session_id={ID}`
-  5. App verifies payment via `GET /api/check-unlock-status?session_id=xxx`
-  6. On verification, sets `localStorage.pftc_unlocked = "true"`
-- **Persistence**: Unlock persists permanently on the device via localStorage
+- **Paid Unlock**: Holes 4-18 require a one-time payment
+- **Persistence**: Unlock persists permanently on the device via localStorage (`pftc_unlocked = "true"`)
 - **Gating**: GameScreen shows overlay for locked holes; SummaryScreen shows lock icons for holes 4-18 data
+
+#### Stripe (Web Browser)
+When running in a regular browser (not inside a TWA), the existing Stripe checkout flow is used:
+1. User taps "Unlock All 18 Cards" → `POST /api/create-checkout-session`
+2. Redirected to Stripe Checkout
+3. On success, redirected back to `/?unlock=success&session_id={ID}`
+4. App verifies payment via `GET /api/check-unlock-status?session_id=xxx`
+
+#### Google Play Billing (TWA on Android)
+When running inside a Trusted Web Activity on Android, the Digital Goods API is used:
+1. `UnlockContext` detects TWA via `window.getDigitalGoodsService` availability
+2. User taps "Unlock All 18 Cards" → Digital Goods API `PaymentRequest` with `https://play.google.com/billing` method
+3. Native Play Billing sheet shown; user completes purchase
+4. Frontend receives `purchaseToken` → sends to `POST /api/verify-play-purchase`
+5. Server verifies via Google Play Developer API (`purchases.products.get`) using a Google service account
+6. Server acknowledges purchase if needed, returns `{ unlocked: true }`
+7. On mount, `checkPendingPurchases()` recovers any purchases that weren't verified (crash recovery)
+
+- **Product ID (SKU)**: `full_unlock` — must be created as a managed product in Google Play Console
+- **TWA detection utility**: `client/src/lib/play-billing.ts` — `isRunningInTwa()`, `initiatePlayBillingCheckout()`, `checkPendingPurchases()`
+- **Digital Asset Links**: `client/public/.well-known/assetlinks.json` — template with placeholder SHA-256; update with real fingerprint from PWABuilder before deploying
 
 ### Game Analytics
 - **Turn Timing**: Each player's turn is timed (start/end timestamps recorded in `turnTimes[]` array in GameState)
@@ -136,6 +150,7 @@ The server only handles two Stripe endpoints for the paywall. Development uses V
 ### API Endpoints
 - `POST /api/create-checkout-session` - Creates Stripe Checkout Session for unlocking all 18 holes
 - `GET /api/check-unlock-status?session_id=xxx` - Verifies a Stripe checkout session payment status
+- `POST /api/verify-play-purchase` - Verifies a Google Play in-app purchase token via Google Play Developer API; acknowledges the purchase if needed; returns `{ unlocked: true/false }`
 
 ### Security Hardening
 - **Helmet**: Sets security HTTP headers (X-Frame-Options, X-Content-Type-Options, Strict-Transport-Security, etc.)
@@ -185,11 +200,13 @@ The server only handles two Stripe endpoints for the paywall. Development uses V
 - **esbuild**: Production server bundling
 
 ### Fonts
-- Google Fonts CDN: DM Sans, Fira Code, Geist Mono, Architects Daughter
+- Google Fonts CDN: Inter (sole web font; all other families were removed for PWA performance)
 
 ## Environment Variables Required
 - `STRIPE_SECRET_KEY` - Stripe secret API key for creating checkout sessions
 - `STRIPE_PRICE_ID` - Stripe Price ID for the "Unlock All 18 Cards" product
+- `GOOGLE_SERVICE_ACCOUNT_JSON` - Full JSON key for a Google service account with `androidpublisher` scope (for verifying Play purchases server-side). Create via Google Cloud Console → IAM → Service Accounts; grant "Android Management API" or link to Google Play Console under API Access.
+- `GOOGLE_PLAY_PACKAGE_NAME` - Android app package name (defaults to `com.prometheangames.parforcourse` if not set)
 - `NODE_ENV=production` (for production builds)
 
 ## Build Commands

@@ -1,5 +1,10 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
 import { apiRequest } from "@/lib/queryClient";
+import {
+  isRunningInTwa,
+  initiatePlayBillingCheckout,
+  checkPendingPurchases,
+} from "@/lib/play-billing";
 
 const FREE_HOLES = 3;
 
@@ -18,12 +23,27 @@ export function useUnlock() {
   return context;
 }
 
+async function verifyPlayPurchase(purchaseToken: string, productId: string): Promise<boolean> {
+  try {
+    const res = await apiRequest("POST", "/api/verify-play-purchase", {
+      purchaseToken,
+      productId,
+    });
+    const data = await res.json();
+    return data.unlocked === true;
+  } catch (err) {
+    console.error("Failed to verify Play purchase:", err);
+    return false;
+  }
+}
+
 export function UnlockProvider({ children }: { children: ReactNode }) {
   const [isUnlocked, setIsUnlocked] = useState(() => {
     return localStorage.getItem("pftc_unlocked") === "true";
   });
   const [isCheckingUnlock, setIsCheckingUnlock] = useState(false);
 
+  // Handle Stripe redirect callback (existing flow)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const unlockStatus = params.get("unlock");
@@ -51,7 +71,51 @@ export function UnlockProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // Check for unconsumed Play purchases on mount (TWA only)
+  // Handles the case where the user purchased but the app crashed before
+  // the token was verified and acknowledged server-side.
+  useEffect(() => {
+    if (isUnlocked || !isRunningInTwa()) return;
+
+    checkPendingPurchases().then(async (pending) => {
+      if (!pending) return;
+      setIsCheckingUnlock(true);
+      try {
+        const verified = await verifyPlayPurchase(pending.purchaseToken, pending.productId);
+        if (verified) {
+          localStorage.setItem("pftc_unlocked", "true");
+          setIsUnlocked(true);
+        }
+      } finally {
+        setIsCheckingUnlock(false);
+      }
+    });
+  }, []);
+
   const initiateCheckout = useCallback(async () => {
+    // TWA path: Google Play Billing via Digital Goods API
+    if (isRunningInTwa()) {
+      try {
+        setIsCheckingUnlock(true);
+        const result = await initiatePlayBillingCheckout();
+        if (!result) {
+          console.error("Play Billing returned no result");
+          return;
+        }
+        const verified = await verifyPlayPurchase(result.purchaseToken, result.productId);
+        if (verified) {
+          localStorage.setItem("pftc_unlocked", "true");
+          setIsUnlocked(true);
+        }
+      } catch (err) {
+        console.error("Play Billing checkout failed:", err);
+      } finally {
+        setIsCheckingUnlock(false);
+      }
+      return;
+    }
+
+    // Browser path: Stripe checkout (existing flow)
     try {
       const res = await apiRequest("POST", "/api/create-checkout-session");
       const data = await res.json();
