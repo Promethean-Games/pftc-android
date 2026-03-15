@@ -1084,20 +1084,16 @@
           <button class="btn btn-ghost btn-icon" onclick="removePlayer('${p.id}')" style="color:var(--destructive)" data-testid="button-remove-${i}">${I.x}</button>
         </div>`).join('');
       app.innerHTML=`
-        <div style="display:flex;flex-direction:column;height:100dvh;padding:16px;box-sizing:border-box" data-testid="setup-screen">
-          <div style="flex-shrink:0">
-            <div class="flex items-center gap-2 mb-4">
-              <button class="btn btn-ghost" onclick="S.screen='splash';render()" data-testid="button-back">Back</button>
-              <h1 class="text-xl font-bold flex-1">Player Setup</h1>
-            </div>
+        <div style="padding:16px;padding-bottom:32px" data-testid="setup-screen">
+          <div class="flex items-center gap-2 mb-4">
+            <button class="btn btn-ghost" onclick="S.screen='splash';render()" data-testid="button-back">Back</button>
+            <h1 class="text-xl font-bold flex-1">Player Setup</h1>
           </div>
-          <div style="flex:1;overflow-y:auto;margin-bottom:12px">${list}</div>
-          <div style="flex-shrink:0">
-            <div class="flex gap-2 mb-3">
-              <input class="input flex-1" id="pname" placeholder="Player name" maxlength="20" onkeydown="if(event.key==='Enter')addP()" data-testid="input-player-name">
-              <button class="btn btn-primary" onclick="addP()" ${ps.length>=MAX_PLAYERS?'disabled':''} data-testid="button-add-player">Add</button>
-            </div>
-            <button class="btn btn-primary btn-xl" style="width:100%" onclick="startGame()" ${ps.length===0?'disabled':''} data-testid="button-start-game">Start Game (${ps.length} player${ps.length!==1?'s':''})</button>
+          <div style="margin-bottom:12px">${list}</div>
+          <button class="btn btn-primary btn-xl" style="width:100%;margin-bottom:12px" onclick="startGame()" ${ps.length===0?'disabled':''} data-testid="button-start-game">Start Game (${ps.length} player${ps.length!==1?'s':''})</button>
+          <div class="flex gap-2">
+            <input class="input flex-1" id="pname" placeholder="Player name" maxlength="20" onkeydown="if(event.key==='Enter')addP()" data-testid="input-player-name">
+            <button class="btn btn-primary" onclick="addP()" ${ps.length>=MAX_PLAYERS?'disabled':''} data-testid="button-add-player">Add</button>
           </div>
         </div>`;
     }

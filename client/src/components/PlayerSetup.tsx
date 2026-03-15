@@ -60,36 +60,35 @@ export function PlayerSetup({
   const canStart = players.length > 0 && namedPlayers.length === players.length;
 
   return (
-    <div className="flex flex-col p-4" style={{ height: "100dvh" }}>
-      <div className="shrink-0">
-        {onBack && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onBack}
-            className="self-start mb-2 text-muted-foreground"
-            data-testid="button-back-to-splash"
-          >
-            <ArrowLeft className="w-4 h-4 mr-1" />
-            Back
-          </Button>
-        )}
-        <div className="flex flex-col items-center mb-3">
-          <img
-            src={LOGO_URL}
-            alt="PftC logo"
-            className="w-16 h-auto mb-2"
-          />
-          <h2 className="text-center text-sm font-semibold uppercase tracking-wide text-muted-foreground px-4">
-            Enter Player Names from Tallest to Shortest Height
-          </h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            Players: {players.length}
-          </p>
-        </div>
+    <div className="flex flex-col min-h-screen p-4 pb-8">
+      {onBack && (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onBack}
+          className="self-start mb-2 text-muted-foreground"
+          data-testid="button-back-to-splash"
+        >
+          <ArrowLeft className="w-4 h-4 mr-1" />
+          Back
+        </Button>
+      )}
+
+      <div className="flex flex-col items-center mb-4">
+        <img
+          src={LOGO_URL}
+          alt="PftC logo"
+          className="w-16 h-auto mb-2"
+        />
+        <h2 className="text-center text-sm font-semibold uppercase tracking-wide text-muted-foreground px-4">
+          Enter Player Names from Tallest to Shortest Height
+        </h2>
+        <p className="text-sm text-muted-foreground mt-1">
+          Players: {players.length}
+        </p>
       </div>
 
-      <div className="flex-1 overflow-y-auto space-y-3 mb-3">
+      <div className="space-y-3 mb-4">
         {players.map((player, index) => (
           <Card key={player.id} className="p-3" data-testid={`player-card-${player.id}`}>
             <div className="flex items-center gap-3">
@@ -97,7 +96,7 @@ export function PlayerSetup({
                 type="button"
                 onClick={() => setShowColorPicker(showColorPicker === player.id ? null : player.id)}
                 className="w-9 h-9 rounded-full border-2 flex-shrink-0 hover-elevate active-elevate-2"
-                style={{ 
+                style={{
                   backgroundColor: player.color,
                   borderColor: showColorPicker === player.id ? "hsl(var(--foreground))" : "hsl(var(--border))"
                 }}
@@ -161,47 +160,47 @@ export function PlayerSetup({
         ))}
       </div>
 
-      <div className="shrink-0 space-y-3">
-        <div className="flex gap-2">
-          <Input
-            ref={inputRef}
-            value={newPlayerName}
-            onChange={(e) => setNewPlayerName(e.target.value)}
-            onKeyPress={handleKeyPress}
-            placeholder="Player name"
-            className="flex-1"
-            data-testid="input-new-player"
-          />
-          <Select value={insertPosition} onValueChange={setInsertPosition}>
-            <SelectTrigger className="w-28" data-testid="select-position">
-              <SelectValue placeholder="Position" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="end">At End</SelectItem>
-              {players.map((player, index) => (
-                <SelectItem key={player.id} value={index.toString()}>
-                  Before {index + 1}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button
-            ref={addButtonRef}
-            onClick={handleAddPlayer}
-            disabled={players.length >= MAX_PLAYERS}
-            variant="outline"
-            data-testid="button-add-player"
-          >
-            Add
-          </Button>
-        </div>
+      {/* Start button sits ABOVE the input so it stays visible when keyboard opens */}
+      <Button
+        onClick={onStartGame}
+        disabled={!canStart}
+        className="w-full h-12 text-lg font-semibold mb-3"
+        data-testid="button-start-game"
+      >
+        Start Game ({players.length} player{players.length !== 1 ? "s" : ""})
+      </Button>
+
+      <div className="flex gap-2">
+        <Input
+          ref={inputRef}
+          value={newPlayerName}
+          onChange={(e) => setNewPlayerName(e.target.value)}
+          onKeyPress={handleKeyPress}
+          placeholder="Player name"
+          className="flex-1"
+          data-testid="input-new-player"
+        />
+        <Select value={insertPosition} onValueChange={setInsertPosition}>
+          <SelectTrigger className="w-28" data-testid="select-position">
+            <SelectValue placeholder="Position" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="end">At End</SelectItem>
+            {players.map((player, index) => (
+              <SelectItem key={player.id} value={index.toString()}>
+                Before {index + 1}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <Button
-          onClick={onStartGame}
-          disabled={!canStart}
-          className="w-full h-12 text-lg font-semibold"
-          data-testid="button-start-game"
+          ref={addButtonRef}
+          onClick={handleAddPlayer}
+          disabled={players.length >= MAX_PLAYERS}
+          variant="outline"
+          data-testid="button-add-player"
         >
-          Start
+          Add
         </Button>
       </div>
     </div>
