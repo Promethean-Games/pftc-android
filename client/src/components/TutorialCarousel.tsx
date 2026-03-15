@@ -218,6 +218,43 @@ export function TutorialCarousel({ onClose }: TutorialCarouselProps) {
           </div>
         ))}
 
+        <div data-testid="section-special-thanks">
+          <div
+            className="rounded-md px-4 py-2.5 mb-3"
+            style={{ background: "linear-gradient(135deg, #1c1917 0%, #292524 100%)" }}
+          >
+            <span className="text-sm font-bold uppercase tracking-widest text-white/70">
+              Special Thanks
+            </span>
+          </div>
+          <div className="rounded-md p-3" style={{ background: "rgba(120,113,108,0.08)" }}>
+            <p className="text-xs text-muted-foreground/70 leading-relaxed mb-3">
+              To our friends and family who have supported the development of Promethean Games
+            </p>
+            <div className="grid grid-cols-3 gap-x-3 gap-y-0.5 mb-4">
+              {[
+                "Francine A.","Rey A.","Anita B.","Joy A.","Lorenzo L.","Joss H.",
+                "Eric B.","Donavan T.","Jimmy G.","Shawn A.","Jim P.","Anna P.",
+                "Reese S.","Nate R.","Caleb R.","Amy V.","Jerry L.","Jesus G.",
+                "Dylan G.","Floyd A.","Chris S.","Rob W.","Kristin W.","Eric R.",
+                "Bobby B.","Blake K.","Rob B.","Sidney C.","Issac V.","Lauren C.",
+                "Caleb M.","Katie H.","Jason B.","Matt R.","Jo R.","Kelsey B.",
+                "Irving G.","Peter L.",
+              ].map((name) => (
+                <span key={name} className="text-xs text-muted-foreground/60 leading-5">
+                  {name}
+                </span>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground/50 leading-relaxed">
+              Made with love by Promethean Games
+            </p>
+            <p className="text-xs text-muted-foreground/40 mt-0.5">
+              &copy; 2026 All rights reserved
+            </p>
+          </div>
+        </div>
+
         <Button
           className="w-full mt-2"
           onClick={onClose}
