@@ -337,7 +337,15 @@ export function GameProvider({ children }: { children: ReactNode }) {
       const newTurnTimes = [...prev.turnTimes, turnTime];
 
       const nextPlayerIndex = (prev.currentPlayerIndex + 1) % prev.players.length;
-      const wouldAdvanceHole = nextPlayerIndex === 0;
+
+      // If every player already has a score for this hole, advance the hole directly
+      // instead of cycling through remaining players one click at a time.
+      const allPlayersHaveScores = prev.players.every((p) => {
+        const s = prev.scores[p.id]?.find((s) => s.hole === prev.currentHole);
+        return s && s.strokes > 0;
+      });
+
+      const wouldAdvanceHole = allPlayersHaveScores || nextPlayerIndex === 0;
       const nextHole = wouldAdvanceHole ? prev.currentHole + 1 : prev.currentHole;
       
       if (wouldAdvanceHole && prev.currentHole >= MAX_HOLES) {
