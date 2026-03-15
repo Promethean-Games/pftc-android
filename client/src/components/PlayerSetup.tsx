@@ -161,6 +161,27 @@ export function PlayerSetup({
       </div>
 
       <div className="flex gap-2 mb-3">
+        <Button
+          ref={addButtonRef}
+          onClick={handleAddPlayer}
+          disabled={players.length >= MAX_PLAYERS}
+          variant="outline"
+          className="flex-1 h-12 text-base"
+          data-testid="button-add-player"
+        >
+          Add Player
+        </Button>
+        <Button
+          onClick={onStartGame}
+          disabled={!canStart}
+          className="flex-1 h-12 text-base font-semibold"
+          data-testid="button-start-game"
+        >
+          Start Game
+        </Button>
+      </div>
+
+      <div className="flex gap-2">
         <Input
           ref={inputRef}
           value={newPlayerName}
@@ -183,27 +204,6 @@ export function PlayerSetup({
             ))}
           </SelectContent>
         </Select>
-      </div>
-
-      <div className="flex gap-2">
-        <Button
-          ref={addButtonRef}
-          onClick={handleAddPlayer}
-          disabled={players.length >= MAX_PLAYERS}
-          variant="outline"
-          className="flex-1 h-12 text-base"
-          data-testid="button-add-player"
-        >
-          Add Player
-        </Button>
-        <Button
-          onClick={onStartGame}
-          disabled={!canStart}
-          className="flex-1 h-12 text-base font-semibold"
-          data-testid="button-start-game"
-        >
-          Start Game
-        </Button>
       </div>
     </div>
   );
