@@ -60,34 +60,36 @@ export function PlayerSetup({
   const canStart = players.length > 0 && namedPlayers.length === players.length;
 
   return (
-    <div className="flex flex-col min-h-screen p-6 pb-8">
-      {onBack && (
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onBack}
-          className="self-start mb-2 text-muted-foreground"
-          data-testid="button-back-to-splash"
-        >
-          <ArrowLeft className="w-4 h-4 mr-1" />
-          Back
-        </Button>
-      )}
-      <div className="flex flex-col items-center mb-4">
-        <img 
-          src={LOGO_URL} 
-          alt="PftC logo" 
-          className="w-24 h-auto mb-2"
-        />
-        <h2 className="text-center text-sm font-semibold uppercase tracking-wide text-muted-foreground px-4">
-          Enter Player Names from Tallest to Shortest Height
-        </h2>
-        <p className="text-sm text-muted-foreground mt-1">
-          Players: {players.length}
-        </p>
+    <div className="flex flex-col p-4" style={{ height: "100dvh" }}>
+      <div className="shrink-0">
+        {onBack && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onBack}
+            className="self-start mb-2 text-muted-foreground"
+            data-testid="button-back-to-splash"
+          >
+            <ArrowLeft className="w-4 h-4 mr-1" />
+            Back
+          </Button>
+        )}
+        <div className="flex flex-col items-center mb-3">
+          <img
+            src={LOGO_URL}
+            alt="PftC logo"
+            className="w-16 h-auto mb-2"
+          />
+          <h2 className="text-center text-sm font-semibold uppercase tracking-wide text-muted-foreground px-4">
+            Enter Player Names from Tallest to Shortest Height
+          </h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            Players: {players.length}
+          </p>
+        </div>
       </div>
 
-      <div className="space-y-3 flex-1">
+      <div className="flex-1 overflow-y-auto space-y-3 mb-3">
         {players.map((player, index) => (
           <Card key={player.id} className="p-3" data-testid={`player-card-${player.id}`}>
             <div className="flex items-center gap-3">
@@ -159,7 +161,7 @@ export function PlayerSetup({
         ))}
       </div>
 
-      <div className="space-y-3">
+      <div className="shrink-0 space-y-3">
         <div className="flex gap-2">
           <Input
             ref={inputRef}
