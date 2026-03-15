@@ -1090,10 +1090,12 @@
             <h1 class="text-xl font-bold flex-1">Player Setup</h1>
           </div>
           <div style="margin-bottom:12px">${list}</div>
-          <button class="btn btn-primary btn-xl" style="width:100%;margin-bottom:12px" onclick="startGame()" ${ps.length===0?'disabled':''} data-testid="button-start-game">Start Game (${ps.length} player${ps.length!==1?'s':''})</button>
-          <div class="flex gap-2">
+          <div class="flex gap-2" style="margin-bottom:12px">
             <input class="input flex-1" id="pname" placeholder="Player name" maxlength="20" onkeydown="if(event.key==='Enter')addP()" data-testid="input-player-name">
-            <button class="btn btn-primary" onclick="addP()" ${ps.length>=MAX_PLAYERS?'disabled':''} data-testid="button-add-player">Add</button>
+          </div>
+          <div class="flex gap-2">
+            <button class="btn btn-outline flex-1" style="min-height:48px;font-size:16px" onclick="addP()" ${ps.length>=MAX_PLAYERS?'disabled':''} data-testid="button-add-player">Add Player</button>
+            <button class="btn btn-primary flex-1" style="min-height:48px;font-size:16px;font-weight:600" onclick="startGame()" ${ps.length===0?'disabled':''} data-testid="button-start-game">Start Game</button>
           </div>
         </div>`;
     }
