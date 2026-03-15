@@ -1123,6 +1123,7 @@
             <p class="text-muted mb-4">You've played the first 3 free cards. Unlock all 18 to continue.</p>
             <button class="btn btn-primary btn-xl mb-2" onclick="location.href='${STRIPE_LINK}'" data-testid="button-unlock">${I.unlock} Unlock All 18 Cards</button>
             <p class="text-xs text-muted mt-2">One-time purchase. Permanent on this device.</p>
+            <button class="btn btn-ghost btn-xl mt-3" onclick="S.screen='splash';render()" data-testid="button-home-from-paywall">${I.home||'⌂'} Return to Home</button>
           </div></div>`;
       }
 

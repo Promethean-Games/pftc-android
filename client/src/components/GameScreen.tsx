@@ -29,6 +29,7 @@ interface GameScreenProps {
   onUndo: () => void;
   canUndo: boolean;
   onSetParForAll: (par: number) => void;
+  onHome?: () => void;
 }
 
 export function GameScreen({
@@ -45,6 +46,7 @@ export function GameScreen({
   onUndo,
   canUndo,
   onSetParForAll,
+  onHome,
 }: GameScreenProps) {
   const { isUnlocked, freeHoles } = useUnlock();
   const { drawCard, getDrawnCard } = useGame();
@@ -271,7 +273,7 @@ export function GameScreen({
 
       {isHoleLocked ? (
         <div className="flex-1 flex flex-col items-center justify-center py-8" data-testid="locked-hole-overlay">
-          <UnlockBanner variant="overlay" />
+          <UnlockBanner variant="overlay" onHome={onHome} />
         </div>
       ) : par === 0 ? (
         <button

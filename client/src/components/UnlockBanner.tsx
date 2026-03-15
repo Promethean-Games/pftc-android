@@ -1,13 +1,14 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Lock, Unlock } from "lucide-react";
+import { Lock, Unlock, Home } from "lucide-react";
 import { useUnlock } from "@/contexts/UnlockContext";
 
 interface UnlockBannerProps {
   variant?: "overlay" | "inline";
+  onHome?: () => void;
 }
 
-export function UnlockBanner({ variant = "inline" }: UnlockBannerProps) {
+export function UnlockBanner({ variant = "inline", onHome }: UnlockBannerProps) {
   const { initiateCheckout, isCheckingUnlock } = useUnlock();
 
   if (variant === "overlay") {
@@ -34,6 +35,17 @@ export function UnlockBanner({ variant = "inline" }: UnlockBannerProps) {
           <p className="text-xs text-muted-foreground">
             One-time purchase. Unlocks permanently on this device.
           </p>
+          {onHome && (
+            <Button
+              variant="ghost"
+              className="w-full"
+              onClick={onHome}
+              data-testid="button-home-from-paywall"
+            >
+              <Home className="w-4 h-4 mr-2" />
+              Return to Home
+            </Button>
+          )}
         </Card>
       </div>
     );
