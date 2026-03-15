@@ -14,7 +14,7 @@ import card501 from "@assets/5-01_1772647223859.png";
 import card502 from "@assets/5-02_1772647223859.png";
 import card503 from "@assets/5-03_1772647223860.png";
 import card601 from "@assets/6-01_1772647223860.png";
-import cardJoker from "@assets/Joker-card.png";
+import cardJoker from "@assets/Joker_1773592747896.png";
 import cardBack from "@assets/Back_1772647592199.png";
 
 export interface CourseCard {
