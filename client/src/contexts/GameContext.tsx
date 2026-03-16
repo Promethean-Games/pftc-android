@@ -336,19 +336,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
       };
       const newTurnTimes = [...prev.turnTimes, turnTime];
 
-      const nextPlayerIndex = (prev.currentPlayerIndex + 1) % prev.players.length;
+      // Next Card is only enabled when all players have scores, so always advance the hole.
+      const nextHole = prev.currentHole + 1;
 
-      // If every player already has a score for this hole, advance the hole directly
-      // instead of cycling through remaining players one click at a time.
-      const allPlayersHaveScores = prev.players.every((p) => {
-        const s = prev.scores[p.id]?.find((s) => s.hole === prev.currentHole);
-        return s && s.strokes > 0;
-      });
-
-      const wouldAdvanceHole = allPlayersHaveScores || nextPlayerIndex === 0;
-      const nextHole = wouldAdvanceHole ? prev.currentHole + 1 : prev.currentHole;
-      
-      if (wouldAdvanceHole && prev.currentHole >= MAX_HOLES) {
+      if (prev.currentHole >= MAX_HOLES) {
         return {
           ...prev,
           isComplete: true,
@@ -360,24 +351,12 @@ export function GameProvider({ children }: { children: ReactNode }) {
           lastResumedAt: 0,
         };
       }
-      
-      if (wouldAdvanceHole) {
-        const sortedPlayers = sortPlayersByPreviousHole(prev.players, prev.scores, prev.currentHole);
-        return {
-          ...prev,
-          players: sortedPlayers,
-          currentPlayerIndex: 0,
-          currentHole: nextHole,
-          turnTimes: newTurnTimes,
-          currentTurnStart: now,
-          totalPlayTimeMs: newTotalPlay,
-          lastResumedAt: now,
-        };
-      }
-      
+
+      const sortedPlayers = sortPlayersByPreviousHole(prev.players, prev.scores, prev.currentHole);
       return {
         ...prev,
-        currentPlayerIndex: nextPlayerIndex,
+        players: sortedPlayers,
+        currentPlayerIndex: 0,
         currentHole: nextHole,
         turnTimes: newTurnTimes,
         currentTurnStart: now,

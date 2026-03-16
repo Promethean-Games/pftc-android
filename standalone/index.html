@@ -293,12 +293,9 @@
         g.turnTimes.push({playerId:cp.id,hole:g.hole,startTime:g.currentTurnStart||now,endTime:now});
       }
       g.currentTurnStart=now;g.lastResumedAt=now;
-      const ni=(g.pi+1)%g.players.length;
-      const allHave=g.players.every(p=>{const sc=(g.scores[p.id]||[]).find(s=>s.hole===g.hole);return sc&&sc.strokes>0;});
-      const adv=allHave||ni===0;
-      if(adv&&g.hole>=MAX_HOLES){g.done=true;g.gameEndTime=now;g.isPaused=true;g.lastResumedAt=0;S.viewOnly=true;S.tab='summary';render();return;}
-      if(adv){sortByPrev(g.hole);g.pi=0;g.hole++;}
-      else{g.pi=ni;}
+      // Next Card is only enabled when all players have scores, so always advance the hole.
+      if(g.hole>=MAX_HOLES){g.done=true;g.gameEndTime=now;g.isPaused=true;g.lastResumedAt=0;S.viewOnly=true;S.tab='summary';render();return;}
+      sortByPrev(g.hole);g.pi=0;g.hole++;
       render();
     }
     function pauseTimer(){
