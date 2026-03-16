@@ -88,9 +88,17 @@ export function SummaryScreen({ players, scores, onNewGame, onSubmitToSheets, is
               </div>
               <div className="flex justify-between border-b border-dashed pb-2">
                 <span>Total Scratches:</span>
-                <span className="font-semibold">
+                <span className="font-semibold" data-testid="text-total-scratches">
                   {Object.values(scores).reduce((sum, playerScores) => 
                     sum + calculatePlayerTotal(playerScores).totalScratches, 0
+                  )}
+                </span>
+              </div>
+              <div className="flex justify-between border-b border-dashed pb-2">
+                <span>Total Penalties:</span>
+                <span className="font-semibold" data-testid="text-total-penalties">
+                  {Object.values(scores).reduce((sum, playerScores) => 
+                    sum + calculatePlayerTotal(playerScores).totalPenalties, 0
                   )}
                 </span>
               </div>
