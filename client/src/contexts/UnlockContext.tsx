@@ -97,22 +97,34 @@ export function UnlockProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const initiateCheckout = useCallback(async () => {
+    setPurchaseError(null);
+
     // TWA path: Google Play Billing via Digital Goods API
     if (isRunningInTwa()) {
       try {
         setIsCheckingUnlock(true);
         const result = await initiatePlayBillingCheckout();
         if (!result) {
-          console.error("Play Billing returned no result");
+          setPurchaseError("Purchase was cancelled.");
           return;
         }
         const verified = await verifyPlayPurchase(result.purchaseToken, result.productId);
         if (verified) {
           localStorage.setItem("pftc_unlocked", "true");
           setIsUnlocked(true);
+        } else {
+          setPurchaseError("Purchase could not be verified. Please try again or contact support.");
         }
-      } catch (err) {
+      } catch (err: unknown) {
         console.error("Play Billing checkout failed:", err);
+        const msg = err instanceof Error ? err.message : String(err);
+        if (msg.includes("Product not found")) {
+          setPurchaseError("In-app product not available yet. Make sure 'full_unlock' is Active in Play Console.");
+        } else if (msg.includes("cancelled") || msg.includes("AbortError")) {
+          setPurchaseError(null); // user dismissed — no error to show
+        } else {
+          setPurchaseError(`Purchase failed: ${msg}`);
+        }
       } finally {
         setIsCheckingUnlock(false);
       }
@@ -128,6 +140,7 @@ export function UnlockProvider({ children }: { children: ReactNode }) {
       }
     } catch (err) {
       console.error("Failed to create checkout session:", err);
+      setPurchaseError("Checkout failed. Please check your connection and try again.");
     }
   }, []);
 
@@ -137,6 +150,8 @@ export function UnlockProvider({ children }: { children: ReactNode }) {
         isUnlocked,
         freeHoles: FREE_HOLES,
         isCheckingUnlock,
+        purchaseError,
+        clearPurchaseError,
         initiateCheckout,
       }}
     >

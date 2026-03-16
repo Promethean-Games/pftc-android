@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { BookOpen, Wrench, ShoppingCart, Shield } from "lucide-react";
+import { BookOpen, Wrench, ShoppingCart, Shield, AlertCircle, X } from "lucide-react";
 import { LOGO_URL, APP_VERSION } from "@/lib/constants";
 import { TutorialCarousel } from "./TutorialCarousel";
 import { TableLeveler } from "./TableLeveler";
@@ -22,7 +22,7 @@ export function SplashScreen({ onNewGame, onLoadGame }: SplashScreenProps) {
   const [showCoinFlip, setShowCoinFlip] = useState(false);
   const [showCueMasterTools, setShowCueMasterTools] = useState(false);
   const [showPrivacy, setShowPrivacy] = useState(false);
-  const { isUnlocked, initiateCheckout } = useUnlock();
+  const { isUnlocked, initiateCheckout, isCheckingUnlock, purchaseError, clearPurchaseError } = useUnlock();
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-6 relative">
@@ -54,15 +54,35 @@ export function SplashScreen({ onNewGame, onLoadGame }: SplashScreenProps) {
           Load Game
         </Button>
         {!isUnlocked && (
-          <Button
-            size="lg"
-            className="w-full text-lg h-14 bg-gradient-to-r from-emerald-600 to-green-500 border-0 text-white font-bold shadow-lg"
-            onClick={initiateCheckout}
-            data-testid="button-buy-now"
-          >
-            <ShoppingCart className="w-5 h-5 mr-2" />
-            Buy Now — Unlock All 18 Courses
-          </Button>
+          <>
+            <Button
+              size="lg"
+              className="w-full text-lg h-14 bg-gradient-to-r from-emerald-600 to-green-500 border-0 text-white font-bold shadow-lg"
+              onClick={initiateCheckout}
+              disabled={isCheckingUnlock}
+              data-testid="button-buy-now"
+            >
+              <ShoppingCart className="w-5 h-5 mr-2" />
+              {isCheckingUnlock ? "Processing…" : "Buy Now — Unlock All 18 Courses"}
+            </Button>
+            {purchaseError && (
+              <div
+                className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+                data-testid="text-purchase-error"
+              >
+                <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
+                <span className="flex-1">{purchaseError}</span>
+                <button
+                  onClick={clearPurchaseError}
+                  className="shrink-0 opacity-60 hover:opacity-100"
+                  data-testid="button-dismiss-error"
+                  aria-label="Dismiss"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+          </>
         )}
         <Button
           size="lg"
