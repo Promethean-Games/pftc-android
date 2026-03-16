@@ -234,7 +234,7 @@ export function TutorialCarousel({ onClose }: TutorialCarouselProps) {
             <div className="grid grid-cols-3 gap-x-3 gap-y-0.5 mb-4">
               {[
                 "Francine A.","Rey A.","Anita B.","Joy A.","Lorenzo L.","Joss H.",
-                "Eric B.","Donavan T.","Jimmy G.","Shawn A.","Jim P.","Anna P.",
+                "Eric B.","Donavan T.","Jimmy G.","Shawn A.","Jim P.","Anna P.","Kyle C.","Forrest C.","Keven F.",
                 "Reese S.","Nate R.","Caleb R.","Amy V.","Jerry L.","Jesus G.",
                 "Dylan G.","Floyd A.","Chris S.","Rob W.","Kristin W.","Eric R.",
                 "Bobby B.","Blake K.","Rob B.","Sidney C.","Issac V.","Lauren C.",
