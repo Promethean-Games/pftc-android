@@ -83,11 +83,8 @@ function GameApp() {
 
   const handleNewGame = () => {
     game.resetGame();
-    game.addPlayer("Player 1");
-    game.startGame();
     setViewOnly(false);
-    setActiveTab("game");
-    setScreen("game");
+    setScreen("setup");
   };
 
   const handleLoadGame = () => {
@@ -96,6 +93,7 @@ function GameApp() {
 
   const handleStartGame = () => {
     game.startGame();
+    setActiveTab("game");
     setScreen("game");
   };
 

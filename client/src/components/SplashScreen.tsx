@@ -42,7 +42,7 @@ export function SplashScreen({ onNewGame, onLoadGame }: SplashScreenProps) {
           onClick={onNewGame}
           data-testid="button-new-game"
         >
-          Start Game
+          {isUnlocked ? "New Game" : "Start Demo"}
         </Button>
         <Button
           size="lg"
