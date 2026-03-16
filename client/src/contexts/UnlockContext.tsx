@@ -119,7 +119,9 @@ export function UnlockProvider({ children }: { children: ReactNode }) {
         console.error("Play Billing checkout failed:", err);
         const msg = err instanceof Error ? err.message : String(err);
         if (msg.includes("Product not found")) {
-          setPurchaseError("In-app product not available yet. Make sure 'full_unlock' is Active in Play Console.");
+          setPurchaseError("In-app product not available. Make sure 'full_unlock' is Active (not Draft) in Play Console.");
+        } else if (msg.toLowerCase().includes("unsupported") || msg.toLowerCase().includes("context")) {
+          setPurchaseError("Play Billing unavailable. Install the app via the Play Store testing link — sideloaded APKs do not support in-app purchases.");
         } else if (msg.includes("cancelled") || msg.includes("AbortError")) {
           setPurchaseError(null); // user dismissed — no error to show
         } else {
