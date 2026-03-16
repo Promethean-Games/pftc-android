@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import headsImg from "@assets/image_1773676717898.png";
 import tailsImg from "@assets/image_1773670945305.png";
 
 interface CoinFlipProps {
@@ -48,98 +49,57 @@ export function CoinFlip({ onClose }: CoinFlipProps) {
           Flip to decide who breaks!
         </p>
 
+        {/* perspective on Y axis so the vertical toss looks 3-D */}
         <div style={{ perspective: "700px" }}>
           <div
             data-testid="coin-face"
             style={{
-              width: 160,
-              height: 160,
+              width: 200,
+              height: 200,
               position: "relative",
               transformStyle: "preserve-3d",
               transition: isFlipping
                 ? "transform 1.4s cubic-bezier(0.33,0,0.66,1)"
                 : "none",
-              transform: `rotateY(${rotation}deg)`,
+              transform: `rotateX(${rotation}deg)`,
             }}
           >
-            {/* Heads — 8-ball */}
+            {/* Heads */}
             <div
               style={{
                 position: "absolute",
                 inset: 0,
                 backfaceVisibility: "hidden",
                 WebkitBackfaceVisibility: "hidden",
-                borderRadius: "50%",
-                background: "radial-gradient(circle at 38% 32%, #444, #000)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                boxShadow: "0 8px 28px rgba(0,0,0,0.55), inset 0 0 0 4px rgba(255,255,255,0.06)",
-              }}
-            >
-              <div
-                style={{
-                  width: 64,
-                  height: 64,
-                  borderRadius: "50%",
-                  background: "radial-gradient(circle at 38% 32%, #fff, #d8d8d8)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  boxShadow: "0 2px 8px rgba(0,0,0,0.3)",
-                }}
-              >
-                <span
-                  style={{
-                    fontSize: 28,
-                    fontWeight: 900,
-                    color: "#111",
-                    lineHeight: 1,
-                  }}
-                >
-                  8
-                </span>
-              </div>
-              <span
-                style={{
-                  position: "absolute",
-                  bottom: 26,
-                  left: 0,
-                  right: 0,
-                  textAlign: "center",
-                  fontSize: 10,
-                  fontWeight: 700,
-                  color: "rgba(255,255,255,0.55)",
-                  letterSpacing: "0.18em",
-                  textTransform: "uppercase",
-                }}
-              >
-                HEADS
-              </span>
-            </div>
-
-            {/* Tails — custom coin image */}
-            <div
-              style={{
-                position: "absolute",
-                inset: 0,
-                backfaceVisibility: "hidden",
-                WebkitBackfaceVisibility: "hidden",
-                transform: "rotateY(180deg)",
                 borderRadius: "50%",
                 overflow: "hidden",
-                boxShadow: "0 8px 28px rgba(0,0,0,0.4)",
+                boxShadow: "0 8px 28px rgba(0,0,0,0.5)",
+              }}
+            >
+              <img
+                src={headsImg}
+                alt="Heads"
+                style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+              />
+            </div>
+
+            {/* Tails — rotated 180° around X so it shows on the back */}
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                backfaceVisibility: "hidden",
+                WebkitBackfaceVisibility: "hidden",
+                transform: "rotateX(180deg)",
+                borderRadius: "50%",
+                overflow: "hidden",
+                boxShadow: "0 8px 28px rgba(0,0,0,0.5)",
               }}
             >
               <img
                 src={tailsImg}
                 alt="Tails"
-                style={{
-                  width: "100%",
-                  height: "100%",
-                  objectFit: "cover",
-                  display: "block",
-                }}
+                style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
               />
             </div>
           </div>
@@ -155,7 +115,7 @@ export function CoinFlip({ onClose }: CoinFlipProps) {
                 {result === "heads" ? "HEADS" : "TAILS"}
               </p>
               <p className="text-sm text-muted-foreground mt-2">
-                {result === "heads" ? "8-Ball — breaks first!" : "Cue Ball — challenger breaks!"}
+                {result === "heads" ? "Heads — breaks first!" : "Tails — challenger breaks!"}
               </p>
             </div>
           )}
