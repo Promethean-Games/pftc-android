@@ -205,19 +205,17 @@ export function GameScreen({
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
-      {isJokerHole && (
-        <div
-          className="absolute inset-0 pointer-events-none z-0"
-          style={{
-            backgroundImage: `url(${jokerBgPath})`,
-            backgroundRepeat: "no-repeat",
-            backgroundPosition: "center center",
-            backgroundSize: "60%",
-            opacity: 0.12,
-          }}
-          data-testid="joker-background"
-        />
-      )}
+      <div
+        className="absolute inset-0 pointer-events-none z-0"
+        style={{
+          backgroundImage: `url(${jokerBgPath})`,
+          backgroundRepeat: "no-repeat",
+          backgroundPosition: "center center",
+          backgroundSize: "60%",
+          opacity: 0.12,
+        }}
+        data-testid="joker-background"
+      />
       <div className="flex items-center gap-3 mb-4">
         <Button
           size="icon"
