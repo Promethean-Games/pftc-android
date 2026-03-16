@@ -2,7 +2,7 @@
   "id": "/",
   "scope": "/",
   "name": "Par for the Course",
-  "short_name": "Par Course",
+  "short_name": "Par for the Course",
   "description": "Billiards training card game with CueMaster Tools — physics-based shot simulation, cueing emulator, and 18-course scoring.",
   "start_url": "/?source=pwa",
   "display": "standalone",
