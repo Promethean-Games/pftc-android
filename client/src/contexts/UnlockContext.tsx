@@ -12,6 +12,8 @@ interface UnlockContextValue {
   isUnlocked: boolean;
   freeHoles: number;
   isCheckingUnlock: boolean;
+  purchaseError: string | null;
+  clearPurchaseError: () => void;
   initiateCheckout: () => Promise<void>;
 }
 
@@ -42,6 +44,8 @@ export function UnlockProvider({ children }: { children: ReactNode }) {
     return localStorage.getItem("pftc_unlocked") === "true";
   });
   const [isCheckingUnlock, setIsCheckingUnlock] = useState(false);
+  const [purchaseError, setPurchaseError] = useState<string | null>(null);
+  const clearPurchaseError = useCallback(() => setPurchaseError(null), []);
 
   // Handle Stripe redirect callback (existing flow)
   useEffect(() => {
