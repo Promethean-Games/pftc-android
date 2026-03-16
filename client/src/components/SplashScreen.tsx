@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { BookOpen, Wrench, ShoppingCart, Shield, AlertCircle, X } from "lucide-react";
+import { BookOpen, Wrench, ShoppingCart, Shield, AlertCircle, X, MessageSquare } from "lucide-react";
 import { LOGO_URL, APP_VERSION } from "@/lib/constants";
 import { TutorialCarousel } from "./TutorialCarousel";
 import { TableLeveler } from "./TableLeveler";
@@ -103,6 +103,16 @@ export function SplashScreen({ onNewGame, onLoadGame }: SplashScreenProps) {
         >
           <BookOpen className="w-5 h-5 mr-2" />
           How to Play
+        </Button>
+        <Button
+          size="lg"
+          variant="ghost"
+          className="w-full text-sm h-10 text-muted-foreground"
+          onClick={() => window.open("https://forms.gle/TgT8YWzdbk7gvJXq6", "_blank")}
+          data-testid="button-feedback"
+        >
+          <MessageSquare className="w-4 h-4 mr-2" />
+          Send Feedback
         </Button>
         <Button
           size="lg"
