@@ -14,8 +14,10 @@ interface UnlockContextValue {
   freeHoles: number;
   isCheckingUnlock: boolean;
   purchaseError: string | null;
+  playBillingUnavailable: boolean;
   clearPurchaseError: () => void;
   initiateCheckout: () => Promise<void>;
+  initiateStripeCheckout: () => Promise<void>;
 }
 
 const UnlockContext = createContext<UnlockContextValue | null>(null);
@@ -46,6 +48,7 @@ export function UnlockProvider({ children }: { children: ReactNode }) {
   });
   const [isCheckingUnlock, setIsCheckingUnlock] = useState(false);
   const [purchaseError, setPurchaseError] = useState<string | null>(null);
+  const [playBillingUnavailable, setPlayBillingUnavailable] = useState(false);
   const clearPurchaseError = useCallback(() => setPurchaseError(null), []);
 
   // Handle Stripe redirect callback (existing flow)
@@ -97,12 +100,26 @@ export function UnlockProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const initiateStripeCheckout = useCallback(async () => {
+    setPurchaseError(null);
+    try {
+      const res = await apiRequest("POST", "/api/create-checkout-session");
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      }
+    } catch (err) {
+      console.error("Failed to create checkout session:", err);
+      setPurchaseError("Checkout failed. Please check your connection and try again.");
+    }
+  }, []);
+
   const initiateCheckout = useCallback(async () => {
     setPurchaseError(null);
     console.log("[PFTC billing]", getTwaDebugInfo());
 
     // TWA path: Google Play Billing via Digital Goods API
-    if (isRunningInTwa()) {
+    if (isRunningInTwa() && !playBillingUnavailable) {
       try {
         setIsCheckingUnlock(true);
         const result = await initiatePlayBillingCheckout();
@@ -121,11 +138,13 @@ export function UnlockProvider({ children }: { children: ReactNode }) {
         console.error("Play Billing checkout failed:", err);
         const msg = err instanceof Error ? err.message : String(err);
         if (msg.includes("Product not found")) {
-          setPurchaseError("In-app product not available. Make sure 'full_unlock' is Active (not Draft) in Play Console.");
+          setPurchaseError("In-app product not set up yet in Play Console. Use the web payment option below.");
+          setPlayBillingUnavailable(true);
         } else if (msg.toLowerCase().includes("unsupported") || msg.toLowerCase().includes("context")) {
-          setPurchaseError("Play Billing unavailable. Install the app via the Play Store testing link — sideloaded APKs do not support in-app purchases.");
+          setPurchaseError("Google Play Billing is not available. Use the web payment option below to complete your purchase.");
+          setPlayBillingUnavailable(true);
         } else if (msg.includes("cancelled") || msg.includes("AbortError")) {
-          setPurchaseError(null); // user dismissed — no error to show
+          setPurchaseError(null);
         } else {
           setPurchaseError(`Purchase failed: ${msg}`);
         }
@@ -135,18 +154,9 @@ export function UnlockProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    // Browser path: Stripe checkout (existing flow)
-    try {
-      const res = await apiRequest("POST", "/api/create-checkout-session");
-      const data = await res.json();
-      if (data.url) {
-        window.location.href = data.url;
-      }
-    } catch (err) {
-      console.error("Failed to create checkout session:", err);
-      setPurchaseError("Checkout failed. Please check your connection and try again.");
-    }
-  }, []);
+    // Browser path (or TWA fallback): Stripe checkout
+    await initiateStripeCheckout();
+  }, [playBillingUnavailable, initiateStripeCheckout]);
 
   return (
     <UnlockContext.Provider
@@ -155,8 +165,10 @@ export function UnlockProvider({ children }: { children: ReactNode }) {
         freeHoles: FREE_HOLES,
         isCheckingUnlock,
         purchaseError,
+        playBillingUnavailable,
         clearPurchaseError,
         initiateCheckout,
+        initiateStripeCheckout,
       }}
     >
       {children}

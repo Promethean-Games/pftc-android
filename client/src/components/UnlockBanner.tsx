@@ -9,7 +9,7 @@ interface UnlockBannerProps {
 }
 
 export function UnlockBanner({ variant = "inline", onHome }: UnlockBannerProps) {
-  const { initiateCheckout, isCheckingUnlock } = useUnlock();
+  const { initiateCheckout, initiateStripeCheckout, isCheckingUnlock, playBillingUnavailable } = useUnlock();
 
   if (variant === "overlay") {
     return (
@@ -35,6 +35,18 @@ export function UnlockBanner({ variant = "inline", onHome }: UnlockBannerProps) 
           <p className="text-xs text-muted-foreground">
             One-time purchase. Unlocks permanently on this device.
           </p>
+          {playBillingUnavailable && (
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={initiateStripeCheckout}
+              disabled={isCheckingUnlock}
+              data-testid="button-stripe-fallback-overlay"
+            >
+              <Unlock className="w-4 h-4 mr-2" />
+              Pay via Web Browser Instead
+            </Button>
+          )}
           {onHome && (
             <Button
               variant="ghost"

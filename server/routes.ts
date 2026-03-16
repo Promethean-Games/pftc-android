@@ -52,7 +52,7 @@ function getGoogleAuth(): GoogleAuth | null {
 export async function registerRoutes(app: Express): Promise<Server> {
   const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
   const stripePriceId = process.env.STRIPE_PRICE_ID;
-  const playPackageName = process.env.GOOGLE_PLAY_PACKAGE_NAME || "com.prometheangames.parforcourse";
+  const playPackageName = process.env.GOOGLE_PLAY_PACKAGE_NAME || "com.prometheangames.parforthecourse";
 
   let stripe: Stripe | null = null;
   if (stripeSecretKey) {
