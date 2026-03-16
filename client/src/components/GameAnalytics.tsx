@@ -60,7 +60,7 @@ export function GameAnalytics({ players, scores, turnTimes, gameStartTime, gameE
       holeTotalTimes[tt.hole] = (holeTotalTimes[tt.hole] || 0) + duration;
     }
 
-    const allHoles = [...new Set(turnTimes.map(t => t.hole))].sort((a, b) => a - b);
+    const allHoles = Array.from(new Set(turnTimes.map(t => t.hole))).sort((a, b) => a - b);
 
     const chartData = allHoles.map(hole => {
       const point: Record<string, number | string> = { hole: `Card ${hole}` };

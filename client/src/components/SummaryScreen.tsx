@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Pencil, Lock } from "lucide-react";
+import { Pencil, Lock, BarChart3, Clock, Zap, Award } from "lucide-react";
 import type { Player, HoleScore } from "@shared/schema";
 import { calculatePlayerTotal, getLeaderboard } from "@/lib/game-utils";
 import { cn } from "@/lib/utils";
@@ -347,19 +347,41 @@ export function SummaryScreen({ players, scores, onNewGame, onSubmitToSheets, is
         </Card>
       )}
 
-      <GameAnalytics
-        players={players}
-        scores={scores}
-        turnTimes={turnTimes}
-        gameStartTime={gameStartTime}
-        gameEndTime={gameEndTime}
-        totalPlayTimeMs={totalPlayTimeMs}
-      />
-
-      {!isUnlocked && allHoles.some(h => h > freeHoles) && (
-        <div className="mb-6">
+      {isUnlocked ? (
+        <GameAnalytics
+          players={players}
+          scores={scores}
+          turnTimes={turnTimes}
+          gameStartTime={gameStartTime}
+          gameEndTime={gameEndTime}
+          totalPlayTimeMs={totalPlayTimeMs}
+        />
+      ) : (
+        <Card className="p-5 mb-6 space-y-4">
+          <div className="flex items-center gap-2">
+            <Lock className="w-5 h-5 text-muted-foreground" />
+            <h3 className="font-bold">Game Analytics</h3>
+            <span className="text-xs text-muted-foreground ml-auto">Paid feature</span>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { icon: Clock, label: "Time Summary", desc: "Total & per-player game time" },
+              { icon: Zap, label: "Speed Records", desc: "Fastest & slowest cards" },
+              { icon: Award, label: "Performance", desc: "Pace, streaks & insights" },
+            ].map(({ icon: Icon, label, desc }) => (
+              <div key={label} className="flex flex-col items-center gap-1 p-3 rounded-md border border-dashed text-center opacity-50 select-none">
+                <Icon className="w-5 h-5 text-muted-foreground" />
+                <span className="text-xs font-semibold">{label}</span>
+                <span className="text-xs text-muted-foreground leading-tight">{desc}</span>
+              </div>
+            ))}
+          </div>
+          <div className="flex items-center gap-2 p-3 rounded-md bg-muted/50">
+            <BarChart3 className="w-4 h-4 text-muted-foreground shrink-0" />
+            <p className="text-xs text-muted-foreground">Unlock all 18 cards to access turn-by-turn time analytics, speed records, and performance charts.</p>
+          </div>
           <UnlockBanner variant="inline" />
-        </div>
+        </Card>
       )}
 
       <div className="space-y-3">

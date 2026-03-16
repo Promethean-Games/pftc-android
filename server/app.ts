@@ -27,7 +27,7 @@ const isDev = process.env.NODE_ENV !== "production";
 
 app.set("trust proxy", 1);
 
-const cspDirectives: helmet.ContentSecurityPolicyOptions["directives"] = isDev
+const cspDirectives = isDev
   ? {
       defaultSrc: ["'self'"],
       scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'"],
