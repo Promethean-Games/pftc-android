@@ -196,7 +196,6 @@ export function GameScreen({
   const shooterInfo = `${shootersRemaining} shooter${shootersRemaining !== 1 ? "s" : ""} remaining`;
 
   const currentCard = getDrawnCard(currentHole);
-  const isJokerHole = currentCard?.isJoker === true;
 
   return (
     <div 
