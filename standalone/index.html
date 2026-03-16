@@ -631,8 +631,15 @@
       render();setTimeout(drawEmulatorCanvas,50);
     }
 
+    function saveEmulatorLayout(){
+      try{localStorage.setItem('pftc_emulator_layout',JSON.stringify(EMU.balls));}catch(e){}
+    }
     function initEmulator(){
-      EMU.balls=[emuBall('cue','cue',25,25)];
+      try{
+        const sv=localStorage.getItem('pftc_emulator_layout');
+        if(sv){const p=JSON.parse(sv);if(Array.isArray(p)&&p.length>0){EMU.balls=p;}}
+        else{EMU.balls=[emuBall('cue','cue',25,25)];}
+      }catch(e){EMU.balls=[emuBall('cue','cue',25,25)];}
       EMU.preShotBalls=null;EMU.selectedId=null;EMU.trajectories=[];
       EMU.aimAngle=0;EMU.hasAimLine=false;EMU.isAiming=false;
       EMU.shotSpeed=5;EMU.angleFine=0;EMU.englishX=0;EMU.englishY=0;
@@ -962,7 +969,7 @@
             <button class="btn btn-primary" style="font-size:12px;min-height:32px" onclick="emuShoot()" ${EMU.hasAimLine?'':'disabled'} data-testid="button-shoot">${I.target||'⊕'} Shoot</button>
             ${EMU.shotHistory.length>0?`<button class="btn btn-outline" style="font-size:12px;min-height:32px" onclick="emuUndo();render();setTimeout(drawEmulatorCanvas,50)" data-testid="button-undo">${I.rotateCcw} Undo</button>`:''}
             <button class="btn ${EMU.showSettings?'btn-primary':'btn-ghost'} btn-icon" onclick="EMU.showSettings=!EMU.showSettings;render();setTimeout(drawEmulatorCanvas,50)" data-testid="button-toggle-settings">${I.gear}</button>
-            <button class="btn btn-ghost btn-icon" onclick="S.showEmulator=false;render()" data-testid="button-close-emulator">${I.x}</button>
+            <button class="btn btn-ghost btn-icon" onclick="saveEmulatorLayout();S.showEmulator=false;render()" data-testid="button-close-emulator">${I.x}</button>
           </div>
         </div>
         ${(()=>{const ci=emuGetCutAngle();return ci?`<div style="display:flex;align-items:center;gap:12px;padding:4px 12px;border-bottom:1px solid var(--border);background:var(--muted);font-size:14px" data-testid="cut-angle-info"><span style="color:var(--muted-fg)">Cut Angle:</span><span style="font-family:monospace;font-weight:bold" data-testid="text-cut-angle">${ci.angle.toFixed(2)}\u00B0</span><span style="color:var(--muted-fg)">(${ci.label})</span></div>`:''})()}

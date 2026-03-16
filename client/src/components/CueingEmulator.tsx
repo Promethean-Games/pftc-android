@@ -174,9 +174,16 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const [balls, setBalls] = useState<Ball[]>(() => [
-    createBall("cue", "cue", 25, 25),
-  ]);
+  const [balls, setBalls] = useState<Ball[]>(() => {
+    try {
+      const saved = localStorage.getItem("pftc_emulator_layout");
+      if (saved) {
+        const parsed: Ball[] = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return [createBall("cue", "cue", 25, 25)];
+  });
   const [shotHistory, setShotHistory] = useState<Ball[][]>([]);
   const [selectedBallId, setSelectedBallId] = useState<string | null>(null);
 
@@ -661,6 +668,13 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
     setSelectedBallId(null);
   };
 
+  const handleClose = () => {
+    try {
+      localStorage.setItem("pftc_emulator_layout", JSON.stringify(balls));
+    } catch {}
+    onClose();
+  };
+
   const handleShoot = () => {
     const cueBall = balls.find((b) => b.type === "cue" && !b.pocketed);
     if (!cueBall || !hasAimLine) return;
@@ -835,7 +849,7 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
           <Button
             size="icon"
             variant="ghost"
-            onClick={onClose}
+            onClick={handleClose}
             data-testid="button-close-emulator"
           >
             <X />
