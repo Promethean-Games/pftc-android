@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, useCallback, type React
 import { apiRequest } from "@/lib/queryClient";
 import {
   isRunningInTwa,
+  getTwaDebugInfo,
   initiatePlayBillingCheckout,
   checkPendingPurchases,
 } from "@/lib/play-billing";
@@ -98,6 +99,7 @@ export function UnlockProvider({ children }: { children: ReactNode }) {
 
   const initiateCheckout = useCallback(async () => {
     setPurchaseError(null);
+    console.log("[PFTC billing]", getTwaDebugInfo());
 
     // TWA path: Google Play Billing via Digital Goods API
     if (isRunningInTwa()) {
