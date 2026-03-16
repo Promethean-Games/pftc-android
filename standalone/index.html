@@ -626,7 +626,7 @@
     function emuSnapPos(x,y){
       if(!EMU.snapToGrid)return{x,y};
       const gx=EMU.TW/8,gy=EMU.TH/4;
-      const sc=EMU._sc||1;const buf=5/sc;
+      const sc=EMU._sc||1;const buf=20/sc;
       const nx=Math.round(x/gx)*gx,ny=Math.round(y/gy)*gy;
       return{x:Math.abs(x-nx)<=buf?nx:x,y:Math.abs(y-ny)<=buf?ny:y};
     }
@@ -776,6 +776,15 @@
         const f=t2c(tr.points[0].x,tr.points[0].y);ctx.moveTo(f.x,f.y);
         for(let i=1;i<tr.points.length;i++){const p=t2c(tr.points[i].x,tr.points[i].y);ctx.lineTo(p.x,p.y);}
         ctx.stroke();ctx.globalAlpha=1;
+      }
+      if(EMU.dragBall){
+        const db=EMU.balls.find(b=>b.id===EMU.dragBall.id);
+        if(db&&!db.pocketed){const bp=t2c(db.pos.x,db.pos.y);
+          ctx.save();ctx.strokeStyle='rgba(255,255,255,0.55)';ctx.lineWidth=1;ctx.setLineDash([5,4]);
+          ctx.beginPath();ctx.moveTo(ox,bp.y);ctx.lineTo(ox+tw,bp.y);ctx.stroke();
+          ctx.beginPath();ctx.moveTo(bp.x,oy);ctx.lineTo(bp.x,oy+th);ctx.stroke();
+          ctx.setLineDash([]);ctx.restore();
+        }
       }
       const bFill={cue:'#ffffff',solid:'#eab308',stripe:'#ffffff'};
       for(const b of EMU.balls){

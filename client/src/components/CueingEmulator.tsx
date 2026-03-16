@@ -412,6 +412,28 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
       ctx.globalAlpha = 1;
     }
 
+    // Crosshairs for the ball currently being dragged
+    if (dragRef.current) {
+      const draggedBall = balls.find((b) => b.id === dragRef.current!.ballId);
+      if (draggedBall && !draggedBall.pocketed) {
+        const bp = tableToCanvas(draggedBall.pos.x, draggedBall.pos.y);
+        ctx.save();
+        ctx.strokeStyle = "rgba(255,255,255,0.55)";
+        ctx.lineWidth = 1;
+        ctx.setLineDash([5, 4]);
+        ctx.beginPath();
+        ctx.moveTo(offsetX, bp.y);
+        ctx.lineTo(offsetX + tw, bp.y);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(bp.x, offsetY);
+        ctx.lineTo(bp.x, offsetY + th);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.restore();
+      }
+    }
+
     for (const ball of balls) {
       if (ball.pocketed) continue;
       const bp = tableToCanvas(ball.pos.x, ball.pos.y);
@@ -669,7 +691,7 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
 
   const GRID_X = TABLE_DIMENSIONS.width / 8;
   const GRID_Y = TABLE_DIMENSIONS.height / 4;
-  const SNAP_BUFFER_PX = 5;
+  const SNAP_BUFFER_PX = 20;
 
   const snapPos = (x: number, y: number): { x: number; y: number } => {
     if (!snapToGrid) return { x, y };
