@@ -88,7 +88,18 @@ When running inside a Trusted Web Activity on Android, the Digital Goods API is 
   - Stripe paywall: holes 1-3 free; holes 4-18 locked behind `https://buy.stripe.com/7sYeVc82N7czdPqaQ20Jq00`; unlock stored in `localStorage.pftc_unlocked = "true"`
 
 ### CueMaster Tools
-- **Cueing Emulator**: Canvas-based billiards shot simulator accessible from the wrench icon dropdown on the splash screen
+- **Entry Point**: A single dark-green "CueMaster Tools" button (bg `#15803d`, Wrench icon, placed beneath the Buy Now button on the splash screen) opens a full-screen tool selector overlay (`CueMasterTools.tsx`). Each tool card has a gradient background and launches the tool as its own full-screen overlay. Both React and standalone versions share the same flow.
+  - **Components**: `CueMasterTools.tsx` (selector overlay), `CoinFlip.tsx`, `CueingEmulator.tsx`, `TableLeveler.tsx`
+  - **Standalone**: `rCueMasterTools()`, `rCoinFlip()`, `rEmulator()`, `rLeveler()` render functions; `COIN` state object + `doFlip()` for the coin flip animation
+
+- **Coin Flip**: Billiards-themed coin flip tool to decide who breaks
+  - 3D CSS perspective flip animation — accumulated rotation state ensures smooth re-flips without DOM resets
+  - Heads face: 8-ball design (black sphere with white circle and "8"); Tails face: cue ball (white sphere with subtle center dimple)
+  - "Flip!" / "Flip Again" button; shows HEADS/TAILS result with flavor text after animation completes
+  - Direct DOM manipulation (`coin-3d` element) used in standalone to trigger CSS transition without a full re-render
+  - React: `CoinFlip.tsx`; Standalone: `rCoinFlip()` + `doFlip()` + `COIN` state object
+
+- **Cueing Emulator**: Canvas-based billiards shot simulator accessible from the CueMaster Tools selector
   - Top-down 9-foot pool table rendered on HTML5 Canvas with green felt, wood rails, 6 pockets, and diamond sights
   - Ball management: add/remove solid (yellow) and stripe (white with green band) balls; drag to reposition; tap to select
   - Snap-to-grid: enabled by default, snaps dragged balls to nearest grid line (X or Y independently) with 5px buffer; diamond grid from 8×4 divisions (12.5" spacing); subtle grid lines drawn on table when active; toggle button in toolbar
