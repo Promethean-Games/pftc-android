@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import tailsImg from "@assets/image_1773670945305.png";
 
 interface CoinFlipProps {
   onClose: () => void;
@@ -117,7 +118,7 @@ export function CoinFlip({ onClose }: CoinFlipProps) {
               </span>
             </div>
 
-            {/* Tails — cue ball */}
+            {/* Tails — custom coin image */}
             <div
               style={{
                 position: "absolute",
@@ -126,38 +127,20 @@ export function CoinFlip({ onClose }: CoinFlipProps) {
                 WebkitBackfaceVisibility: "hidden",
                 transform: "rotateY(180deg)",
                 borderRadius: "50%",
-                background: "radial-gradient(circle at 38% 32%, #ffffff, #c8c8c8)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                boxShadow: "0 8px 28px rgba(0,0,0,0.25), inset 0 0 0 4px rgba(0,0,0,0.04)",
+                overflow: "hidden",
+                boxShadow: "0 8px 28px rgba(0,0,0,0.4)",
               }}
             >
-              <div
+              <img
+                src={tailsImg}
+                alt="Tails"
                 style={{
-                  width: 22,
-                  height: 22,
-                  borderRadius: "50%",
-                  background: "rgba(180,180,180,0.45)",
-                  boxShadow: "inset 0 1px 4px rgba(0,0,0,0.18)",
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "cover",
+                  display: "block",
                 }}
               />
-              <span
-                style={{
-                  position: "absolute",
-                  bottom: 26,
-                  left: 0,
-                  right: 0,
-                  textAlign: "center",
-                  fontSize: 10,
-                  fontWeight: 700,
-                  color: "rgba(0,0,0,0.35)",
-                  letterSpacing: "0.18em",
-                  textTransform: "uppercase",
-                }}
-              >
-                TAILS
-              </span>
             </div>
           </div>
         </div>
