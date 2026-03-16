@@ -1,12 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { BookOpen, Wrench, Ruler, Crosshair, ShoppingCart, Shield } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { BookOpen, Ruler, Crosshair, ShoppingCart, Shield } from "lucide-react";
 import { LOGO_URL, APP_VERSION } from "@/lib/constants";
 import { TutorialCarousel } from "./TutorialCarousel";
 import { TableLeveler } from "./TableLeveler";
@@ -28,26 +22,6 @@ export function SplashScreen({ onNewGame, onLoadGame }: SplashScreenProps) {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-6 relative">
-      <div className="absolute top-4 right-4 z-10">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button size="icon" variant="ghost" data-testid="button-cuemaster-tools">
-              <Wrench className="w-5 h-5" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => setShowEmulator(true)} data-testid="menu-cueing-emulator">
-              <Crosshair className="w-4 h-4 mr-2" />
-              Cueing Emulator
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setShowLeveler(true)} data-testid="menu-table-leveler">
-              <Ruler className="w-4 h-4 mr-2" />
-              Table Leveler
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-
       <div className="mb-6 flex justify-center">
         <img 
           src={LOGO_URL} 
@@ -96,6 +70,28 @@ export function SplashScreen({ onNewGame, onLoadGame }: SplashScreenProps) {
           <BookOpen className="w-5 h-5 mr-2" />
           How to Play
         </Button>
+        <div className="flex flex-wrap gap-3">
+          <Button
+            size="lg"
+            variant="ghost"
+            className="flex-1 h-14 text-sm text-muted-foreground"
+            onClick={() => setShowEmulator(true)}
+            data-testid="button-cueing-emulator"
+          >
+            <Crosshair className="w-4 h-4 mr-2 shrink-0" />
+            Cueing Emulator
+          </Button>
+          <Button
+            size="lg"
+            variant="ghost"
+            className="flex-1 h-14 text-sm text-muted-foreground"
+            onClick={() => setShowLeveler(true)}
+            data-testid="button-table-leveler"
+          >
+            <Ruler className="w-4 h-4 mr-2 shrink-0" />
+            Table Leveler
+          </Button>
+        </div>
         <Button
           size="lg"
           variant="ghost"

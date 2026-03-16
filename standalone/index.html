@@ -79,9 +79,6 @@
     .select-wrap{position:relative;display:inline-block}
     .select-wrap select{appearance:none;background:var(--bg2);color:var(--fg);border:1px solid var(--border);border-radius:6px;padding:8px 32px 8px 12px;font-size:16px;min-height:44px;cursor:pointer}
     .select-wrap::after{content:"";position:absolute;right:12px;top:50%;transform:translateY(-50%);border-left:5px solid transparent;border-right:5px solid transparent;border-top:6px solid var(--fg2);pointer-events:none}
-    .tools-dropdown{position:absolute;top:100%;right:0;margin-top:4px;background:var(--card);border:1px solid var(--card-border);border-radius:8px;min-width:180px;z-index:60;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,.3)}
-    .tools-dropdown button{display:flex;align-items:center;gap:8px;width:100%;padding:10px 14px;background:none;color:var(--fg);font-size:14px;text-align:left;border:none;cursor:pointer}
-    .tools-dropdown button:active{background:var(--bg2)}
     .leveler-overlay{position:fixed;inset:0;z-index:50;background:var(--bg);display:flex;flex-direction:column}
     .fixed-overlay{position:fixed;inset:0;z-index:50}
     .leveler-header{display:flex;align-items:center;justify-content:space-between;padding:16px;border-bottom:1px solid var(--border)}
@@ -150,6 +147,7 @@
       rotateCcw: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>',
       plus: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>',
       target: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>',
+      ruler: '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.3 15.3a2.4 2.4 0 0 1 0 3.4l-2.6 2.6a2.4 2.4 0 0 1-3.4 0L2.7 8.7a2.4 2.4 0 0 1 0-3.4l2.6-2.6a2.4 2.4 0 0 1 3.4 0Z"/><path d="m14.5 12.5 2-2"/><path d="m11.5 9.5 2-2"/><path d="m8.5 6.5 2-2"/><path d="m17.5 15.5 2-2"/></svg>',
       chevD: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>',
       grid: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M3 15h18"/><path d="M9 3v18"/><path d="M15 3v18"/></svg>',
       move: '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20"/><path d="m15 19-3 3-3-3"/><path d="m19 15 3-3-3-3"/><path d="M2 12h20"/><path d="m5 9-3 3 3 3"/><path d="m9 5 3-3 3 3"/></svg>',
@@ -168,7 +166,7 @@
       showCardView: false,
       showTutorial: false,
       jokerPar: null,
-      showToolsMenu: false,
+
       showLeveler: false,
       showEmulator: false,
       showLevelerTutorial: false,
@@ -336,35 +334,21 @@
 
     function rSplash(app){
       app.innerHTML=`
-        <div class="screen flex flex-col items-center justify-center" style="min-height:100dvh;gap:24px;position:relative" data-testid="splash-screen">
-          <div style="position:absolute;top:16px;right:16px;z-index:10">
-            <div style="position:relative">
-              <button class="btn btn-ghost btn-icon" onclick="S.showToolsMenu=!S.showToolsMenu;render()" data-testid="button-tools-menu">${I.wrench}</button>
-              ${S.showToolsMenu?`<div class="tools-dropdown" data-testid="tools-dropdown">
-                <button onclick="S.showToolsMenu=false;S.showEmulator=true;initEmulator();render();setTimeout(drawEmulatorCanvas,50)" data-testid="button-cueing-emulator">${I.target||I.game} Cueing Emulator</button>
-                <button onclick="S.showToolsMenu=false;S.showLeveler=true;initLeveler();render()" data-testid="button-table-leveler">${I.game} Table Leveler</button>
-              </div>`:''}
-            </div>
-          </div>
+        <div class="screen flex flex-col items-center justify-center" style="min-height:100dvh;gap:24px" data-testid="splash-screen">
           <img src="${LOGO}" alt="Par for the Course" style="width:auto;max-width:100%;max-height:36vh;object-fit:contain" data-testid="img-logo">
           <div class="flex flex-col gap-3 w-full" style="max-width:280px">
             <button class="btn btn-primary btn-xl" data-testid="button-new-game" onclick="S.game=defGame();S.game.deck=shuffleDeck();S.viewOnly=false;S.screen='setup';render()">${unlocked()?'New Game':'Start Demo'}</button>
             <button class="btn btn-outline btn-xl" data-testid="button-load-game" onclick="S.screen='load';render()">Load Game</button>
             ${!unlocked()?`<button class="btn btn-xl" data-testid="button-buy-now" onclick="window.location.href='${STRIPE_LINK}'" style="background:linear-gradient(to right,#059669,#22c55e);border:none;color:#fff;font-weight:bold;box-shadow:0 4px 14px rgba(34,197,94,0.35)">${I.cart||'🛒'} Buy Now — Unlock All 18 Courses</button>`:''}
             <button class="btn btn-ghost btn-xl" data-testid="button-how-to-play" onclick="S.showTutorial=true;render()">${I.book} How to Play</button>
+            <div style="display:flex;gap:12px">
+              <button class="btn btn-ghost flex-1" style="min-height:48px;font-size:14px" onclick="S.showEmulator=true;initEmulator();render();setTimeout(drawEmulatorCanvas,50)" data-testid="button-cueing-emulator">${I.target} Cueing Emulator</button>
+              <button class="btn btn-ghost flex-1" style="min-height:48px;font-size:14px" onclick="S.showLeveler=true;initLeveler();render()" data-testid="button-table-leveler">${I.ruler} Table Leveler</button>
+            </div>
           </div>
           <p style="font-size:11px;color:var(--muted-fg);margin-top:16px" data-testid="text-app-version">v3.1.4.0</p>
         </div>${S.showTutorial?rTutorial():''}${S.showLeveler?rLeveler():''}${S.showEmulator?rEmulator():''}`;
-      if(S.showToolsMenu){setTimeout(()=>document.addEventListener('click',closeToolsMenu,{once:true}),0);}
       if(S.showEmulator){setTimeout(drawEmulatorCanvas,50);}
-    }
-
-    function closeToolsMenu(e){
-      const btn=document.querySelector('[data-testid="button-tools-menu"]');
-      const dd=document.querySelector('[data-testid="tools-dropdown"]');
-      if(btn&&btn.contains(e.target))return;
-      if(dd&&dd.contains(e.target))return;
-      S.showToolsMenu=false;render();
     }
 
     const LEVELER={
