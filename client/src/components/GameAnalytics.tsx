@@ -1,13 +1,15 @@
 import { useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
-import { Clock, Timer, TrendingUp, TrendingDown, Zap, Target, Award, BarChart3 } from "lucide-react";
+import { Clock, Timer, TrendingUp, TrendingDown, Zap, Target, Award, BarChart3, Lock } from "lucide-react";
 import type { Player, HoleScore } from "@shared/schema";
 import type { TurnTime } from "@/contexts/GameContext";
 import { cn } from "@/lib/utils";
+import { UnlockBanner } from "./UnlockBanner";
 
 interface GameAnalyticsProps {
   players: Player[];
+  isUnlocked?: boolean;
   scores: Record<string, HoleScore[]>;
   turnTimes: TurnTime[];
   gameStartTime: number;
@@ -35,7 +37,7 @@ function formatShortDuration(ms: number): string {
   return `${seconds}s`;
 }
 
-export function GameAnalytics({ players, scores, turnTimes, gameStartTime, gameEndTime, totalPlayTimeMs = 0 }: GameAnalyticsProps) {
+export function GameAnalytics({ players, scores, turnTimes, gameStartTime, gameEndTime, totalPlayTimeMs = 0, isUnlocked = false }: GameAnalyticsProps) {
   const analytics = useMemo(() => {
     if (turnTimes.length === 0 || players.length === 0) return null;
 
@@ -213,128 +215,154 @@ export function GameAnalytics({ players, scores, turnTimes, gameStartTime, gameE
         </div>
       </Card>
 
-      <Card className="p-4 mb-6">
-        <h3 className="font-bold mb-3 flex items-center gap-2">
-          <Timer className="w-5 h-5" /> Turn Duration by Card
-        </h3>
-        <div className="w-full" style={{ height: 220 }}>
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={analytics.chartData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
-              <XAxis dataKey="hole" tick={{ fontSize: 11 }} />
-              <YAxis tick={{ fontSize: 11 }} label={{ value: "sec", angle: -90, position: "insideLeft", offset: 30, style: { fontSize: 11 } }} />
-              <Tooltip
-                contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }}
-                labelStyle={{ color: "hsl(var(--foreground))" }}
-                formatter={(value: number) => [`${value}s`, undefined]}
-              />
-              <Legend wrapperStyle={{ fontSize: 12 }} />
-              {players.map(p => (
-                <Line
-                  key={p.id}
-                  type="monotone"
-                  dataKey={p.name}
-                  stroke={p.color}
-                  strokeWidth={2}
-                  dot={{ r: 3, fill: p.color }}
-                  activeDot={{ r: 5 }}
-                  connectNulls
-                />
-              ))}
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      </Card>
-
-      <Card className="p-4 mb-6">
-        <h3 className="font-bold mb-3 flex items-center gap-2">
-          <Zap className="w-5 h-5" /> Speed Records
-        </h3>
-        <div className="space-y-3 text-sm">
-          <div className="flex items-center justify-between p-2 rounded-lg border border-dashed">
-            <span className="flex items-center gap-2"><TrendingDown className="w-4 h-4 text-green-500" /> Fastest Card (Group):</span>
-            <span className="font-semibold" data-testid="text-group-fastest">Card {analytics.groupFastest.hole} ({formatShortDuration(analytics.groupFastest.time)})</span>
-          </div>
-          <div className="flex items-center justify-between p-2 rounded-lg border border-dashed">
-            <span className="flex items-center gap-2"><TrendingUp className="w-4 h-4 text-red-500" /> Slowest Card (Group):</span>
-            <span className="font-semibold" data-testid="text-group-slowest">Card {analytics.groupSlowest.hole} ({formatShortDuration(analytics.groupSlowest.time)})</span>
-          </div>
-          {players.map(p => {
-            const fastest = analytics.playerFastest[p.id];
-            const slowest = analytics.playerSlowest[p.id];
-            const avg = analytics.playerAvgTurn[p.id];
-            if (!fastest || !slowest) return null;
-            return (
-              <div key={p.id} className="p-2 rounded-lg border">
-                <div className="flex items-center gap-2 mb-1">
-                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: p.color }} />
-                  <span className="font-semibold">{p.name}</span>
-                </div>
-                <div className="grid grid-cols-3 gap-2 text-xs text-muted-foreground">
-                  <div>
-                    <TrendingDown className="w-3 h-3 text-green-500 inline mr-1" />
-                    Fastest: Card {fastest.hole} ({formatShortDuration(fastest.time)})
-                  </div>
-                  <div>
-                    <TrendingUp className="w-3 h-3 text-red-500 inline mr-1" />
-                    Slowest: Card {slowest.hole} ({formatShortDuration(slowest.time)})
-                  </div>
-                  <div>
-                    <Clock className="w-3 h-3 inline mr-1" />
-                    Avg: {avg ? formatShortDuration(avg) : "-"}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </Card>
-
-      <Card className="p-4 mb-6">
-        <h3 className="font-bold mb-3 flex items-center gap-2">
-          <Award className="w-5 h-5" /> Performance Insights
-        </h3>
-        <div className="space-y-2 text-sm">
-          {mostConsistentPlayer && (
-            <div className="flex items-center justify-between p-2 rounded-lg border border-dashed">
-              <span className="flex items-center gap-2">
-                <Target className="w-4 h-4 text-blue-500" /> Most Consistent Pace:
-              </span>
-              <span className="font-semibold flex items-center gap-1">
-                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: mostConsistentPlayer.color }} />
-                {mostConsistentPlayer.name}
-              </span>
+      {isUnlocked ? (
+        <>
+          <Card className="p-4 mb-6">
+            <h3 className="font-bold mb-3 flex items-center gap-2">
+              <Timer className="w-5 h-5" /> Turn Duration by Card
+            </h3>
+            <div className="w-full" style={{ height: 220 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={analytics.chartData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
+                  <XAxis dataKey="hole" tick={{ fontSize: 11 }} />
+                  <YAxis tick={{ fontSize: 11 }} label={{ value: "sec", angle: -90, position: "insideLeft", offset: 30, style: { fontSize: 11 } }} />
+                  <Tooltip
+                    contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }}
+                    labelStyle={{ color: "hsl(var(--foreground))" }}
+                    formatter={(value: number) => [`${value}s`, undefined]}
+                  />
+                  <Legend wrapperStyle={{ fontSize: 12 }} />
+                  {players.map(p => (
+                    <Line
+                      key={p.id}
+                      type="monotone"
+                      dataKey={p.name}
+                      stroke={p.color}
+                      strokeWidth={2}
+                      dot={{ r: 3, fill: p.color }}
+                      activeDot={{ r: 5 }}
+                      connectNulls
+                    />
+                  ))}
+                </LineChart>
+              </ResponsiveContainer>
             </div>
-          )}
-          {bestStreakPlayer && analytics.streakData[bestStreakPlayer.id]?.bestStreak > 1 && (
-            <div className="flex items-center justify-between p-2 rounded-lg border border-dashed">
-              <span className="flex items-center gap-2">
-                <Zap className="w-4 h-4 text-yellow-500" /> Best Par Streak:
-              </span>
-              <span className="font-semibold flex items-center gap-1">
-                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: bestStreakPlayer.color }} />
-                {bestStreakPlayer.name} ({analytics.streakData[bestStreakPlayer.id].bestStreak} cards)
-              </span>
-            </div>
-          )}
-          {players.map(p => {
-            const spm = analytics.playerScorePerMinute[p.id];
-            const sps = analytics.playerSecondsPerStroke[p.id];
-            if (!spm || !sps) return null;
-            return (
-              <div key={p.id} className="p-2 rounded-lg border border-dashed">
-                <div className="flex items-center gap-2 mb-1">
-                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: p.color }} />
-                  <span className="font-semibold">{p.name}</span>
-                </div>
-                <div className="flex justify-between gap-4 text-xs text-muted-foreground">
-                  <span>{sps.toFixed(2)} sec/stroke</span>
-                  <span>{spm.toFixed(1)} strokes/min</span>
-                </div>
+          </Card>
+
+          <Card className="p-4 mb-6">
+            <h3 className="font-bold mb-3 flex items-center gap-2">
+              <Zap className="w-5 h-5" /> Speed Records
+            </h3>
+            <div className="space-y-3 text-sm">
+              <div className="flex items-center justify-between p-2 rounded-lg border border-dashed">
+                <span className="flex items-center gap-2"><TrendingDown className="w-4 h-4 text-green-500" /> Fastest Card (Group):</span>
+                <span className="font-semibold" data-testid="text-group-fastest">Card {analytics.groupFastest.hole} ({formatShortDuration(analytics.groupFastest.time)})</span>
               </div>
-            );
-          })}
-        </div>
-      </Card>
+              <div className="flex items-center justify-between p-2 rounded-lg border border-dashed">
+                <span className="flex items-center gap-2"><TrendingUp className="w-4 h-4 text-red-500" /> Slowest Card (Group):</span>
+                <span className="font-semibold" data-testid="text-group-slowest">Card {analytics.groupSlowest.hole} ({formatShortDuration(analytics.groupSlowest.time)})</span>
+              </div>
+              {players.map(p => {
+                const fastest = analytics.playerFastest[p.id];
+                const slowest = analytics.playerSlowest[p.id];
+                const avg = analytics.playerAvgTurn[p.id];
+                if (!fastest || !slowest) return null;
+                return (
+                  <div key={p.id} className="p-2 rounded-lg border">
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: p.color }} />
+                      <span className="font-semibold">{p.name}</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2 text-xs text-muted-foreground">
+                      <div>
+                        <TrendingDown className="w-3 h-3 text-green-500 inline mr-1" />
+                        Fastest: Card {fastest.hole} ({formatShortDuration(fastest.time)})
+                      </div>
+                      <div>
+                        <TrendingUp className="w-3 h-3 text-red-500 inline mr-1" />
+                        Slowest: Card {slowest.hole} ({formatShortDuration(slowest.time)})
+                      </div>
+                      <div>
+                        <Clock className="w-3 h-3 inline mr-1" />
+                        Avg: {avg ? formatShortDuration(avg) : "-"}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </Card>
+
+          <Card className="p-4 mb-6">
+            <h3 className="font-bold mb-3 flex items-center gap-2">
+              <Award className="w-5 h-5" /> Performance Insights
+            </h3>
+            <div className="space-y-2 text-sm">
+              {mostConsistentPlayer && (
+                <div className="flex items-center justify-between p-2 rounded-lg border border-dashed">
+                  <span className="flex items-center gap-2">
+                    <Target className="w-4 h-4 text-blue-500" /> Most Consistent Pace:
+                  </span>
+                  <span className="font-semibold flex items-center gap-1">
+                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: mostConsistentPlayer.color }} />
+                    {mostConsistentPlayer.name}
+                  </span>
+                </div>
+              )}
+              {bestStreakPlayer && analytics.streakData[bestStreakPlayer.id]?.bestStreak > 1 && (
+                <div className="flex items-center justify-between p-2 rounded-lg border border-dashed">
+                  <span className="flex items-center gap-2">
+                    <Zap className="w-4 h-4 text-yellow-500" /> Best Par Streak:
+                  </span>
+                  <span className="font-semibold flex items-center gap-1">
+                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: bestStreakPlayer.color }} />
+                    {bestStreakPlayer.name} ({analytics.streakData[bestStreakPlayer.id].bestStreak} cards)
+                  </span>
+                </div>
+              )}
+              {players.map(p => {
+                const spm = analytics.playerScorePerMinute[p.id];
+                const sps = analytics.playerSecondsPerStroke[p.id];
+                if (!spm || !sps) return null;
+                return (
+                  <div key={p.id} className="p-2 rounded-lg border border-dashed">
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: p.color }} />
+                      <span className="font-semibold">{p.name}</span>
+                    </div>
+                    <div className="flex justify-between gap-4 text-xs text-muted-foreground">
+                      <span>{sps.toFixed(2)} sec/stroke</span>
+                      <span>{spm.toFixed(1)} strokes/min</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </Card>
+        </>
+      ) : (
+        <Card className="p-5 mb-6 space-y-4">
+          <div className="flex items-center gap-2">
+            <Lock className="w-5 h-5 text-muted-foreground" />
+            <h3 className="font-bold">Detailed Analytics</h3>
+            <span className="text-xs text-muted-foreground ml-auto">Paid feature</span>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            {[
+              { icon: Timer, label: "Turn Duration", desc: "Per-card timing chart" },
+              { icon: Zap, label: "Speed Records", desc: "Fastest & slowest cards" },
+              { icon: Award, label: "Performance", desc: "Pace, streaks & insights" },
+            ].map(({ icon: Icon, label, desc }) => (
+              <div key={label} className="flex flex-col items-center gap-1 p-3 rounded-md border border-dashed text-center opacity-50 select-none">
+                <Icon className="w-5 h-5 text-muted-foreground" />
+                <span className="text-xs font-semibold">{label}</span>
+                <span className="text-xs text-muted-foreground leading-tight">{desc}</span>
+              </div>
+            ))}
+          </div>
+          <UnlockBanner variant="inline" />
+        </Card>
+      )}
     </>
   );
 }
