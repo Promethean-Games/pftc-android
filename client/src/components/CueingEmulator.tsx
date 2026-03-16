@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { X, Plus, Trash2, Undo2, Crosshair, Grid3x3, Move, Settings, Lock } from "lucide-react";
+import { X, Plus, Trash2, Undo2, Crosshair, Grid3x3, Move, Settings, Lock, RefreshCw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
@@ -703,6 +703,17 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
     setHasAimLine(false);
   };
 
+  const handleReset = () => {
+    const initial =
+      shotHistory.length > 0
+        ? shotHistory[0]
+        : [createBall("cue", "cue", 25, 25)];
+    setBalls(initial);
+    setShotHistory([]);
+    setHasAimLine(false);
+    setSelectedBallId(null);
+  };
+
   const GRID_X = TABLE_DIMENSIONS.width / 8;
   const GRID_Y = TABLE_DIMENSIONS.height / 4;
   const SNAP_BUFFER_PX = 20;
@@ -718,8 +729,8 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
     return { x: snappedX, y: snappedY };
   };
 
-  const ENG_MIN = -1.5;
-  const ENG_MAX = 1.5;
+  const ENG_MIN = -2;
+  const ENG_MAX = 2;
   const ENG_SNAP = 0.25;
 
   const snapEnglish = (val: number): number => {
@@ -728,8 +739,8 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
 
   const handleEnglishDiagramClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width) * 3 - 1.5;
-    const y = ((e.clientY - rect.top) / rect.height) * 3 - 1.5;
+    const x = ((e.clientX - rect.left) / rect.width) * 4 - 2;
+    const y = ((e.clientY - rect.top) / rect.height) * 4 - 2;
     setEnglishX(snapEnglish(Math.max(ENG_MIN, Math.min(ENG_MAX, x))));
     setEnglishY(snapEnglish(Math.max(ENG_MIN, Math.min(ENG_MAX, y))));
   };
@@ -828,15 +839,26 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
             Shoot
           </Button>
           {shotHistory.length > 0 && (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={handleUndo}
-              data-testid="button-undo"
-            >
-              <Undo2 className="w-3 h-3 mr-1" />
-              Undo
-            </Button>
+            <>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleUndo}
+                data-testid="button-undo"
+              >
+                <Undo2 className="w-3 h-3 mr-1" />
+                Undo
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleReset}
+                data-testid="button-reset-layout"
+              >
+                <RefreshCw className="w-3 h-3 mr-1" />
+                Reset
+              </Button>
+            </>
           )}
           <Button
             size="icon"
@@ -967,36 +989,36 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
                     >
                       <svg width="120" height="120" viewBox="0 0 120 120">
                         <circle cx="60" cy="60" r="58" fill="white" stroke="#ccc" strokeWidth="1" />
-                        <circle cx="60" cy="60" r="58" fill="none" stroke="#ef4444" strokeWidth="1" strokeDasharray="4 3" opacity="0.5" />
+                        <circle cx="60" cy="60" r="43.5" fill="none" stroke="#ef4444" strokeWidth="1" strokeDasharray="4 3" opacity="0.5" />
                         <line x1="60" y1="2" x2="60" y2="118" stroke="rgba(0,0,0,0.15)" strokeWidth="0.5" />
                         <line x1="2" y1="60" x2="118" y2="60" stroke="rgba(0,0,0,0.15)" strokeWidth="0.5" />
-                        {[-1.5, -1.25, -1, -0.75, -0.5, -0.25, 0, 0.25, 0.5, 0.75, 1, 1.25, 1.5].map((vx) =>
-                          [-1.5, -1.25, -1, -0.75, -0.5, -0.25, 0, 0.25, 0.5, 0.75, 1, 1.25, 1.5].map((vy) => {
-                            const px = 60 + (vx / 1.5) * 58;
-                            const py = 60 + (vy / 1.5) * 58;
+                        {[-2,-1.75,-1.5,-1.25,-1,-0.75,-0.5,-0.25,0,0.25,0.5,0.75,1,1.25,1.5,1.75,2].map((vx) =>
+                          [-2,-1.75,-1.5,-1.25,-1,-0.75,-0.5,-0.25,0,0.25,0.5,0.75,1,1.25,1.5,1.75,2].map((vy) => {
+                            const px = 60 + (vx / 2) * 58;
+                            const py = 60 + (vy / 2) * 58;
                             return (
                               <circle
                                 key={`${vx}-${vy}`}
                                 cx={px}
                                 cy={py}
-                                r={1.5}
+                                r={1.2}
                                 fill="rgba(0,0,0,0.12)"
                               />
                             );
                           })
                         )}
                         <circle
-                          cx={60 + (englishX / 1.5) * 58}
-                          cy={60 + (englishY / 1.5) * 58}
-                          r={Math.max(6, 58 / 3)}
+                          cx={60 + (englishX / 2) * 58}
+                          cy={60 + (englishY / 2) * 58}
+                          r={Math.max(5, 58 / 4)}
                           fill="rgba(59,130,246,0.25)"
                           stroke="#3b82f6"
                           strokeWidth="1.5"
                           data-testid="english-tip-circle"
                         />
                         <circle
-                          cx={60 + (englishX / 1.5) * 58}
-                          cy={60 + (englishY / 1.5) * 58}
+                          cx={60 + (englishX / 2) * 58}
+                          cy={60 + (englishY / 2) * 58}
                           r={3}
                           fill="#3b82f6"
                           data-testid="english-dot"
@@ -1004,34 +1026,37 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
                       </svg>
                       <span className="absolute text-muted-foreground" style={{ fontSize: 8, bottom: -2, right: 0, opacity: 0.6 }}>miscue limit</span>
                     </div>
+                    <div className="text-xs text-center text-muted-foreground" data-testid="english-readout">
+                      Horizontal: {englishX >= 0 ? "+" : ""}{englishX.toFixed(2)} tips · Vertical: {englishY >= 0 ? "+" : ""}{englishY.toFixed(2)} tips
+                    </div>
                     <div>
                       <div className="flex justify-between text-xs text-muted-foreground mb-1">
-                        <span>-1.5</span>
+                        <span>-2</span>
                         <span>0</span>
-                        <span>+1.5</span>
+                        <span>+2</span>
                       </div>
                       <Slider
                         value={[englishX]}
-                        min={-1.5}
-                        max={1.5}
-                        step={0.05}
-                        onValueChange={([v]) => setEnglishX(v)}
+                        min={-2}
+                        max={2}
+                        step={0.25}
+                        onValueChange={([v]) => setEnglishX(snapEnglish(v))}
                         data-testid="slider-english-x"
                       />
                       <span className="text-xs text-muted-foreground">Horizontal (side spin)</span>
                     </div>
                     <div>
                       <div className="flex justify-between text-xs text-muted-foreground mb-1">
-                        <span>-1.5</span>
+                        <span>-2</span>
                         <span>0</span>
-                        <span>+1.5</span>
+                        <span>+2</span>
                       </div>
                       <Slider
                         value={[englishY]}
-                        min={-1.5}
-                        max={1.5}
-                        step={0.05}
-                        onValueChange={([v]) => setEnglishY(v)}
+                        min={-2}
+                        max={2}
+                        step={0.25}
+                        onValueChange={([v]) => setEnglishY(snapEnglish(v))}
                         data-testid="slider-english-y"
                       />
                       <span className="text-xs text-muted-foreground">Vertical (top/draw)</span>

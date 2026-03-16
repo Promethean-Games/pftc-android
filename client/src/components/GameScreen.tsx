@@ -139,6 +139,22 @@ export function GameScreen({
     onUpdateScore({ par, strokes, scratches, penalties });
   }, [par, strokes, scratches, penalties]);
 
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const action = (e as CustomEvent<{ action: string }>).detail?.action;
+      if (action === "stroke_add") {
+        setStrokes((prev) => Math.max(0, prev + 1));
+      } else if (action === "next_player") {
+        onNextPlayer();
+      } else if (action === "undo") {
+        onUndo();
+      }
+    };
+    window.addEventListener("pftc-notif-action", handler as EventListener);
+    return () =>
+      window.removeEventListener("pftc-notif-action", handler as EventListener);
+  }, [onNextPlayer, onUndo]);
+
   const playerStats = (scores[currentPlayer.id] || []).reduce((acc, score) => ({
     scratches: acc.scratches + score.scratches,
     strokes: acc.strokes + score.strokes + score.scratches + score.penalties,

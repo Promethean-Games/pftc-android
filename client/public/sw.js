@@ -89,6 +89,30 @@ self.addEventListener("fetch", (event) => {
   event.respondWith(staleWhileRevalidate(request, DYNAMIC_CACHE));
 });
 
+// ── Notification: relay action button taps to the app ─────────────────────────
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const action = event.action || "open";
+
+  event.waitUntil(
+    self.clients
+      .matchAll({ type: "window", includeUncontrolled: true })
+      .then((clients) => {
+        // Prefer the visible client; fall back to any open client
+        const target =
+          clients.find((c) => c.visibilityState === "visible") || clients[0];
+        if (target) {
+          // Relay action to app — app handles game logic
+          target.postMessage({ type: "NOTIF_ACTION", action });
+          if (action === "open" || !action) return target.focus();
+        } else {
+          // App is fully closed — open it
+          return self.clients.openWindow("/");
+        }
+      })
+  );
+});
+
 // ── Strategy helpers ──────────────────────────────────────────────────────────
 
 async function cacheFirst(request, cacheName) {

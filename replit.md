@@ -114,7 +114,7 @@ When running inside a Trusted Web Activity on Android, the Digital Goods API is 
   - Settings via accordion panels:
     - Shot Speed: slider 1–10 (maps to initial cue ball velocity)
     - Fine-Tune Angle: slider ±5° with 0.1° steps
-    - English (Spin): circular cue ball face diagram with crosshairs, 0.25-tip snap grid (diagram click snaps to nearest 0.25), cue tip circle overlay, and red dashed miscue limit ring; sliders allow fine-tuning at 0.05 steps (-1.5 to +1.5 tips); H: negative = left, positive = right; V: negative = follow/topspin (top of ball), positive = draw/backspin (bottom of ball)
+    - English (Spin): circular cue ball face diagram with crosshairs, 0.25-tip snap grid (diagram click and sliders snap to nearest 0.25), cue tip circle overlay, and red dashed miscue limit ring (r=43.5% of ball radius, ~¾ ball width); range is -2 to +2 tips (0.25 steps); readout shows current H/V tips below diagram; H: negative = left, positive = right; V: negative = follow/topspin (top of ball), positive = draw/backspin (bottom of ball)
     - Table Physics: segmented controls for Table Speed (Slow/Medium/Fast), Equipment (Dirty/Average/Clean), Rails (Soft/Medium/Firm)
   - Cut angle display: shows cut angle in hundredths of degrees for first object ball collision, with ball-hit summary (Full/3/4/1/2/1/4 ball); fullness = 1 - sin(cutAngle)
   - Settings sidebar: slide-out panel from right side (280px), toggled by gear icon button; replaces bottom accordion for better mobile UX

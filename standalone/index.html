@@ -898,10 +898,15 @@
     function emuSnapEng(v){return Math.round(v/0.25)*0.25;}
     function emuEngClick(e){
       const el=e.currentTarget;const rect=el.getBoundingClientRect();
-      const x=((e.clientX-rect.left)/rect.width)*3-1.5;
-      const y=((e.clientY-rect.top)/rect.height)*3-1.5;
-      EMU.englishX=emuSnapEng(Math.max(-1.5,Math.min(1.5,x)));
-      EMU.englishY=emuSnapEng(Math.max(-1.5,Math.min(1.5,y)));
+      const x=((e.clientX-rect.left)/rect.width)*4-2;
+      const y=((e.clientY-rect.top)/rect.height)*4-2;
+      EMU.englishX=emuSnapEng(Math.max(-2,Math.min(2,x)));
+      EMU.englishY=emuSnapEng(Math.max(-2,Math.min(2,y)));
+      drawEmulatorCanvas();render();
+    }
+    function emuReset(){
+      const initial=EMU.shotHistory.length>0?EMU.shotHistory[0]:[emuBall('cue','cue',25,25)];
+      EMU.balls=initial;EMU.shotHistory=[];EMU.trajectories=[];EMU.hasAimLine=false;EMU.selectedId=null;
       drawEmulatorCanvas();render();
     }
     function emuToggleSection(s){EMU.expandedSections[s]=!EMU.expandedSections[s];render();}
@@ -949,9 +954,9 @@
         return`<div style="${accStyle}" onclick="emuToggleSection('${key}')"><span>${label}</span><span style="transition:transform .2s;transform:rotate(${open?180:0}deg)">${I.chevD}</span></div>`;
       }
 
-      const engCx=60+(EMU.englishX/1.5)*58;
-      const engCy=60+(EMU.englishY/1.5)*58;
-      const engTipR=Math.max(6,58/3);
+      const engCx=60+(EMU.englishX/2)*58;
+      const engCy=60+(EMU.englishY/2)*58;
+      const engTipR=Math.max(5,58/4);
 
       const toggleBtn=(group,val,label)=>`<button class="btn ${EMU[group]===val?'btn-primary':'btn-outline'}" style="flex:1;min-height:32px;font-size:12px" onclick="EMU.${group}='${val}';render();setTimeout(drawEmulatorCanvas,50)">${label}</button>`;
 
@@ -967,7 +972,7 @@
           </div>
           <div style="display:flex;align-items:center;gap:4px">
             <button class="btn btn-primary" style="font-size:12px;min-height:32px" onclick="emuShoot()" ${EMU.hasAimLine?'':'disabled'} data-testid="button-shoot">${I.target||'⊕'} Shoot</button>
-            ${EMU.shotHistory.length>0?`<button class="btn btn-outline" style="font-size:12px;min-height:32px" onclick="emuUndo();render();setTimeout(drawEmulatorCanvas,50)" data-testid="button-undo">${I.rotateCcw} Undo</button>`:''}
+            ${EMU.shotHistory.length>0?`<button class="btn btn-outline" style="font-size:12px;min-height:32px" onclick="emuUndo();render();setTimeout(drawEmulatorCanvas,50)" data-testid="button-undo">${I.rotateCcw} Undo</button><button class="btn btn-outline" style="font-size:12px;min-height:32px" onclick="emuReset()" data-testid="button-reset-layout">${I.rotateCcw} Reset</button>`:''}
             <button class="btn ${EMU.showSettings?'btn-primary':'btn-ghost'} btn-icon" onclick="EMU.showSettings=!EMU.showSettings;render();setTimeout(drawEmulatorCanvas,50)" data-testid="button-toggle-settings">${I.gear}</button>
             <button class="btn btn-ghost btn-icon" onclick="saveEmulatorLayout();S.showEmulator=false;render()" data-testid="button-close-emulator">${I.x}</button>
           </div>
@@ -1001,23 +1006,24 @@
                 <div onclick="emuEngClick(event)" style="width:120px;height:120px;position:relative;cursor:pointer;margin:0 auto 12px" data-testid="english-diagram">
                   <svg width="120" height="120" viewBox="0 0 120 120">
                     <circle cx="60" cy="60" r="58" fill="white" stroke="#ccc" stroke-width="1"/>
-                    <circle cx="60" cy="60" r="58" fill="none" stroke="#ef4444" stroke-width="1" stroke-dasharray="4 3" opacity="0.5"/>
+                    <circle cx="60" cy="60" r="43.5" fill="none" stroke="#ef4444" stroke-width="1" stroke-dasharray="4 3" opacity="0.5"/>
                     <line x1="60" y1="2" x2="60" y2="118" stroke="rgba(0,0,0,0.15)" stroke-width="0.5"/>
                     <line x1="2" y1="60" x2="118" y2="60" stroke="rgba(0,0,0,0.15)" stroke-width="0.5"/>
-                    ${[-1.5,-1.25,-1,-0.75,-0.5,-0.25,0,0.25,0.5,0.75,1,1.25,1.5].map(vx=>[-1.5,-1.25,-1,-0.75,-0.5,-0.25,0,0.25,0.5,0.75,1,1.25,1.5].map(vy=>`<circle cx="${60+(vx/1.5)*58}" cy="${60+(vy/1.5)*58}" r="1.5" fill="rgba(0,0,0,0.12)"/>`).join('')).join('')}
+                    ${[-2,-1.75,-1.5,-1.25,-1,-0.75,-0.5,-0.25,0,0.25,0.5,0.75,1,1.25,1.5,1.75,2].map(vx=>[-2,-1.75,-1.5,-1.25,-1,-0.75,-0.5,-0.25,0,0.25,0.5,0.75,1,1.25,1.5,1.75,2].map(vy=>`<circle cx="${60+(vx/2)*58}" cy="${60+(vy/2)*58}" r="1.2" fill="rgba(0,0,0,0.12)"/>`).join('')).join('')}
                     <circle cx="${engCx}" cy="${engCy}" r="${engTipR}" fill="rgba(59,130,246,0.25)" stroke="#3b82f6" stroke-width="1.5"/>
                     <circle cx="${engCx}" cy="${engCy}" r="3" fill="#3b82f6"/>
                   </svg>
                   <span style="position:absolute;font-size:8px;bottom:-2px;right:0;opacity:0.6;color:var(--muted-fg)">miscue limit</span>
                 </div>
+                <div style="font-size:11px;text-align:center;color:var(--muted-fg);margin-bottom:8px" data-testid="english-readout">Horizontal: ${EMU.englishX>=0?'+':''}${EMU.englishX.toFixed(2)} tips · Vertical: ${EMU.englishY>=0?'+':''}${EMU.englishY.toFixed(2)} tips</div>
                 <div style="margin-bottom:8px">
-                  <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted-fg);margin-bottom:2px"><span>-1.5</span><span>0</span><span>+1.5</span></div>
-                  <input type="range" min="-1.5" max="1.5" step="0.05" value="${EMU.englishX}" oninput="EMU.englishX=+this.value;drawEmulatorCanvas()" style="width:100%" data-testid="slider-english-x">
+                  <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted-fg);margin-bottom:2px"><span>-2</span><span>0</span><span>+2</span></div>
+                  <input type="range" min="-2" max="2" step="0.25" value="${EMU.englishX}" oninput="EMU.englishX=emuSnapEng(+this.value);drawEmulatorCanvas();render()" style="width:100%" data-testid="slider-english-x">
                   <span style="font-size:11px;color:var(--muted-fg)">Horizontal (side spin)</span>
                 </div>
                 <div style="margin-bottom:8px">
-                  <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted-fg);margin-bottom:2px"><span>-1.5</span><span>0</span><span>+1.5</span></div>
-                  <input type="range" min="-1.5" max="1.5" step="0.05" value="${EMU.englishY}" oninput="EMU.englishY=+this.value;drawEmulatorCanvas()" style="width:100%" data-testid="slider-english-y">
+                  <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted-fg);margin-bottom:2px"><span>-2</span><span>0</span><span>+2</span></div>
+                  <input type="range" min="-2" max="2" step="0.25" value="${EMU.englishY}" oninput="EMU.englishY=emuSnapEng(+this.value);drawEmulatorCanvas();render()" style="width:100%" data-testid="slider-english-y">
                   <span style="font-size:11px;color:var(--muted-fg)">Vertical (top/draw)</span>
                 </div>
                 <button class="btn btn-ghost" style="font-size:12px" onclick="EMU.englishX=0;EMU.englishY=0;drawEmulatorCanvas();render()" data-testid="button-reset-english">Center</button>

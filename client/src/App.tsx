@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useGameNotification, requestNotificationPermission } from "@/hooks/useGameNotification";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./lib/queryClient";
 import { Toaster } from "@/components/ui/toaster";
@@ -104,6 +105,12 @@ function GameApp() {
     }
   }, [game.isComplete]);
 
+  useEffect(() => {
+    if (screen === "game") {
+      requestNotificationPermission().catch(() => {});
+    }
+  }, [screen]);
+
   const handleEndGame = () => {
     game.endGame();
     setActiveTab("summary");
@@ -135,6 +142,23 @@ function GameApp() {
 
   const currentPlayer = game.players[game.currentPlayerIndex];
   const playerIsLeader = currentPlayer ? isLeader(currentPlayer.id, game.players, game.scores) : false;
+
+  const _notifScore = currentPlayer
+    ? game.scores[currentPlayer.id]?.find((s) => s.hole === game.currentHole)
+    : undefined;
+  useGameNotification({
+    isActive:
+      screen === "game" &&
+      activeTab === "game" &&
+      !viewOnly &&
+      !!currentPlayer &&
+      !game.isComplete,
+    playerName: currentPlayer?.name ?? "",
+    hole: game.currentHole,
+    strokes: _notifScore?.strokes ?? 0,
+    par: _notifScore?.par ?? 0,
+    penalties: _notifScore?.penalties ?? 0,
+  });
 
   if (screen === "splash") {
     return (
