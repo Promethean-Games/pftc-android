@@ -256,6 +256,7 @@ function GameApp() {
           onEndGame={handleEndGame}
           onHome={() => setScreen("splash")}
           viewOnly={viewOnly}
+          isGameOver={game.isComplete}
           onLogout={() => {
             game.endGame();
             setViewOnly(false);

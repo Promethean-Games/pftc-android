@@ -17,9 +17,10 @@ interface SettingsPanelProps {
   onHome?: () => void;
   onLogout?: () => void;
   viewOnly?: boolean;
+  isGameOver?: boolean;
 }
 
-export function SettingsPanel({ settings, players, onUpdateSettings, onAddPlayer, onEndGame, onHome, onLogout, viewOnly = false }: SettingsPanelProps) {
+export function SettingsPanel({ settings, players, onUpdateSettings, onAddPlayer, onEndGame, onHome, onLogout, viewOnly = false, isGameOver = false }: SettingsPanelProps) {
   const [newPlayerName, setNewPlayerName] = useState("");
   const [insertPosition, setInsertPosition] = useState<string>("end");
 
@@ -44,6 +45,7 @@ export function SettingsPanel({ settings, players, onUpdateSettings, onAddPlayer
         </div>
 
         <div className="space-y-4">
+          {!isGameOver && (
           <Card className="p-4">
             <h3 className="font-semibold mb-3 flex items-center gap-2">
               <UserPlus className="w-4 h-4" />
@@ -84,6 +86,7 @@ export function SettingsPanel({ settings, players, onUpdateSettings, onAddPlayer
               Current players: {players.length}
             </p>
           </Card>
+          )}
 
           <Card className="p-4">
             <h3 className="font-semibold mb-4">Display</h3>
