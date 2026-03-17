@@ -256,7 +256,6 @@ function GameApp() {
           onEndGame={handleEndGame}
           onHome={() => setScreen("splash")}
           viewOnly={viewOnly}
-          onShowPrivacy={() => setShowPrivacy(true)}
           onLogout={() => {
             game.endGame();
             setViewOnly(false);
