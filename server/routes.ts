@@ -85,7 +85,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
 
     try {
-      await fetch("https://us.i.posthog.com/capture/", {
+      const phRes = await fetch("https://us.i.posthog.com/capture/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -94,15 +94,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           distinct_id: typeof sessionId === "string" && sessionId.length < 64
             ? sessionId
             : "anonymous",
-          properties: {
-            ...(typeof properties === "object" && properties !== null ? properties : {}),
-            $ip: "0",
-          },
+          properties: typeof properties === "object" && properties !== null ? properties : {},
         }),
       });
-      res.json({ ok: true });
+      const phBody = await phRes.text();
+      console.log(`[analytics proxy] ${event} → PostHog ${phRes.status}: ${phBody}`);
+      res.json({ ok: phRes.ok });
     } catch (err) {
-      console.error("[analytics proxy]", err);
+      console.error("[analytics proxy] fetch error:", err);
       res.json({ ok: false, reason: "upstream_error" });
     }
   });
