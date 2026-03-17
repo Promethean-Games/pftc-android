@@ -23,6 +23,7 @@ const ALL_LOCALSTORAGE_KEYS = [
   "pftc_terms_version",
   "pftc_terms_accepted_at",
   "pftc_device_id",
+  "pftc_analytics_opt_out",
   "sidebar:state",
 ];
 
@@ -66,7 +67,7 @@ export function PrivacyPolicy({ onClose }: PrivacyPolicyProps) {
           </div>
         </div>
 
-        <p className="text-xs text-muted-foreground mb-4">Promethean Games LLC &middot; Effective Oct 23, 2025</p>
+        <p className="text-xs text-muted-foreground mb-4">Promethean Games LLC &middot; Effective Mar 17, 2026</p>
 
         <div className="space-y-4 text-sm leading-relaxed">
           <Card className="p-4">
@@ -109,10 +110,11 @@ export function PrivacyPolicy({ onClose }: PrivacyPolicyProps) {
             <h2 className="font-semibold mb-2">6. Privacy & Data Collection</h2>
             <ul className="text-muted-foreground list-disc pl-4 space-y-2">
               <li><strong>No personal data</strong> is sent to our servers. Player names, scores, and game settings stay on your device in local browser storage.</li>
+              <li><strong>Anonymous usage analytics</strong>: We use <a href="https://posthog.com/privacy" target="_blank" rel="noopener noreferrer" className="underline">PostHog</a> to collect anonymous, aggregate data to help us improve the App. This is strictly limited to events such as: app opened (platform, app version), game started (number of players, demo vs full), game completed (holes played, approximate duration), paywall encountered, purchase initiated or completed, and which CueMaster Tools are opened. <strong>We do not collect</strong> player names, individual scores, device identifiers, IP addresses, or any personally identifiable information. No cookies are used. You can opt out at any time in Settings.</li>
               <li><strong>Payment processing</strong> is handled by Stripe. When you purchase the full version, Stripe collects your payment information directly. We do not store or have access to your payment details. See <a href="https://stripe.com/privacy" target="_blank" rel="noopener noreferrer" className="underline">Stripe's Privacy Policy</a>.</li>
               <li><strong>Device sensors</strong>: The Table Leveler feature uses your device's accelerometer/gyroscope. This data is processed locally and is never transmitted to any server.</li>
               <li><strong>Google Fonts</strong>: The App loads fonts from Google's servers. Google may collect standard web request data (IP address, browser type). See <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer" className="underline">Google's Privacy Policy</a>.</li>
-              <li><strong>No third-party ads or analytics</strong>. No tracking cookies or advertising identifiers are used.</li>
+              <li><strong>No ads or advertising identifiers</strong> are used.</li>
               <li><strong>No account required</strong>. The App does not require sign-up, login, or any personal information to use.</li>
             </ul>
           </Card>
@@ -126,8 +128,9 @@ export function PrivacyPolicy({ onClose }: PrivacyPolicyProps) {
               <li>App settings (theme, display preferences)</li>
               <li>Purchase unlock status</li>
               <li>Table Leveler calibration data</li>
+              <li>Analytics opt-out preference</li>
             </ul>
-            <p className="text-muted-foreground mt-2">This data never leaves your device unless you choose to share it.</p>
+            <p className="text-muted-foreground mt-2">Player names, individual scores, and other gameplay data never leave your device. Anonymous analytics events (described in Section 6) are sent to PostHog using an in-memory session only — no persistent identifier is stored on your device.</p>
           </Card>
 
           <Card className="p-4">

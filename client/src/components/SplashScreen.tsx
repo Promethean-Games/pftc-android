@@ -9,6 +9,7 @@ import { CoinFlip } from "./CoinFlip";
 import { CueMasterTools } from "./CueMasterTools";
 import { PrivacyPolicy } from "./PrivacyPolicy";
 import { useUnlock } from "@/contexts/UnlockContext";
+import { trackEvent } from "@/lib/analytics";
 
 interface SplashScreenProps {
   onNewGame: () => void;
@@ -101,7 +102,7 @@ export function SplashScreen({ onNewGame, onLoadGame }: SplashScreenProps) {
           size="lg"
           className="w-full text-lg h-14 text-white font-bold border-0"
           style={{ background: "#15803d" }}
-          onClick={() => setShowCueMasterTools(true)}
+          onClick={() => { setShowCueMasterTools(true); trackEvent("tool_opened", { tool_name: "cuemaster_tools" }); }}
           data-testid="button-cuemaster-tools"
         >
           <Wrench className="w-5 h-5 mr-2" />
@@ -111,7 +112,7 @@ export function SplashScreen({ onNewGame, onLoadGame }: SplashScreenProps) {
           size="lg"
           variant="ghost"
           className="w-full text-lg h-14 text-muted-foreground"
-          onClick={() => setShowTutorial(true)}
+          onClick={() => { setShowTutorial(true); trackEvent("tutorial_viewed"); }}
           data-testid="button-how-to-play"
         >
           <BookOpen className="w-5 h-5 mr-2" />
@@ -158,9 +159,9 @@ export function SplashScreen({ onNewGame, onLoadGame }: SplashScreenProps) {
       {showCueMasterTools && (
         <CueMasterTools
           onClose={() => setShowCueMasterTools(false)}
-          onOpenCoinFlip={() => { setShowCueMasterTools(false); setShowCoinFlip(true); }}
-          onOpenEmulator={() => { setShowCueMasterTools(false); setShowEmulator(true); }}
-          onOpenLeveler={() => { setShowCueMasterTools(false); setShowLeveler(true); }}
+          onOpenCoinFlip={() => { setShowCueMasterTools(false); setShowCoinFlip(true); trackEvent("tool_opened", { tool_name: "coin_flip" }); }}
+          onOpenEmulator={() => { setShowCueMasterTools(false); setShowEmulator(true); trackEvent("tool_opened", { tool_name: "cueing_emulator" }); }}
+          onOpenLeveler={() => { setShowCueMasterTools(false); setShowLeveler(true); trackEvent("tool_opened", { tool_name: "table_leveler" }); }}
         />
       )}
       {showPrivacy && (

@@ -6,7 +6,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider, useTheme } from "@/components/ThemeProvider";
 import { GameProvider, useGame } from "@/contexts/GameContext";
-import { UnlockProvider } from "@/contexts/UnlockContext";
+import { UnlockProvider, useUnlock } from "@/contexts/UnlockContext";
 import { SplashScreen } from "@/components/SplashScreen";
 import { PlayerSetup } from "@/components/PlayerSetup";
 import { GameScreen } from "@/components/GameScreen";
@@ -16,6 +16,9 @@ import { PrivacyPolicy } from "@/components/PrivacyPolicy";
 import { SaveLoadDialog } from "@/components/SaveLoadDialog";
 import { BottomNav } from "@/components/BottomNav";
 import { isLeader } from "@/lib/game-utils";
+import { initAnalytics, trackEvent } from "@/lib/analytics";
+import { APP_VERSION } from "@/lib/constants";
+import { isRunningInTwa } from "@/lib/play-billing";
 
 type Screen = "splash" | "load" | "setup" | "game" | "summary";
 type ActiveTab = "game" | "summary" | "settings" | "save";
@@ -23,6 +26,7 @@ type ActiveTab = "game" | "summary" | "settings" | "save";
 function GameApp() {
   const game = useGame();
   const { theme, setTheme } = useTheme();
+  const { isUnlocked } = useUnlock();
   
   const [screen, setScreen] = useState<Screen>(() => {
     const saved = localStorage.getItem("appScreen");
@@ -45,6 +49,14 @@ function GameApp() {
     return localStorage.getItem("appViewOnly") === "true";
   });
   const [showPrivacy, setShowPrivacy] = useState(false);
+
+  useEffect(() => {
+    initAnalytics();
+    trackEvent("app_opened", {
+      platform: isRunningInTwa() ? "android" : "web",
+      version: APP_VERSION,
+    });
+  }, []);
 
   useEffect(() => {
     localStorage.setItem("appScreen", screen);
@@ -96,12 +108,23 @@ function GameApp() {
     game.startGame();
     setActiveTab("game");
     setScreen("game");
+    trackEvent("game_started", {
+      player_count: game.players.length,
+      mode: isUnlocked ? "full" : "demo",
+    });
   };
 
   useEffect(() => {
     if (game.isComplete && screen === "game" && !viewOnly) {
       setViewOnly(true);
       setActiveTab("summary");
+      const durationMs = game.totalPlayTimeMs || 0;
+      const durationMin5 = Math.round(durationMs / 300000) * 5;
+      trackEvent("game_completed", {
+        holes_played: game.currentHole,
+        player_count: game.players.length,
+        duration_minutes: durationMin5,
+      });
     }
   }, [game.isComplete]);
 

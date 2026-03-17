@@ -13,6 +13,7 @@ import { useUnlock } from "@/contexts/UnlockContext";
 import { UnlockBanner } from "./UnlockBanner";
 import { useGame } from "@/contexts/GameContext";
 import type { CourseCard } from "@/lib/card-deck";
+import { trackEvent } from "@/lib/analytics";
 
 interface GameScreenProps {
   players: Player[];
@@ -50,6 +51,14 @@ export function GameScreen({
   const { isUnlocked, freeHoles } = useUnlock();
   const { drawCard, getDrawnCard } = useGame();
   const isHoleLocked = !isUnlocked && currentHole > freeHoles;
+  const paywallTracked = useRef(false);
+
+  useEffect(() => {
+    if (isHoleLocked && !paywallTracked.current) {
+      paywallTracked.current = true;
+      trackEvent("paywall_encountered", { hole: currentHole });
+    }
+  }, [isHoleLocked, currentHole]);
 
   const [showDrawDialog, setShowDrawDialog] = useState(false);
   const [showFinishConfirm, setShowFinishConfirm] = useState(false);

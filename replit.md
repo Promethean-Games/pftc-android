@@ -76,6 +76,26 @@ When running inside a Trusted Web Activity on Android, the Digital Goods API is 
   - Scoring rate (strokes/minute)
 - **Standalone**: Same analytics (except line chart) rendered in standalone HTML
 
+### Anonymous Usage Analytics (PostHog)
+- **Library**: `posthog-js` (npm package)
+- **Utility**: `client/src/lib/analytics.ts` — thin wrapper around PostHog
+  - `initAnalytics()` — called once at app boot in `App.tsx`; no-ops silently if `VITE_POSTHOG_KEY` is not set
+  - `trackEvent(name, props?)` — fire a named event (no-ops if key absent or user opted out)
+  - `setAnalyticsOptOut(bool)` / `getAnalyticsOptOut()` — opt-out stored in `localStorage["pftc_analytics_opt_out"]`
+- **Events tracked**:
+  - `app_opened` — platform (`web`/`android`), app version
+  - `game_started` — player_count, mode (`demo`/`full`)
+  - `game_completed` — holes_played, player_count, duration_minutes (rounded to nearest 5)
+  - `paywall_encountered` — hole number (fired once per GameScreen mount via `paywallTracked` ref)
+  - `purchase_initiated` — checkout_type (`stripe`/`play`)
+  - `purchase_completed` — checkout_type (`stripe`/`play`)
+  - `tool_opened` — tool_name (`cuemaster_tools`/`coin_flip`/`cueing_emulator`/`table_leveler`)
+  - `tutorial_viewed` — fired when user opens How to Play
+- **Privacy**: cookie-free (`persistence: "memory"`), IP not captured, no PII ever sent
+- **Opt-out**: "Help Improve the App" toggle in Settings → Display card; respects preference immediately
+- **Configuration**: Set env vars `VITE_POSTHOG_KEY` and optionally `VITE_POSTHOG_HOST` to activate; analytics silently disabled without them
+- **Policy**: Privacy Policy Section 6 updated (Mar 17, 2026) to disclose PostHog usage; Section 7 updated to list analytics opt-out pref in local storage items
+
 ### GitHub Pages Standalone (`index.html`)
 - **Root-level `index.html`**: Complete self-contained standalone game file at the project root for GitHub Pages / static hosting deployment
   - All CSS, JS, and HTML embedded inline — no build step required; works by opening in any browser

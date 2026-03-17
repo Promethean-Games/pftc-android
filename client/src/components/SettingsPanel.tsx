@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { UserPlus, Home } from "lucide-react";
 import type { Settings, Player } from "@shared/schema";
+import { getAnalyticsOptOut, setAnalyticsOptOut } from "@/lib/analytics";
 
 interface SettingsPanelProps {
   settings: Settings;
@@ -23,6 +24,12 @@ interface SettingsPanelProps {
 export function SettingsPanel({ settings, players, onUpdateSettings, onAddPlayer, onEndGame, onHome, onLogout, viewOnly = false, isGameOver = false }: SettingsPanelProps) {
   const [newPlayerName, setNewPlayerName] = useState("");
   const [insertPosition, setInsertPosition] = useState<string>("end");
+  const [analyticsOptOut, setAnalyticsOptOutState] = useState(() => getAnalyticsOptOut());
+
+  const handleAnalyticsToggle = (enabled: boolean) => {
+    setAnalyticsOptOut(!enabled);
+    setAnalyticsOptOutState(!enabled);
+  };
 
   const handleAddPlayer = () => {
     const name = newPlayerName.trim() || `Player ${players.length + 1}`;
@@ -104,7 +111,7 @@ export function SettingsPanel({ settings, players, onUpdateSettings, onAddPlayer
               />
             </div>
 
-            <div className="flex items-center justify-between py-3">
+            <div className="flex items-center justify-between py-3 border-b">
               <Label htmlFor="left-handed-toggle" className="flex-1">
                 <div className="font-medium">Left-Handed Mode</div>
                 <div className="text-sm text-muted-foreground">Optimized layout for left-handed use</div>
@@ -114,6 +121,19 @@ export function SettingsPanel({ settings, players, onUpdateSettings, onAddPlayer
                 checked={settings.leftHandedMode}
                 onCheckedChange={(checked) => onUpdateSettings({ leftHandedMode: checked })}
                 data-testid="switch-left-handed"
+              />
+            </div>
+
+            <div className="flex items-center justify-between py-3">
+              <Label htmlFor="analytics-toggle" className="flex-1">
+                <div className="font-medium">Help Improve the App</div>
+                <div className="text-sm text-muted-foreground">Send anonymous usage data to help us improve</div>
+              </Label>
+              <Switch
+                id="analytics-toggle"
+                checked={!analyticsOptOut}
+                onCheckedChange={handleAnalyticsToggle}
+                data-testid="switch-analytics"
               />
             </div>
           </Card>

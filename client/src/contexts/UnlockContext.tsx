@@ -6,6 +6,7 @@ import {
   initiatePlayBillingCheckout,
   checkPendingPurchases,
 } from "@/lib/play-billing";
+import { trackEvent } from "@/lib/analytics";
 
 const FREE_HOLES = 3;
 
@@ -65,6 +66,7 @@ export function UnlockProvider({ children }: { children: ReactNode }) {
           if (data.unlocked) {
             localStorage.setItem("pftc_unlocked", "true");
             setIsUnlocked(true);
+            trackEvent("purchase_completed", { checkout_type: "stripe" });
           }
         })
         .catch((err) => {
@@ -102,6 +104,7 @@ export function UnlockProvider({ children }: { children: ReactNode }) {
 
   const initiateStripeCheckout = useCallback(async () => {
     setPurchaseError(null);
+    trackEvent("purchase_initiated", { checkout_type: "stripe" });
     try {
       const res = await apiRequest("POST", "/api/create-checkout-session");
       const data = await res.json();
@@ -120,6 +123,7 @@ export function UnlockProvider({ children }: { children: ReactNode }) {
 
     // TWA path: Google Play Billing via Digital Goods API
     if (isRunningInTwa() && !playBillingUnavailable) {
+      trackEvent("purchase_initiated", { checkout_type: "play" });
       try {
         setIsCheckingUnlock(true);
         const result = await initiatePlayBillingCheckout();
@@ -131,6 +135,7 @@ export function UnlockProvider({ children }: { children: ReactNode }) {
         if (verified) {
           localStorage.setItem("pftc_unlocked", "true");
           setIsUnlocked(true);
+          trackEvent("purchase_completed", { checkout_type: "play" });
         } else {
           setPurchaseError("Purchase could not be verified. Please try again or contact support.");
         }
