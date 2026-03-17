@@ -1,73 +1,52 @@
-import posthog from "posthog-js";
-
 export const ANALYTICS_OPT_OUT_KEY = "pftc_analytics_opt_out";
+const SESSION_KEY = "pftc_session_id";
 
-let initialized = false;
-let resolvedKey: string | null = null;
-
-async function resolveKey(): Promise<{ key: string; host: string } | null> {
-  const envKey = import.meta.env.VITE_POSTHOG_KEY as string | undefined;
-  if (envKey) {
-    const envHost =
-      (import.meta.env.VITE_POSTHOG_HOST as string | undefined) ||
-      "https://us.i.posthog.com";
-    return { key: envKey, host: envHost };
-  }
+function getSessionId(): string {
   try {
-    const res = await fetch("/api/config");
-    const data = await res.json();
-    if (data.posthogKey) {
-      return { key: data.posthogKey, host: data.posthogHost || "https://us.i.posthog.com" };
-    }
-  } catch {}
-  return null;
+    const existing = sessionStorage.getItem(SESSION_KEY);
+    if (existing) return existing;
+    const id = Math.random().toString(36).slice(2) + Date.now().toString(36);
+    sessionStorage.setItem(SESSION_KEY, id);
+    return id;
+  } catch {
+    return "anonymous";
+  }
 }
 
-export async function initAnalytics(): Promise<void> {
-  if (initialized) return;
-  if (localStorage.getItem(ANALYTICS_OPT_OUT_KEY) === "true") return;
-
-  const config = await resolveKey();
-  if (!config) return;
-
-  resolvedKey = config.key;
-  posthog.init(config.key, {
-    api_host: config.host,
-    autocapture: false,
-    capture_pageview: false,
-    capture_pageleave: false,
-    disable_session_recording: true,
-    persistence: "memory",
-    ip: false,
-  });
-  initialized = true;
+export function initAnalytics(): void {
 }
 
 export function trackEvent(
   name: string,
   props?: Record<string, unknown>
 ): void {
-  if (!initialized || !resolvedKey) return;
-  if (localStorage.getItem(ANALYTICS_OPT_OUT_KEY) === "true") return;
   try {
-    posthog.capture(name, props);
+    if (localStorage.getItem(ANALYTICS_OPT_OUT_KEY) === "true") return;
   } catch {}
+
+  const sessionId = getSessionId();
+
+  fetch("/api/analytics/capture", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ event: name, properties: props, sessionId }),
+  }).catch(() => {});
 }
 
 export function setAnalyticsOptOut(optOut: boolean): void {
-  if (optOut) {
-    localStorage.setItem(ANALYTICS_OPT_OUT_KEY, "true");
-    try {
-      posthog.opt_out_capturing();
-    } catch {}
-  } else {
-    localStorage.removeItem(ANALYTICS_OPT_OUT_KEY);
-    try {
-      posthog.opt_in_capturing();
-    } catch {}
-  }
+  try {
+    if (optOut) {
+      localStorage.setItem(ANALYTICS_OPT_OUT_KEY, "true");
+    } else {
+      localStorage.removeItem(ANALYTICS_OPT_OUT_KEY);
+    }
+  } catch {}
 }
 
 export function getAnalyticsOptOut(): boolean {
-  return localStorage.getItem(ANALYTICS_OPT_OUT_KEY) === "true";
+  try {
+    return localStorage.getItem(ANALYTICS_OPT_OUT_KEY) === "true";
+  } catch {
+    return false;
+  }
 }

@@ -59,12 +59,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     stripe = new Stripe(stripeSecretKey);
   }
 
-  // Public client configuration — only exposes non-sensitive, client-intended values.
-  app.get("/api/config", (_req, res) => {
-    res.json({
-      posthogKey: process.env.VITE_POSTHOG_KEY || null,
-      posthogHost: process.env.VITE_POSTHOG_HOST || "https://us.i.posthog.com",
-    });
+  // Server-side analytics proxy — forwards anonymous events to PostHog.
+  // Routing through our server avoids ad-blocker interference and keeps
+  // the API key server-side only.
+  const analyticsLimiter = rateLimit({
+    windowMs: 60 * 1000,
+    max: 60,
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
+
+  const ALLOWED_EVENTS = new Set([
+    "app_opened", "game_started", "game_completed",
+    "paywall_encountered", "purchase_initiated", "purchase_completed",
+    "tool_opened", "tutorial_viewed",
+  ]);
+
+  app.post("/api/analytics/capture", analyticsLimiter, async (req, res) => {
+    const posthogKey = process.env.VITE_POSTHOG_KEY;
+    if (!posthogKey) { res.json({ ok: false, reason: "no_key" }); return; }
+
+    const { event, properties, sessionId } = req.body ?? {};
+    if (!event || typeof event !== "string" || !ALLOWED_EVENTS.has(event)) {
+      res.json({ ok: false, reason: "invalid_event" }); return;
+    }
+
+    try {
+      await fetch("https://us.i.posthog.com/capture/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          api_key: posthogKey,
+          event,
+          distinct_id: typeof sessionId === "string" && sessionId.length < 64
+            ? sessionId
+            : "anonymous",
+          properties: {
+            ...(typeof properties === "object" && properties !== null ? properties : {}),
+            $ip: "0",
+          },
+        }),
+      });
+      res.json({ ok: true });
+    } catch (err) {
+      console.error("[analytics proxy]", err);
+      res.json({ ok: false, reason: "upstream_error" });
+    }
   });
 
   // Explicit route for Digital Asset Links (required for TWA / Play Store association).

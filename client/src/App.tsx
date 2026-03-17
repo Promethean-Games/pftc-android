@@ -51,11 +51,10 @@ function GameApp() {
   const [showPrivacy, setShowPrivacy] = useState(false);
 
   useEffect(() => {
-    initAnalytics().then(() => {
-      trackEvent("app_opened", {
-        platform: isRunningInTwa() ? "android" : "web",
-        version: APP_VERSION,
-      });
+    initAnalytics();
+    trackEvent("app_opened", {
+      platform: isRunningInTwa() ? "android" : "web",
+      version: APP_VERSION,
     });
   }, []);
 
