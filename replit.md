@@ -77,11 +77,13 @@ When running inside a Trusted Web Activity on Android, the Digital Goods API is 
 - **Standalone**: Same analytics (except line chart) rendered in standalone HTML
 
 ### Anonymous Usage Analytics (PostHog)
-- **Library**: `posthog-js` (npm package)
-- **Utility**: `client/src/lib/analytics.ts` — thin wrapper around PostHog
-  - `initAnalytics()` — called once at app boot in `App.tsx`; no-ops silently if `VITE_POSTHOG_KEY` is not set
-  - `trackEvent(name, props?)` — fire a named event (no-ops if key absent or user opted out)
+- **Architecture**: Server-side proxy — no PostHog SDK in the browser. Events flow: `client fetch → POST /api/analytics/capture → PostHog REST API`. The PostHog API key stays server-side only; ad-blockers cannot interfere.
+- **Utility**: `client/src/lib/analytics.ts` — plain fetch wrapper
+  - `initAnalytics()` — no-op (kept for call-site compatibility)
+  - `trackEvent(name, props?)` — POSTs to `/api/analytics/capture`; silently skipped if user opted out
   - `setAnalyticsOptOut(bool)` / `getAnalyticsOptOut()` — opt-out stored in `localStorage["pftc_analytics_opt_out"]`
+- **Session ID**: Random ID generated per browser session (`sessionStorage["pftc_session_id"]`); never persistent
+- **Server endpoint**: `POST /api/analytics/capture` in `server/routes.ts` — validates event name against an allowlist, rate-limited (60 req/min), forwards to `https://us.i.posthog.com/capture/`
 - **Events tracked**:
   - `app_opened` — platform (`web`/`android`), app version
   - `game_started` — player_count, mode (`demo`/`full`)
@@ -91,10 +93,10 @@ When running inside a Trusted Web Activity on Android, the Digital Goods API is 
   - `purchase_completed` — checkout_type (`stripe`/`play`)
   - `tool_opened` — tool_name (`cuemaster_tools`/`coin_flip`/`cueing_emulator`/`table_leveler`)
   - `tutorial_viewed` — fired when user opens How to Play
-- **Privacy**: cookie-free (`persistence: "memory"`), IP not captured, no PII ever sent
+- **Privacy**: no cookies, no IP forwarded, no PII, no third-party JS in browser
 - **Opt-out**: "Help Improve the App" toggle in Settings → Display card; respects preference immediately
-- **Configuration**: Set env vars `VITE_POSTHOG_KEY` and optionally `VITE_POSTHOG_HOST` to activate; analytics silently disabled without them
-- **Policy**: Privacy Policy Section 6 updated (Mar 17, 2026) to disclose PostHog usage; Section 7 updated to list analytics opt-out pref in local storage items
+- **Configuration**: Set `VITE_POSTHOG_KEY` Replit secret to activate; analytics silently disabled without it
+- **Policy**: Privacy Policy Section 6 updated (Mar 17, 2026) to disclose PostHog usage; opt-out key listed in Section 7
 
 ### GitHub Pages Standalone (`index.html`)
 - **Root-level `index.html`**: Complete self-contained standalone game file at the project root for GitHub Pages / static hosting deployment

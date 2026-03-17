@@ -97,8 +97,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           properties: typeof properties === "object" && properties !== null ? properties : {},
         }),
       });
-      const phBody = await phRes.text();
-      console.log(`[analytics proxy] ${event} → PostHog ${phRes.status}: ${phBody}`);
+      if (!phRes.ok) {
+        const phBody = await phRes.text();
+        console.error(`[analytics proxy] PostHog ${phRes.status}: ${phBody}`);
+      }
       res.json({ ok: phRes.ok });
     } catch (err) {
       console.error("[analytics proxy] fetch error:", err);
