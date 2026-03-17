@@ -1,20 +1,38 @@
 import posthog from "posthog-js";
 
-const KEY = import.meta.env.VITE_POSTHOG_KEY as string | undefined;
-const HOST =
-  (import.meta.env.VITE_POSTHOG_HOST as string | undefined) ||
-  "https://us.i.posthog.com";
-
 export const ANALYTICS_OPT_OUT_KEY = "pftc_analytics_opt_out";
 
 let initialized = false;
+let resolvedKey: string | null = null;
 
-export function initAnalytics(): void {
-  if (!KEY || initialized) return;
+async function resolveKey(): Promise<{ key: string; host: string } | null> {
+  const envKey = import.meta.env.VITE_POSTHOG_KEY as string | undefined;
+  if (envKey) {
+    const envHost =
+      (import.meta.env.VITE_POSTHOG_HOST as string | undefined) ||
+      "https://us.i.posthog.com";
+    return { key: envKey, host: envHost };
+  }
+  try {
+    const res = await fetch("/api/config");
+    const data = await res.json();
+    if (data.posthogKey) {
+      return { key: data.posthogKey, host: data.posthogHost || "https://us.i.posthog.com" };
+    }
+  } catch {}
+  return null;
+}
+
+export async function initAnalytics(): Promise<void> {
+  if (initialized) return;
   if (localStorage.getItem(ANALYTICS_OPT_OUT_KEY) === "true") return;
 
-  posthog.init(KEY, {
-    api_host: HOST,
+  const config = await resolveKey();
+  if (!config) return;
+
+  resolvedKey = config.key;
+  posthog.init(config.key, {
+    api_host: config.host,
     autocapture: false,
     capture_pageview: false,
     capture_pageleave: false,
@@ -29,7 +47,7 @@ export function trackEvent(
   name: string,
   props?: Record<string, unknown>
 ): void {
-  if (!KEY || !initialized) return;
+  if (!initialized || !resolvedKey) return;
   if (localStorage.getItem(ANALYTICS_OPT_OUT_KEY) === "true") return;
   try {
     posthog.capture(name, props);
@@ -47,9 +65,6 @@ export function setAnalyticsOptOut(optOut: boolean): void {
     try {
       posthog.opt_in_capturing();
     } catch {}
-    if (KEY && !initialized) {
-      initAnalytics();
-    }
   }
 }
 

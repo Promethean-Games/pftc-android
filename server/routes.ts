@@ -59,6 +59,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     stripe = new Stripe(stripeSecretKey);
   }
 
+  // Public client configuration — only exposes non-sensitive, client-intended values.
+  app.get("/api/config", (_req, res) => {
+    res.json({
+      posthogKey: process.env.VITE_POSTHOG_KEY || null,
+      posthogHost: process.env.VITE_POSTHOG_HOST || "https://us.i.posthog.com",
+    });
+  });
+
   // Explicit route for Digital Asset Links (required for TWA / Play Store association).
   // google-auth-library (direct REST) is used instead of the googleapis package for
   // simplicity — it avoids the heavier googleapis dependency while achieving the same result.
