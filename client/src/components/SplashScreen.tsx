@@ -8,6 +8,7 @@ import { CueingEmulator } from "./CueingEmulator";
 import { CoinFlip } from "./CoinFlip";
 import { CueMasterTools } from "./CueMasterTools";
 import { PrivacyPolicy } from "./PrivacyPolicy";
+import { PlaytestBanner } from "./PlaytestBanner"; // PLAYTESTING_MODE — revert: remove this import and usage
 import { useUnlock } from "@/contexts/UnlockContext";
 import { trackEvent } from "@/lib/analytics";
 
@@ -118,10 +119,11 @@ export function SplashScreen({ onNewGame, onLoadGame }: SplashScreenProps) {
           <BookOpen className="w-5 h-5 mr-2" />
           How to Play
         </Button>
+        {/* PLAYTESTING_MODE — revert: restore variant="ghost" className="w-full text-sm h-10 text-muted-foreground" */}
         <Button
           size="lg"
           variant="ghost"
-          className="w-full text-sm h-10 text-muted-foreground"
+          className="w-full text-sm h-10 font-semibold text-green-700 dark:text-green-400 bg-green-100 dark:bg-green-900/30"
           onClick={() => window.open("https://forms.gle/TgT8YWzdbk7gvJXq6", "_blank")}
           data-testid="button-feedback"
         >
@@ -167,6 +169,8 @@ export function SplashScreen({ onNewGame, onLoadGame }: SplashScreenProps) {
       {showPrivacy && (
         <PrivacyPolicy onClose={() => setShowPrivacy(false)} />
       )}
+      {/* PLAYTESTING_MODE — revert: remove this line */}
+      <PlaytestBanner />
     </div>
   );
 }

@@ -7,6 +7,7 @@ import {
   checkPendingPurchases,
 } from "@/lib/play-billing";
 import { trackEvent } from "@/lib/analytics";
+import { PLAYTESTING_MODE } from "@/lib/constants";
 
 const FREE_HOLES = 3;
 
@@ -45,6 +46,7 @@ async function verifyPlayPurchase(purchaseToken: string, productId: string): Pro
 
 export function UnlockProvider({ children }: { children: ReactNode }) {
   const [isUnlocked, setIsUnlocked] = useState(() => {
+    if (PLAYTESTING_MODE) return true; // PLAYTESTING_MODE — revert: remove this line
     return localStorage.getItem("pftc_unlocked") === "true";
   });
   const [isCheckingUnlock, setIsCheckingUnlock] = useState(false);

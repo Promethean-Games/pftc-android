@@ -4,6 +4,18 @@
 
 Par for the Course is a mobile-first billiards training card game designed for active gameplay. The app supports local multiplayer scoring with game save/load functionality. It uses a physical card deck system (16 course cards + 2 jokers) with 3D flip animation. A Stripe paywall gates cards 4-18 (first 3 cards are free). Built with a React frontend and Express backend, all game data is stored in browser localStorage — no database required. A standalone single HTML file version is maintained for GitHub Pages deployment.
 
+## Playtesting Mode (ACTIVE — revert before launch)
+
+The app is currently in **playtesting mode**. All 18 holes are unlocked for testers at no cost, the Buy Now button is hidden, a first-load-per-day welcome banner is shown, and the Send Feedback button is styled green.
+
+### To revert to paid access:
+1. `client/src/lib/constants.ts` — set `PLAYTESTING_MODE = false` (or delete the constant)
+2. `client/src/contexts/UnlockContext.tsx` — remove the `if (PLAYTESTING_MODE) return true;` line
+3. `client/src/components/SplashScreen.tsx` — remove `PlaytestBanner` import + `<PlaytestBanner />` usage; restore feedback button to `variant="ghost" className="w-full text-sm h-10 text-muted-foreground"`
+4. Delete `client/src/components/PlaytestBanner.tsx`
+
+All PLAYTESTING_MODE touch-points are marked with `// PLAYTESTING_MODE` comments for easy search.
+
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.

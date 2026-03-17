@@ -19,3 +19,12 @@ export const LOGO_URL = "/splash-logo.png";
 
 export const APP_VERSION = "v3.1.4.0";
 
+// ─── PLAYTESTING_MODE ────────────────────────────────────────────────────────
+// Set to false (or remove entirely) when playtesting ends to restore paid access.
+// Also revert:
+//   • UnlockContext.tsx  — remove the PLAYTESTING_MODE early-return in useState
+//   • SplashScreen.tsx   — remove PlaytestBanner import/render; revert feedback button
+//   • Delete client/src/components/PlaytestBanner.tsx
+// ─────────────────────────────────────────────────────────────────────────────
+export const PLAYTESTING_MODE = true;
+
