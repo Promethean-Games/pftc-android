@@ -106,9 +106,9 @@ const COURSE_PRESETS: CoursePreset[] = [
     { type: "solid", x: 98, y: 48 },
   ]},
   { id: "4-04", label: "4-04", par: 4, balls: [
-    { type: "stripe", x: 37.5, y: 37.5 },
-    { type: "stripe", x: 50, y: 25 },
-    { type: "stripe", x: 75, y: 12.5 },
+    { type: "stripe", x: 50, y: 12.5 },
+    { type: "stripe", x: 62.5, y: 25 },
+    { type: "stripe", x: 75, y: 37.5 },
     { type: "solid", x: 75, y: 25 },
   ]},
   { id: "4-05", label: "4-05", par: 4, balls: [
