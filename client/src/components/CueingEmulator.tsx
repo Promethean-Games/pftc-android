@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { X, Plus, Trash2, Undo2, Crosshair, Grid3x3, Move, Settings, Lock, RefreshCw } from "lucide-react";
+import { X, Plus, Trash2, Undo2, Crosshair, Grid3x3, Move, Settings, RefreshCw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
@@ -58,27 +58,28 @@ const COURSE_PRESETS: CoursePreset[] = [
     { type: "stripe", x: 87.5, y: 12.5 },
   ]},
   { id: "2-03", label: "2-03", par: 2, balls: [
-    { type: "stripe", x: 87.5, y: 37.5 },
-    { type: "stripe", x: 62.5, y: 12.5 },
+    { type: "stripe", x: 2, y: 37.5 },
+    { type: "stripe", x: 37.5, y: 2 },
   ]},
   { id: "3-01", label: "3-01", par: 3, balls: [
     { type: "stripe", x: 62.5, y: 25 },
-    { type: "stripe", x: 75, y: 12.5 },
-    { type: "solid", x: 87.5, y: 12.5 },
+    { type: "stripe", x: 75, y: 25 },
+    { type: "solid", x: 98, y: 2 },
   ]},
   { id: "3-02", label: "3-02", par: 3, balls: [
     { type: "stripe", x: 25, y: 25 },
-    { type: "solid", x: 50, y: 25 },
+    { type: "solid", x: 62.5, y: 25 },
     { type: "stripe", x: 75, y: 25 },
   ]},
   { id: "3-03", label: "3-03", par: 3, balls: [
-    { type: "stripe", x: 50, y: 12.5 },
+    { type: "stripe", x: 50, y: 2 },
     { type: "solid", x: 50, y: 25 },
-    { type: "stripe", x: 50, y: 37.5 },
+    { type: "stripe", x: 50, y: 48 },
   ]},
   { id: "3-04", label: "3-04", par: 3, balls: [
     { type: "solid", x: 75, y: 25 },
-    { type: "stripe", x: 87.5, y: 2 },
+    { type: "stripe", x: 98, y: 2 },
+    { type: "stripe", x: 98, y: 48 },
   ]},
   { id: "4-01", label: "4-01", par: 4, balls: [
     { type: "stripe", x: 25, y: 25 },
@@ -95,7 +96,8 @@ const COURSE_PRESETS: CoursePreset[] = [
   { id: "4-03", label: "4-03", par: 4, balls: [
     { type: "stripe", x: 25, y: 25 },
     { type: "stripe", x: 62.5, y: 12.5 },
-    { type: "solid", x: 87.5, y: 37.5 },
+    { type: "solid", x: 98, y: 2 },
+    { type: "solid", x: 98, y: 48 },
   ]},
   { id: "4-04", label: "4-04", par: 4, balls: [
     { type: "stripe", x: 37.5, y: 37.5 },
@@ -714,6 +716,20 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
     setSelectedBallId(null);
   };
 
+  const loadPreset = (preset: CoursePreset) => {
+    const cuePos = findCueBallPosition(preset.balls);
+    const newBalls: Ball[] = [
+      createBall("cue", "cue", cuePos.x, cuePos.y),
+      ...preset.balls.map((pb) =>
+        createBall(generateId(), pb.type, pb.x, pb.y)
+      ),
+    ];
+    setBalls(newBalls);
+    setShotHistory([]);
+    setHasAimLine(false);
+    setSelectedBallId(null);
+  };
+
   const GRID_X = TABLE_DIMENSIONS.width / 8;
   const GRID_Y = TABLE_DIMENSIONS.height / 4;
   const SNAP_BUFFER_PX = 20;
@@ -1145,18 +1161,32 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
 
               <AccordionItem value="presets">
                 <AccordionTrigger className="text-sm py-2" data-testid="accordion-course-layouts">
-                  <span className="flex items-center gap-2">
-                    Course Layouts
-                    <Badge variant="secondary" className="text-xs no-default-active-elevate">
-                      <Lock className="w-2.5 h-2.5 mr-1" />
-                      Coming Soon
-                    </Badge>
-                  </span>
+                  Course Layouts
                 </AccordionTrigger>
                 <AccordionContent>
-                  <p className="text-xs text-muted-foreground pb-3 leading-relaxed" data-testid="text-courses-coming-soon">
-                    Preset course layouts — matching the card deck holes — are coming soon as a purchasable add-on.
-                  </p>
+                  <div className="pb-3 space-y-3" data-testid="course-layouts-content">
+                    {[2, 3, 4, 5, 6].map((par) => {
+                      const parPresets = COURSE_PRESETS.filter((p) => p.par === par);
+                      return (
+                        <div key={par}>
+                          <span className="text-xs text-muted-foreground block mb-1">Par {par}</span>
+                          <div className="flex flex-wrap gap-1">
+                            {parPresets.map((preset) => (
+                              <Button
+                                key={preset.id}
+                                size="sm"
+                                variant="outline"
+                                onClick={() => loadPreset(preset)}
+                                data-testid={`button-preset-${preset.id}`}
+                              >
+                                {preset.label}
+                              </Button>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </AccordionContent>
               </AccordionItem>
             </Accordion>
