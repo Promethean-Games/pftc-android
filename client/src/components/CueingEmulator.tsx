@@ -1370,6 +1370,19 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
           onNext={advanceTour}
           onBack={backTour}
           onDismiss={dismissTour}
+          cueBallCanvasPos={(() => {
+            const cueBall = balls.find((b) => b.type === "cue" && !b.pocketed);
+            const canvas = canvasRef.current;
+            if (!cueBall || !canvas || canvasSize.width === 0) return undefined;
+            const { scale, offsetX, offsetY } = getScale();
+            const dpr = window.devicePixelRatio || 1;
+            const rect = canvas.getBoundingClientRect();
+            return {
+              x: rect.left + (offsetX + cueBall.pos.x * scale) / dpr,
+              y: rect.top + (offsetY + cueBall.pos.y * scale) / dpr,
+              r: Math.max(12, (TABLE_DIMENSIONS.ballRadius * ballScale * scale) / dpr),
+            };
+          })()}
         />
       )}
     </div>

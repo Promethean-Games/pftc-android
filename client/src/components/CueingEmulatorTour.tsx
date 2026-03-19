@@ -10,8 +10,9 @@ interface StepDef {
   body: string;
   targetTestId: string | null;
   trigger: TourTrigger;
-  Icon: React.ComponentType<{ className?: string }>;
+  Icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
   ringColor: string;
+  circular?: boolean;
 }
 
 const STEPS: StepDef[] = [
@@ -50,6 +51,7 @@ const STEPS: StepDef[] = [
     trigger: "aim_set",
     Icon: Crosshair,
     ringColor: "#22c55e",
+    circular: true,
   },
   {
     id: "english",
@@ -59,11 +61,12 @@ const STEPS: StepDef[] = [
     trigger: "next",
     Icon: CircleDot,
     ringColor: "#ec4899",
+    circular: true,
   },
   {
     id: "speed",
     title: "Shot Speed",
-    body: "Drag to set power. Snaps to whole numbers; ¼-step fine-tuning available.",
+    body: "Drag to set power. Snaps to whole numbers; \u00bc-step fine-tuning available.",
     targetTestId: "slider-speed",
     trigger: "next",
     Icon: Zap,
@@ -81,7 +84,7 @@ const STEPS: StepDef[] = [
   {
     id: "done",
     title: "You're all set!",
-    body: "Gear icon → course layouts & table physics. Undo/Reset appear after your first shot.",
+    body: "Gear icon \u2192 course layouts & table physics. Undo/Reset appear after your first shot.",
     targetTestId: null,
     trigger: "done",
     Icon: CheckCircle,
@@ -96,6 +99,7 @@ interface RingBox {
   height: number;
   centerX: number;
   centerY: number;
+  circular?: boolean;
 }
 
 interface TooltipPos {
@@ -104,7 +108,7 @@ interface TooltipPos {
 }
 
 const TOOLTIP_W = 252;
-const TOOLTIP_OFFSET = 12; // gap between ring edge and tooltip
+const TOOLTIP_OFFSET = 14;
 
 function computeTooltipPos(ring: RingBox | null): TooltipPos {
   const vw = window.innerWidth;
@@ -119,14 +123,14 @@ function computeTooltipPos(ring: RingBox | null): TooltipPos {
 
   let top: number;
   if (spaceBelow >= 120 || spaceBelow >= spaceAbove) {
-    // Place below
     top = ring.top + ring.height + TOOLTIP_OFFSET;
   } else {
-    // Place above (anchor bottom of tooltip to ring top)
-    top = ring.top - TOOLTIP_OFFSET - 140; // approx tooltip height
+    top = ring.top - TOOLTIP_OFFSET - 148;
   }
 
-  // Horizontal: center on target, clamped to viewport with 8px margin
+  // Clamp so tooltip never goes off-screen
+  top = Math.max(8, Math.min(vh - 160, top));
+
   const idealLeft = ring.centerX - TOOLTIP_W / 2;
   const left = Math.max(8, Math.min(vw - TOOLTIP_W - 8, idealLeft));
 
@@ -144,12 +148,15 @@ interface CueingEmulatorTourProps {
   onNext: () => void;
   onBack: () => void;
   onDismiss: () => void;
+  /** Viewport-coordinate position of the cue ball — used for the aim step spotlight */
+  cueBallCanvasPos?: { x: number; y: number; r: number };
 }
 
 export function CueingEmulatorTour({
   currentStepIndex,
   onNext,
   onDismiss,
+  cueBallCanvasPos,
 }: CueingEmulatorTourProps) {
   const [ringBox, setRingBox] = useState<RingBox | null>(null);
   const [tooltipPos, setTooltipPos] = useState<TooltipPos>({ top: 0, left: 0 });
@@ -159,11 +166,32 @@ export function CueingEmulatorTour({
   const isActionStep = step?.trigger !== "next" && step?.trigger !== "done";
 
   const update = useCallback(() => {
-    if (!step?.targetTestId) {
+    if (!step) return;
+
+    // Aim step: target the cue ball circle directly
+    if (step.id === "aim" && cueBallCanvasPos) {
+      const pad = 10;
+      const { x, y, r } = cueBallCanvasPos;
+      const box: RingBox = {
+        top: y - r - pad,
+        left: x - r - pad,
+        width: (r + pad) * 2,
+        height: (r + pad) * 2,
+        centerX: x,
+        centerY: y,
+        circular: true,
+      };
+      setRingBox(box);
+      setTooltipPos(computeTooltipPos(box));
+      return;
+    }
+
+    if (!step.targetTestId) {
       setRingBox(null);
       setTooltipPos(computeTooltipPos(null));
       return;
     }
+
     const el = document.querySelector(`[data-testid="${step.targetTestId}"]`);
     if (!el) {
       setRingBox(null);
@@ -171,7 +199,7 @@ export function CueingEmulatorTour({
       return;
     }
     const rect = el.getBoundingClientRect();
-    const pad = step.targetTestId === "canvas-container" ? 0 : 6;
+    const pad = 6;
     const box: RingBox = {
       top: rect.top - pad,
       left: rect.left - pad,
@@ -179,10 +207,11 @@ export function CueingEmulatorTour({
       height: rect.height + pad * 2,
       centerX: rect.left + rect.width / 2,
       centerY: rect.top + rect.height / 2,
+      circular: step.circular,
     };
     setRingBox(box);
     setTooltipPos(computeTooltipPos(box));
-  }, [step]);
+  }, [step, cueBallCanvasPos]);
 
   useLayoutEffect(() => { update(); }, [update]);
   useEffect(() => {
@@ -193,30 +222,34 @@ export function CueingEmulatorTour({
   if (!step) return null;
 
   const { Icon, ringColor, title, body } = step;
+  const borderRadius = ringBox?.circular ? "50%" : "8px";
 
   return (
     <>
-      {/* Non-blocking dark overlay */}
-      <div
-        className="fixed inset-0 z-40 bg-black/50"
-        style={{ pointerEvents: "none" }}
-        data-testid="tour-overlay"
-      />
-
-      {/* Pulsing highlight ring */}
-      {ringBox && (
+      {/* Overlay strategy:
+          - WITH a target: the ring element itself casts a 9999px box-shadow that acts
+            as the dark overlay, leaving the target area fully visible (spotlight effect).
+          - WITHOUT a target: a simple full-screen dim overlay. */}
+      {ringBox ? (
         <div
-          className="fixed z-50 rounded-lg tour-ring"
+          className="fixed z-40 tour-ring"
           style={{
             top: ringBox.top,
             left: ringBox.left,
             width: ringBox.width,
             height: ringBox.height,
+            borderRadius,
             border: `2px solid ${ringColor}`,
-            boxShadow: `0 0 0 3px ${ringColor}33, 0 0 18px ${ringColor}55`,
+            boxShadow: `0 0 0 9999px rgba(0,0,0,0.6), 0 0 0 4px ${ringColor}44, 0 0 20px ${ringColor}66`,
             pointerEvents: "none",
           }}
           data-testid="tour-highlight-ring"
+        />
+      ) : (
+        <div
+          className="fixed inset-0 z-40 bg-black/60"
+          style={{ pointerEvents: "none" }}
+          data-testid="tour-overlay"
         />
       )}
 
