@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { X, Plus, Trash2, Undo2, Crosshair, Grid3x3, Move, Settings, RefreshCw } from "lucide-react";
+import { X, Plus, Trash2, Undo2, Crosshair, Grid3x3, Move, Settings, RefreshCw, BookOpen } from "lucide-react";
+import { CueingEmulatorTutorial } from "./CueingEmulatorTutorial";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import {
@@ -201,6 +202,17 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
   const [moveCueBall, setMoveCueBall] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [cueBallMoved, setCueBallMoved] = useState(false);
+  const [showTutorial, setShowTutorial] = useState(false);
+
+  useEffect(() => {
+    const seen = localStorage.getItem("pftc_emulator_tutorial_seen");
+    if (!seen) setShowTutorial(true);
+  }, []);
+
+  const handleCloseTutorial = () => {
+    localStorage.setItem("pftc_emulator_tutorial_seen", "1");
+    setShowTutorial(false);
+  };
 
   const [tableConfig, setTableConfig] = useState<TableConfig>({
     tableSpeed: "medium",
@@ -950,6 +962,16 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
             </Button>
           </div>
           <div className="p-3 space-y-5">
+            <Button
+              variant="outline"
+              className="w-full justify-start gap-2"
+              onClick={() => { setShowSettings(false); setShowTutorial(true); }}
+              data-testid="button-open-emulator-tutorial"
+            >
+              <BookOpen className="w-4 h-4" />
+              How to Use the Emulator
+            </Button>
+
             <div className="space-y-3">
               <span className="font-semibold text-sm">Table Physics</span>
 
@@ -1112,6 +1134,8 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
           </span>
         </div>
       )}
+
+      {showTutorial && <CueingEmulatorTutorial onClose={handleCloseTutorial} />}
     </div>
   );
 }
