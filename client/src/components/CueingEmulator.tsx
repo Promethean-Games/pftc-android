@@ -628,24 +628,34 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
     return { x: 0, y: 0 };
   };
 
-  const findBallAt = (cx: number, cy: number): Ball | null => {
+  const findBallAt = (cx: number, cy: number, touchTarget = false): Ball | null => {
     const tp = canvasToTable(cx, cy);
     const { scale } = getScale();
-    const hitRadius = TABLE_DIMENSIONS.ballRadius + 4 / scale;
-    for (let i = balls.length - 1; i >= 0; i--) {
-      const b = balls[i];
+    // Touch targets need ~44px of hit area for comfortable finger use.
+    // extraPx is in canvas-pixel units; dividing by scale converts to table units.
+    const extraPx = touchTarget ? 18 : 4;
+    const hitRadius = TABLE_DIMENSIONS.ballRadius + extraPx / scale;
+    // Prefer the closest ball when multiple overlap within the hit zone
+    let closest: Ball | null = null;
+    let closestDist = Infinity;
+    for (const b of balls) {
       if (b.pocketed) continue;
       const dx = tp.x - b.pos.x;
       const dy = tp.y - b.pos.y;
-      if (Math.sqrt(dx * dx + dy * dy) < hitRadius) return b;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < hitRadius && dist < closestDist) {
+        closest = b;
+        closestDist = dist;
+      }
     }
-    return null;
+    return closest;
   };
 
   const handlePointerDown = (e: React.TouchEvent | React.MouseEvent) => {
     e.preventDefault();
     const pos = getEventPos(e);
-    const hitBall = findBallAt(pos.x, pos.y);
+    const isTouch = "touches" in e;
+    const hitBall = findBallAt(pos.x, pos.y, isTouch);
 
     if (hitBall) {
       if (hitBall.type === "cue" && !moveCueBall) {
