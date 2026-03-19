@@ -196,11 +196,6 @@ const TABLE_SIZE_PRESETS: Record<"7ft" | "8ft" | "9ft", { lengthIn: number; widt
   "9ft": { lengthIn: 100, widthIn: 50, ballScale: 1.0 },
 };
 
-function formatInches(inches: number): string {
-  const ft = Math.floor(inches / 12);
-  const ins = inches % 12;
-  return ins === 0 ? `${ft}'` : `${ft}' ${ins}"`;
-}
 
 const DIAL_ITEM_H = 36;
 const DIAL_VISIBLE = 5;
@@ -272,7 +267,7 @@ function ScrollDial({ values, value, onChange, label }: ScrollDialProps) {
                 style={{ height: DIAL_ITEM_H, scrollSnapAlign: "center" }}
                 className="flex items-center justify-center text-sm font-medium select-none"
               >
-                {formatInches(v)}
+                {v}"
               </div>
             ))}
           </div>
@@ -1175,7 +1170,7 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
 
               {tableSizeState.preset === "custom" && (
                 <div className="space-y-2">
-                  <span className="text-xs text-muted-foreground block">Playing Surface</span>
+                  <span className="text-xs text-muted-foreground block">Nose to nose (inches)</span>
                   <div className="flex gap-4 justify-center">
                     <ScrollDial
                       label="Length"
@@ -1195,7 +1190,7 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
                     />
                   </div>
                   <p className="text-xs text-muted-foreground text-center">
-                    {formatInches(tableSizeState.customLength)} &times; {formatInches(tableSizeState.customWidth)}
+                    {tableSizeState.customLength}" &times; {tableSizeState.customWidth}"
                   </p>
                 </div>
               )}
