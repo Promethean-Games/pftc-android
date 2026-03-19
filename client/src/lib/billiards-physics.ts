@@ -85,7 +85,7 @@ const THROW_FACTOR: Record<string, number> = {
 
 const SQUIRT_COEFFICIENT = 0.005;
 const SWERVE_COEFFICIENT = 0.00015;
-const SPEED_SCALE = 10;
+const SPEED_SCALE = 9;
 const DT = 0.002;
 const MAX_STEPS = 30000;
 const VELOCITY_THRESHOLD = 0.05;
