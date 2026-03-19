@@ -845,7 +845,7 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
             data-testid="button-move-cue"
           >
             <Move className="w-3 h-3 mr-1" />
-            Move Cue
+            Move Cue Ball
           </Button>
         </div>
         <div className="flex items-center gap-2">
