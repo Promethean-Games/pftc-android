@@ -728,9 +728,11 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
   const getEventPos = (
     e: React.TouchEvent | React.MouseEvent
   ): { x: number; y: number } => {
-    const canvas = canvasRef.current;
-    if (!canvas) return { x: 0, y: 0 };
-    const rect = canvas.getBoundingClientRect();
+    // Use containerRef (the same element canvasSize is measured from) so that
+    // the coordinate origin is consistent with canvasToTable / tableToCanvas.
+    const container = containerRef.current;
+    if (!container) return { x: 0, y: 0 };
+    const rect = container.getBoundingClientRect();
     const dpr = window.devicePixelRatio || 1;
     if ("touches" in e && e.touches.length > 0) {
       return {
@@ -1108,7 +1110,7 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
             ref={canvasRef}
             width={canvasSize.width}
             height={canvasSize.height}
-            style={{ width: "100%", height: "100%" }}
+            style={{ width: "100%", height: "100%", display: "block" }}
             onMouseDown={handlePointerDown}
             onMouseMove={handlePointerMove}
             onMouseUp={handlePointerUp}
