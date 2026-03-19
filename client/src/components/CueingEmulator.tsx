@@ -206,6 +206,7 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
   const [snapToGrid, setSnapToGrid] = useState(true);
   const [moveCueBall, setMoveCueBall] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [cueBallMoved, setCueBallMoved] = useState(false);
 
   const [tableConfig, setTableConfig] = useState<TableConfig>({
     tableSpeed: "medium",
@@ -657,6 +658,10 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
   };
 
   const handlePointerUp = () => {
+    if (dragRef.current) {
+      const dragged = balls.find((b) => b.id === dragRef.current!.ballId);
+      if (dragged?.type === "cue") setCueBallMoved(true);
+    }
     setIsAiming(false);
     aimStartRef.current = null;
     dragRef.current = null;
@@ -700,6 +705,7 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
     setBalls(result.finalBalls);
     setHasAimLine(false);
     setSelectedBallId(null);
+    setCueBallMoved(true);
   };
 
   const handleUndo = () => {
@@ -719,6 +725,7 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
     setShotHistory([]);
     setHasAimLine(false);
     setSelectedBallId(null);
+    setCueBallMoved(false);
   };
 
   const loadPreset = (preset: CoursePreset) => {
@@ -733,6 +740,7 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
     setShotHistory([]);
     setHasAimLine(false);
     setSelectedBallId(null);
+    setCueBallMoved(false);
   };
 
   const GRID_X = TABLE_DIMENSIONS.width / 8;
@@ -1196,14 +1204,16 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
           </div>
         </div>
       </div>
-      <div
-        className="border-t bg-muted/50 py-3 flex items-center justify-center"
-        data-testid="footer-ball-in-hand"
-      >
-        <span className="text-2xl font-bold tracking-widest uppercase text-muted-foreground select-none">
-          Ball in Hand
-        </span>
-      </div>
+      {!cueBallMoved && (
+        <div
+          className="border-t bg-muted/50 py-3 flex items-center justify-center"
+          data-testid="footer-ball-in-hand"
+        >
+          <span className="text-2xl font-bold tracking-widest uppercase text-muted-foreground select-none">
+            Ball in Hand
+          </span>
+        </div>
+      )}
     </div>
   );
 }
