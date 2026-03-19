@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { X, Plus, Trash2, Undo2, Crosshair, Grid3x3, Move, Settings, RefreshCw } from "lucide-react";
+import { X, Plus, Trash2, Undo2, Crosshair, Grid3x3, Move, Settings, Lock, RefreshCw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
@@ -1161,32 +1161,18 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
 
               <AccordionItem value="presets">
                 <AccordionTrigger className="text-sm py-2" data-testid="accordion-course-layouts">
-                  Course Layouts
+                  <span className="flex items-center gap-2">
+                    Course Layouts
+                    <Badge variant="secondary" className="text-xs no-default-active-elevate">
+                      <Lock className="w-2.5 h-2.5 mr-1" />
+                      Coming Soon
+                    </Badge>
+                  </span>
                 </AccordionTrigger>
                 <AccordionContent>
-                  <div className="pb-3 space-y-3" data-testid="course-layouts-content">
-                    {[2, 3, 4, 5, 6].map((par) => {
-                      const parPresets = COURSE_PRESETS.filter((p) => p.par === par);
-                      return (
-                        <div key={par}>
-                          <span className="text-xs text-muted-foreground block mb-1">Par {par}</span>
-                          <div className="flex flex-wrap gap-1">
-                            {parPresets.map((preset) => (
-                              <Button
-                                key={preset.id}
-                                size="sm"
-                                variant="outline"
-                                onClick={() => loadPreset(preset)}
-                                data-testid={`button-preset-${preset.id}`}
-                              >
-                                {preset.label}
-                              </Button>
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+                  <p className="text-xs text-muted-foreground pb-3 leading-relaxed" data-testid="text-courses-coming-soon">
+                    Preset course layouts — matching the card deck holes — are coming soon as a purchasable add-on.
+                  </p>
                 </AccordionContent>
               </AccordionItem>
             </Accordion>
