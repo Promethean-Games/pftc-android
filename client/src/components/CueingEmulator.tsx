@@ -172,6 +172,16 @@ function generateId(): string {
   return Math.random().toString(36).substring(2, 9);
 }
 
+function formatSpeed(v: number): string {
+  const whole = Math.floor(v);
+  const frac = Math.round((v - whole) * 4);
+  if (frac === 0) return `${whole}`;
+  if (frac === 1) return `${whole}¼`;
+  if (frac === 2) return `${whole}½`;
+  if (frac === 3) return `${whole}¾`;
+  return `${whole + 1}`;
+}
+
 export function CueingEmulator({ onClose }: CueingEmulatorProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -1087,12 +1097,14 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
 
         <div className="flex-1 space-y-2 min-w-0">
           <div className="flex items-center gap-2">
-            <span className="text-xs text-muted-foreground w-20 flex-shrink-0">Speed: {shotSpeed}</span>
+            <span className="text-xs text-muted-foreground w-20 flex-shrink-0">
+              Speed: {formatSpeed(shotSpeed)}
+            </span>
             <Slider
               value={[shotSpeed]}
               min={1}
               max={10}
-              step={1}
+              step={0.25}
               onValueChange={([v]) => setShotSpeed(v)}
               data-testid="slider-speed"
             />

@@ -71,7 +71,9 @@ const SECTIONS: Section[] = [
         body: (
           <>
             Set power with the <B>Speed slider</B> in the control strip at the bottom
-            before shooting. 1 is a gentle roll; 10 is a power break.
+            before shooting. 1 is a gentle roll; 10 is a power break. The slider
+            snaps to whole numbers but can be fine-tuned to <B>quarter increments</B> —
+            look for ¼, ½, and ¾ in the label.
           </>
         ),
       },
