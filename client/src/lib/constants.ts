@@ -17,7 +17,7 @@ export const MAX_HOLES = 18;
 
 export const LOGO_URL = "/splash-logo.png";
 
-export const APP_VERSION = "v3.1.4.0";
+export const APP_VERSION = "v3.1.4.1";
 
 // ─── PLAYTESTING_MODE ────────────────────────────────────────────────────────
 // Set to false (or remove entirely) when playtesting ends to restore paid access.
