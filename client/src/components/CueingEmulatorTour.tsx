@@ -28,7 +28,7 @@ const STEPS: StepDef[] = [
   {
     id: "add_ball",
     title: "Add a Ball",
-    body: "Tap Add Ball → Solid or Stripe to place a ball on the table.",
+    body: "Tap Add Ball \u2192 Solid or Stripe to place a ball on the table.",
     targetTestId: "button-add-ball",
     trigger: "ball_added",
     Icon: Plus,
@@ -128,7 +128,6 @@ function computeTooltipPos(ring: RingBox | null): TooltipPos {
     top = ring.top - TOOLTIP_OFFSET - 148;
   }
 
-  // Clamp so tooltip never goes off-screen
   top = Math.max(8, Math.min(vh - 160, top));
 
   const idealLeft = ring.centerX - TOOLTIP_W / 2;
@@ -148,7 +147,6 @@ interface CueingEmulatorTourProps {
   onNext: () => void;
   onBack: () => void;
   onDismiss: () => void;
-  /** Viewport-coordinate position of the cue ball — used for the aim step spotlight */
   cueBallCanvasPos?: { x: number; y: number; r: number };
 }
 
@@ -160,15 +158,18 @@ export function CueingEmulatorTour({
 }: CueingEmulatorTourProps) {
   const [ringBox, setRingBox] = useState<RingBox | null>(null);
   const [tooltipPos, setTooltipPos] = useState<TooltipPos>({ top: 0, left: 0 });
+  const [vp, setVp] = useState({ w: window.innerWidth, h: window.innerHeight });
 
   const step = STEPS[currentStepIndex];
   const isLast = currentStepIndex === STEPS.length - 1;
   const isActionStep = step?.trigger !== "next" && step?.trigger !== "done";
 
   const update = useCallback(() => {
+    setVp({ w: window.innerWidth, h: window.innerHeight });
+
     if (!step) return;
 
-    // Aim step: target the cue ball circle directly
+    // Aim step: spotlight the cue ball circle
     if (step.id === "aim" && cueBallCanvasPos) {
       const pad = 10;
       const { x, y, r } = cueBallCanvasPos;
@@ -222,36 +223,79 @@ export function CueingEmulatorTour({
   if (!step) return null;
 
   const { Icon, ringColor, title, body } = step;
-  const borderRadius = ringBox?.circular ? "50%" : "8px";
+
+  // SVG spotlight: full-screen rect masked with a hole at the target
+  const hasRing = ringBox !== null;
+  const rx = hasRing ? ringBox!.left : 0;
+  const ry = hasRing ? ringBox!.top : 0;
+  const rw = hasRing ? ringBox!.width : 0;
+  const rh = hasRing ? ringBox!.height : 0;
+  const cx = hasRing ? ringBox!.centerX : 0;
+  const cy = hasRing ? ringBox!.centerY : 0;
+  const isCircular = hasRing && ringBox!.circular;
 
   return (
     <>
-      {/* Overlay strategy:
-          - WITH a target: the ring element itself casts a 9999px box-shadow that acts
-            as the dark overlay, leaving the target area fully visible (spotlight effect).
-          - WITHOUT a target: a simple full-screen dim overlay. */}
-      {ringBox ? (
-        <div
-          className="fixed z-40 tour-ring"
-          style={{
-            top: ringBox.top,
-            left: ringBox.left,
-            width: ringBox.width,
-            height: ringBox.height,
-            borderRadius,
-            border: `2px solid ${ringColor}`,
-            boxShadow: `0 0 0 9999px rgba(0,0,0,0.6), 0 0 0 4px ${ringColor}44, 0 0 20px ${ringColor}66`,
-            pointerEvents: "none",
-          }}
-          data-testid="tour-highlight-ring"
+      {/* SVG overlay with spotlight cutout */}
+      <svg
+        className="fixed inset-0 pointer-events-none"
+        style={{ zIndex: 40, width: "100vw", height: "100vh", display: "block" }}
+        data-testid="tour-overlay"
+      >
+        <defs>
+          <filter id="tour-glow" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur in="SourceGraphic" stdDeviation="4" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+          {hasRing && (
+            <mask id="tour-spotlight-mask">
+              <rect width={vp.w} height={vp.h} fill="white" />
+              {isCircular ? (
+                <ellipse cx={cx} cy={cy} rx={rw / 2} ry={rh / 2} fill="black" />
+              ) : (
+                <rect x={rx} y={ry} width={rw} height={rh} rx="8" fill="black" />
+              )}
+            </mask>
+          )}
+        </defs>
+
+        {/* Dark overlay — full-screen if no ring, spotlight-cut if ring present */}
+        <rect
+          width={vp.w}
+          height={vp.h}
+          fill="rgba(0,0,0,0.62)"
+          mask={hasRing ? "url(#tour-spotlight-mask)" : undefined}
         />
-      ) : (
-        <div
-          className="fixed inset-0 z-40 bg-black/60"
-          style={{ pointerEvents: "none" }}
-          data-testid="tour-overlay"
-        />
-      )}
+
+        {/* Glowing ring border around the target */}
+        {hasRing && (
+          isCircular ? (
+            <ellipse
+              cx={cx} cy={cy}
+              rx={rw / 2} ry={rh / 2}
+              fill="none"
+              stroke={ringColor}
+              strokeWidth="2.5"
+              filter="url(#tour-glow)"
+              data-testid="tour-highlight-ring"
+            />
+          ) : (
+            <rect
+              x={rx} y={ry}
+              width={rw} height={rh}
+              rx="8"
+              fill="none"
+              stroke={ringColor}
+              strokeWidth="2.5"
+              filter="url(#tour-glow)"
+              data-testid="tour-highlight-ring"
+            />
+          )
+        )}
+      </svg>
 
       {/* Floating tooltip card */}
       <div
@@ -264,7 +308,6 @@ export function CueingEmulatorTour({
         }}
         data-testid="tour-card"
       >
-        {/* Progress dots + dismiss */}
         <div className="flex items-center justify-between px-3 pt-2.5">
           <div className="flex gap-1">
             {STEPS.map((_, i) => (
@@ -291,16 +334,11 @@ export function CueingEmulatorTour({
         </div>
 
         <div className="px-3 pt-2 pb-3">
-          {/* Title row */}
           <div className="flex items-center gap-1.5 mb-1.5">
             <Icon className="w-3.5 h-3.5 shrink-0" style={{ color: ringColor }} />
             <span className="font-semibold text-sm leading-tight">{title}</span>
           </div>
-
-          {/* Body */}
           <p className="text-xs text-muted-foreground leading-relaxed mb-2.5">{body}</p>
-
-          {/* Nav */}
           <div className="flex items-center justify-between">
             <span className="text-xs text-muted-foreground/60 tabular-nums">
               {currentStepIndex + 1}/{STEPS.length}
