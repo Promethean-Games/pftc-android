@@ -1372,11 +1372,13 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
           onDismiss={dismissTour}
           cueBallCanvasPos={(() => {
             const cueBall = balls.find((b) => b.type === "cue" && !b.pocketed);
-            const canvas = canvasRef.current;
-            if (!cueBall || !canvas || canvasSize.width === 0) return undefined;
-            const { scale, offsetX, offsetY } = getScale();
+            const container = containerRef.current;
+            if (!cueBall || !container || canvasSize.width === 0) return undefined;
+            // Use containerRef (same element canvasSize was measured from) so
+            // rect.top matches the coordinate origin used by getScale/tableToCanvas.
+            const rect = container.getBoundingClientRect();
             const dpr = window.devicePixelRatio || 1;
-            const rect = canvas.getBoundingClientRect();
+            const { scale, offsetX, offsetY } = getScale();
             return {
               x: rect.left + (offsetX + cueBall.pos.x * scale) / dpr,
               y: rect.top + (offsetY + cueBall.pos.y * scale) / dpr,
