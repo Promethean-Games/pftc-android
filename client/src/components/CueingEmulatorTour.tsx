@@ -46,7 +46,7 @@ const STEPS: StepDef[] = [
     id: "aim",
     title: "Aim",
     body: "Press and drag outward from the cue ball to set your shot direction.",
-    targetTestId: "canvas-container",
+    targetTestId: null,
     trigger: "aim_set",
     Icon: Crosshair,
     ringColor: "#22c55e",
