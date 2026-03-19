@@ -3,12 +3,6 @@ import { X, Plus, Trash2, Undo2, Crosshair, Grid3x3, Move, Settings, RefreshCw }
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -955,255 +949,159 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
               <X className="w-4 h-4" />
             </Button>
           </div>
-          <div className="p-3">
-            <Accordion type="multiple" defaultValue={["speed", "english"]}>
-              <AccordionItem value="speed">
-                <AccordionTrigger className="text-sm py-2">
-                  Shot Speed: {shotSpeed}
-                </AccordionTrigger>
-                <AccordionContent>
-                  <div className="pb-3">
-                    <div className="flex justify-between text-xs text-muted-foreground mb-1">
-                      <span>Soft</span>
-                      <span>Power</span>
-                    </div>
-                    <Slider
-                      value={[shotSpeed]}
-                      min={1}
-                      max={10}
-                      step={1}
-                      onValueChange={([v]) => setShotSpeed(v)}
-                      data-testid="slider-speed"
-                    />
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
+          <div className="p-3 space-y-5">
+            <div className="space-y-3">
+              <span className="font-semibold text-sm">Table Physics</span>
 
-              <AccordionItem value="angle">
-                <AccordionTrigger className="text-sm py-2">
-                  Fine-Tune Angle: {angleFine > 0 ? "+" : ""}
-                  {angleFine.toFixed(1)}°
-                </AccordionTrigger>
-                <AccordionContent>
-                  <div className="pb-3">
-                    <div className="flex justify-between text-xs text-muted-foreground mb-1">
-                      <span>-5°</span>
-                      <span>+5°</span>
-                    </div>
-                    <Slider
-                      value={[angleFine]}
-                      min={-5}
-                      max={5}
-                      step={0.1}
-                      onValueChange={([v]) => setAngleFine(Math.round(v * 10) / 10)}
-                      data-testid="slider-angle"
-                    />
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
+              <div className="space-y-1">
+                <span className="text-xs text-muted-foreground block">Table Speed</span>
+                <ToggleGroup
+                  value={tableConfig.tableSpeed}
+                  options={[
+                    { label: "Slow", value: "slow" },
+                    { label: "Medium", value: "medium" },
+                    { label: "Fast", value: "fast" },
+                  ]}
+                  onChange={(v) => setTableConfig((p) => ({ ...p, tableSpeed: v as TableConfig["tableSpeed"] }))}
+                />
+              </div>
+              <div className="space-y-1">
+                <span className="text-xs text-muted-foreground block">Equipment</span>
+                <ToggleGroup
+                  value={tableConfig.equipment}
+                  options={[
+                    { label: "Dirty", value: "dirty" },
+                    { label: "Average", value: "average" },
+                    { label: "Clean", value: "clean" },
+                  ]}
+                  onChange={(v) => setTableConfig((p) => ({ ...p, equipment: v as TableConfig["equipment"] }))}
+                />
+              </div>
+              <div className="space-y-1">
+                <span className="text-xs text-muted-foreground block">Rails</span>
+                <ToggleGroup
+                  value={tableConfig.rails}
+                  options={[
+                    { label: "Soft", value: "soft" },
+                    { label: "Medium", value: "medium" },
+                    { label: "Firm", value: "firm" },
+                  ]}
+                  onChange={(v) => setTableConfig((p) => ({ ...p, rails: v as TableConfig["rails"] }))}
+                />
+              </div>
+            </div>
 
-              <AccordionItem value="english">
-                <AccordionTrigger className="text-sm py-2">
-                  English: H {englishX > 0 ? "+" : ""}{englishX.toFixed(1)}, V {englishY > 0 ? "+" : ""}{englishY.toFixed(1)}
-                </AccordionTrigger>
-                <AccordionContent>
-                  <div className="pb-3 space-y-3">
-                    <div
-                      className="relative cursor-pointer mx-auto"
-                      style={{ width: 120, height: 120 }}
-                      onClick={handleEnglishDiagramClick}
-                      data-testid="english-diagram"
-                    >
-                      <svg width="120" height="120" viewBox="0 0 120 120">
-                        <circle cx="60" cy="60" r="58" fill="white" stroke="#ccc" strokeWidth="1" />
-                        <circle cx="60" cy="60" r="43.5" fill="none" stroke="#ef4444" strokeWidth="1" strokeDasharray="4 3" opacity="0.5" />
-                        <line x1="60" y1="2" x2="60" y2="118" stroke="rgba(0,0,0,0.15)" strokeWidth="0.5" />
-                        <line x1="2" y1="60" x2="118" y2="60" stroke="rgba(0,0,0,0.15)" strokeWidth="0.5" />
-                        {[-2,-1.75,-1.5,-1.25,-1,-0.75,-0.5,-0.25,0,0.25,0.5,0.75,1,1.25,1.5,1.75,2].map((vx) =>
-                          [-2,-1.75,-1.5,-1.25,-1,-0.75,-0.5,-0.25,0,0.25,0.5,0.75,1,1.25,1.5,1.75,2].map((vy) => {
-                            const px = 60 + (vx / 2) * 58;
-                            const py = 60 + (vy / 2) * 58;
-                            return (
-                              <circle
-                                key={`${vx}-${vy}`}
-                                cx={px}
-                                cy={py}
-                                r={1.2}
-                                fill="rgba(0,0,0,0.12)"
-                              />
-                            );
-                          })
-                        )}
-                        <circle
-                          cx={60 + (englishX / 2) * 58}
-                          cy={60 + (englishY / 2) * 58}
-                          r={Math.max(5, 58 / 4)}
-                          fill="rgba(59,130,246,0.25)"
-                          stroke="#3b82f6"
-                          strokeWidth="1.5"
-                          data-testid="english-tip-circle"
-                        />
-                        <circle
-                          cx={60 + (englishX / 2) * 58}
-                          cy={60 + (englishY / 2) * 58}
-                          r={3}
-                          fill="#3b82f6"
-                          data-testid="english-dot"
-                        />
-                      </svg>
-                      <span className="absolute text-muted-foreground" style={{ fontSize: 8, bottom: -2, right: 0, opacity: 0.6 }}>miscue limit</span>
-                    </div>
-                    <div className="text-xs text-center text-muted-foreground" data-testid="english-readout">
-                      Horizontal: {englishX >= 0 ? "+" : ""}{englishX.toFixed(2)} tips · Vertical: {englishY >= 0 ? "+" : ""}{englishY.toFixed(2)} tips
-                    </div>
-                    <div>
-                      <div className="flex justify-between text-xs text-muted-foreground mb-1">
-                        <span>-2</span>
-                        <span>0</span>
-                        <span>+2</span>
+            <div className="border-t pt-4 space-y-3">
+              <span className="font-semibold text-sm" data-testid="accordion-course-layouts">Course Layouts</span>
+              <div className="space-y-3" data-testid="course-layouts-content">
+                {[2, 3, 4, 5, 6].map((par) => {
+                  const parPresets = COURSE_PRESETS.filter((p) => p.par === par);
+                  return (
+                    <div key={par}>
+                      <span className="text-xs text-muted-foreground block mb-1">Par {par}</span>
+                      <div className="flex flex-wrap gap-1">
+                        {parPresets.map((preset) => (
+                          <Button
+                            key={preset.id}
+                            size="sm"
+                            variant="outline"
+                            onClick={() => { loadPreset(preset); setShowSettings(false); }}
+                            data-testid={`button-preset-${preset.id}`}
+                          >
+                            {preset.label}
+                          </Button>
+                        ))}
                       </div>
-                      <Slider
-                        value={[englishX]}
-                        min={-2}
-                        max={2}
-                        step={0.25}
-                        onValueChange={([v]) => setEnglishX(snapEnglish(v))}
-                        data-testid="slider-english-x"
-                      />
-                      <span className="text-xs text-muted-foreground">Horizontal (side spin)</span>
                     </div>
-                    <div>
-                      <div className="flex justify-between text-xs text-muted-foreground mb-1">
-                        <span>-2</span>
-                        <span>0</span>
-                        <span>+2</span>
-                      </div>
-                      <Slider
-                        value={[englishY]}
-                        min={-2}
-                        max={2}
-                        step={0.25}
-                        onValueChange={([v]) => setEnglishY(snapEnglish(v))}
-                        data-testid="slider-english-y"
-                      />
-                      <span className="text-xs text-muted-foreground">Vertical (top/draw)</span>
-                    </div>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => {
-                        setEnglishX(0);
-                        setEnglishY(0);
-                      }}
-                      data-testid="button-reset-english"
-                    >
-                      Center
-                    </Button>
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
-
-              <AccordionItem value="physics">
-                <AccordionTrigger className="text-sm py-2">
-                  Table Physics
-                </AccordionTrigger>
-                <AccordionContent>
-                  <div className="space-y-3 pb-3">
-                    <div>
-                      <span className="text-xs text-muted-foreground block mb-1">
-                        Table Speed
-                      </span>
-                      <ToggleGroup
-                        value={tableConfig.tableSpeed}
-                        options={[
-                          { label: "Slow", value: "slow" },
-                          { label: "Medium", value: "medium" },
-                          { label: "Fast", value: "fast" },
-                        ]}
-                        onChange={(v) =>
-                          setTableConfig((p) => ({
-                            ...p,
-                            tableSpeed: v as TableConfig["tableSpeed"],
-                          }))
-                        }
-                      />
-                    </div>
-                    <div>
-                      <span className="text-xs text-muted-foreground block mb-1">
-                        Equipment
-                      </span>
-                      <ToggleGroup
-                        value={tableConfig.equipment}
-                        options={[
-                          { label: "Dirty", value: "dirty" },
-                          { label: "Average", value: "average" },
-                          { label: "Clean", value: "clean" },
-                        ]}
-                        onChange={(v) =>
-                          setTableConfig((p) => ({
-                            ...p,
-                            equipment: v as TableConfig["equipment"],
-                          }))
-                        }
-                      />
-                    </div>
-                    <div>
-                      <span className="text-xs text-muted-foreground block mb-1">
-                        Rails
-                      </span>
-                      <ToggleGroup
-                        value={tableConfig.rails}
-                        options={[
-                          { label: "Soft", value: "soft" },
-                          { label: "Medium", value: "medium" },
-                          { label: "Firm", value: "firm" },
-                        ]}
-                        onChange={(v) =>
-                          setTableConfig((p) => ({
-                            ...p,
-                            rails: v as TableConfig["rails"],
-                          }))
-                        }
-                      />
-                    </div>
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
-
-              <AccordionItem value="course-tools">
-                <AccordionTrigger className="text-sm py-2" data-testid="accordion-course-layouts">
-                  Course Layouts
-                </AccordionTrigger>
-                <AccordionContent>
-                  <div className="pb-3 space-y-3" data-testid="course-layouts-content">
-                    {[2, 3, 4, 5, 6].map((par) => {
-                      const parPresets = COURSE_PRESETS.filter((p) => p.par === par);
-                      return (
-                        <div key={par}>
-                          <span className="text-xs text-muted-foreground block mb-1">Par {par}</span>
-                          <div className="flex flex-wrap gap-1">
-                            {parPresets.map((preset) => (
-                              <Button
-                                key={preset.id}
-                                size="sm"
-                                variant="outline"
-                                onClick={() => loadPreset(preset)}
-                                data-testid={`button-preset-${preset.id}`}
-                              >
-                                {preset.label}
-                              </Button>
-                            ))}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         </div>
       </div>
+      <div className="border-t bg-background px-3 py-2 flex items-center gap-3" data-testid="shot-controls-strip">
+        <div className="flex flex-col items-center gap-1 flex-shrink-0">
+          <div
+            className="relative cursor-pointer"
+            style={{ width: 64, height: 64 }}
+            onClick={handleEnglishDiagramClick}
+            data-testid="english-diagram"
+          >
+            <svg width="64" height="64" viewBox="0 0 120 120">
+              <circle cx="60" cy="60" r="58" fill="white" stroke="#ccc" strokeWidth="1" />
+              <circle cx="60" cy="60" r="43.5" fill="none" stroke="#ef4444" strokeWidth="1" strokeDasharray="4 3" opacity="0.5" />
+              <line x1="60" y1="2" x2="60" y2="118" stroke="rgba(0,0,0,0.15)" strokeWidth="0.5" />
+              <line x1="2" y1="60" x2="118" y2="60" stroke="rgba(0,0,0,0.15)" strokeWidth="0.5" />
+              {([-1.5,-1,-0.5,0,0.5,1,1.5] as number[]).map((vx) =>
+                ([-1.5,-1,-0.5,0,0.5,1,1.5] as number[]).map((vy) => {
+                  const px = 60 + (vx / 2) * 58;
+                  const py = 60 + (vy / 2) * 58;
+                  return <circle key={`${vx}-${vy}`} cx={px} cy={py} r={1.5} fill="rgba(0,0,0,0.12)" />;
+                })
+              )}
+              <circle
+                cx={60 + (englishX / 2) * 58}
+                cy={60 + (englishY / 2) * 58}
+                r={Math.max(5, 58 / 4)}
+                fill="rgba(59,130,246,0.25)"
+                stroke="#3b82f6"
+                strokeWidth="1.5"
+                data-testid="english-tip-circle"
+              />
+              <circle
+                cx={60 + (englishX / 2) * 58}
+                cy={60 + (englishY / 2) * 58}
+                r={3}
+                fill="#3b82f6"
+                data-testid="english-dot"
+              />
+            </svg>
+          </div>
+          <span className="text-xs text-muted-foreground" data-testid="english-readout">
+            H{englishX >= 0 ? "+" : ""}{englishX.toFixed(1)} V{englishY >= 0 ? "+" : ""}{englishY.toFixed(1)}
+          </span>
+        </div>
+
+        <div className="flex-1 space-y-2 min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground w-20 flex-shrink-0">Speed: {shotSpeed}</span>
+            <Slider
+              value={[shotSpeed]}
+              min={1}
+              max={10}
+              step={1}
+              onValueChange={([v]) => setShotSpeed(v)}
+              data-testid="slider-speed"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground w-20 flex-shrink-0">
+              Angle: {angleFine > 0 ? "+" : ""}{angleFine.toFixed(1)}°
+            </span>
+            <Slider
+              value={[angleFine]}
+              min={-5}
+              max={5}
+              step={0.1}
+              onValueChange={([v]) => setAngleFine(Math.round(v * 10) / 10)}
+              data-testid="slider-angle"
+            />
+          </div>
+        </div>
+
+        {(englishX !== 0 || englishY !== 0) && (
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => { setEnglishX(0); setEnglishY(0); }}
+            data-testid="button-reset-english"
+          >
+            Center
+          </Button>
+        )}
+      </div>
+
       {!cueBallMoved && (
         <div
           className="border-t bg-muted/50 py-3 flex items-center justify-center"
