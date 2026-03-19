@@ -1,14 +1,46 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useUnlock } from "@/contexts/UnlockContext";
 import headsImg from "@assets/image_1773676717898.png";
 import tailsImg from "@assets/image_1773670945305.png";
 
+const HISTORY_KEY = "pftc_coin_flip_history";
+const MAX_HISTORY = 99;
+
 interface FlipRecord {
   id: number;
   outcome: "heads" | "tails";
   timestamp: Date;
+}
+
+interface StoredRecord {
+  id: number;
+  outcome: "heads" | "tails";
+  timestamp: string; // ISO string in storage
+}
+
+function loadHistory(): FlipRecord[] {
+  try {
+    const raw = localStorage.getItem(HISTORY_KEY);
+    if (!raw) return [];
+    const parsed: StoredRecord[] = JSON.parse(raw);
+    return parsed.map((r) => ({ ...r, timestamp: new Date(r.timestamp) }));
+  } catch {
+    return [];
+  }
+}
+
+function saveHistory(history: FlipRecord[]) {
+  try {
+    const toStore: StoredRecord[] = history.map((r) => ({
+      ...r,
+      timestamp: r.timestamp.toISOString(),
+    }));
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(toStore));
+  } catch {
+    // storage full — silently skip
+  }
 }
 
 interface CoinFlipProps {
@@ -21,7 +53,11 @@ export function CoinFlip({ onClose }: CoinFlipProps) {
   const [isFlipping, setIsFlipping] = useState(false);
   const [result, setResult] = useState<"heads" | "tails" | null>(null);
   const [flipCount, setFlipCount] = useState(0);
-  const [history, setHistory] = useState<FlipRecord[]>([]);
+  const [history, setHistory] = useState<FlipRecord[]>(loadHistory);
+
+  useEffect(() => {
+    saveHistory(history);
+  }, [history]);
 
   const doFlip = () => {
     if (isFlipping) return;
@@ -35,12 +71,16 @@ export function CoinFlip({ onClose }: CoinFlipProps) {
       setIsFlipping(false);
       setResult(outcome);
       if (isUnlocked) {
-        setHistory((h) => [
-          { id: Date.now(), outcome, timestamp: new Date() },
-          ...h,
-        ]);
+        setHistory((h) =>
+          [{ id: Date.now(), outcome, timestamp: new Date() }, ...h].slice(0, MAX_HISTORY)
+        );
       }
     }, 1400);
+  };
+
+  const clearHistory = () => {
+    setHistory([]);
+    localStorage.removeItem(HISTORY_KEY);
   };
 
   const formatTime = (d: Date) =>
@@ -164,7 +204,7 @@ export function CoinFlip({ onClose }: CoinFlipProps) {
               </p>
               {history.length > 0 && (
                 <button
-                  onClick={() => setHistory([])}
+                  onClick={clearHistory}
                   className="text-xs text-muted-foreground underline underline-offset-2"
                   data-testid="button-clear-history"
                 >
