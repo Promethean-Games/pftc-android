@@ -1,6 +1,6 @@
 // Bump CACHE_VERSION with every production deployment so stale caches clear
 // automatically and users always receive fresh assets.
-const CACHE_VERSION = "pftc-v4";
+const CACHE_VERSION = "pftc-v5";
 const STATIC_CACHE  = `${CACHE_VERSION}-static`;
 const DYNAMIC_CACHE = `${CACHE_VERSION}-dynamic`;
 
