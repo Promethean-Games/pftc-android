@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { X, Plus, Trash2, Undo2, Crosshair, Grid3x3, Move, Settings, RefreshCw, BookOpen } from "lucide-react";
-import { CueingEmulatorTutorial } from "./CueingEmulatorTutorial";
+import { CueingEmulatorTour, getTourTrigger, TOUR_STEP_COUNT } from "./CueingEmulatorTour";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import {
@@ -212,17 +212,52 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
   const [moveCueBall, setMoveCueBall] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [cueBallMoved, setCueBallMoved] = useState(false);
-  const [showTutorial, setShowTutorial] = useState(false);
+  const [tourStep, setTourStep] = useState<number | null>(null);
 
+  // Auto-start tour on first visit
   useEffect(() => {
     const seen = localStorage.getItem("pftc_emulator_tutorial_seen");
-    if (!seen) setShowTutorial(true);
+    if (!seen) setTourStep(0);
   }, []);
 
-  const handleCloseTutorial = () => {
+  const advanceTour = useCallback(() => {
+    setTourStep((s) => {
+      if (s === null) return null;
+      const next = s + 1;
+      return next >= TOUR_STEP_COUNT ? null : next;
+    });
+  }, []);
+
+  const dismissTour = useCallback(() => {
     localStorage.setItem("pftc_emulator_tutorial_seen", "1");
-    setShowTutorial(false);
-  };
+    setTourStep(null);
+  }, []);
+
+  const backTour = useCallback(() => {
+    setTourStep((s) => (s !== null && s > 0 ? s - 1 : s));
+  }, []);
+
+  // Auto-advance tour on action completion
+  const prevBallCount = useRef<number | null>(null);
+  useEffect(() => {
+    if (tourStep === null) { prevBallCount.current = null; return; }
+    if (getTourTrigger(tourStep) !== "ball_added") return;
+    if (prevBallCount.current === null) { prevBallCount.current = balls.length; return; }
+    if (balls.length > prevBallCount.current) advanceTour();
+    prevBallCount.current = balls.length;
+  }, [balls.length, tourStep, advanceTour]);
+
+  useEffect(() => {
+    if (tourStep === null) return;
+    if (getTourTrigger(tourStep) !== "cue_moved") return;
+    if (cueBallMoved) advanceTour();
+  }, [cueBallMoved, tourStep, advanceTour]);
+
+  useEffect(() => {
+    if (tourStep === null) return;
+    if (getTourTrigger(tourStep) !== "aim_set") return;
+    if (hasAimLine) advanceTour();
+  }, [hasAimLine, tourStep, advanceTour]);
 
   const [tableConfig, setTableConfig] = useState<TableConfig>({
     tableSpeed: "medium",
@@ -722,6 +757,8 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
     setHasAimLine(false);
     setSelectedBallId(null);
     setCueBallMoved(true);
+
+    if (tourStep !== null && getTourTrigger(tourStep) === "shot_taken") advanceTour();
   };
 
   const handleUndo = () => {
@@ -935,6 +972,7 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
           ref={containerRef}
           className="absolute inset-0 bg-[#1a1a2e] dark:bg-[#0a0a1a]"
           style={{ touchAction: "none" }}
+          data-testid="canvas-container"
         >
           <canvas
             ref={canvasRef}
@@ -975,7 +1013,7 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
             <Button
               variant="outline"
               className="w-full justify-start gap-2"
-              onClick={() => { setShowSettings(false); setShowTutorial(true); }}
+              onClick={() => { setShowSettings(false); setTourStep(0); }}
               data-testid="button-open-emulator-tutorial"
             >
               <BookOpen className="w-4 h-4" />
@@ -1147,7 +1185,14 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
         </div>
       )}
 
-      {showTutorial && <CueingEmulatorTutorial onClose={handleCloseTutorial} />}
+      {tourStep !== null && (
+        <CueingEmulatorTour
+          currentStepIndex={tourStep}
+          onNext={advanceTour}
+          onBack={backTour}
+          onDismiss={dismissTour}
+        />
+      )}
     </div>
   );
 }

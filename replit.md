@@ -123,7 +123,7 @@ When running inside a Trusted Web Activity on Android, the Digital Goods API is 
 
 ### CueMaster Tools
 - **Entry Point**: A single dark-green "CueMaster Tools" button (bg `#15803d`, Wrench icon, placed beneath the Buy Now button on the splash screen) opens a full-screen tool selector overlay (`CueMasterTools.tsx`). Each tool card has a gradient background and launches the tool as its own full-screen overlay. Both React and standalone versions share the same flow.
-  - **Components**: `CueMasterTools.tsx` (selector overlay), `CoinFlip.tsx`, `CueingEmulator.tsx`, `CueingEmulatorTutorial.tsx` (how-to guide, auto-shown on first visit, `localStorage: pftc_emulator_tutorial_seen`), `TableLeveler.tsx`
+  - **Components**: `CueMasterTools.tsx` (selector overlay), `CoinFlip.tsx`, `CueingEmulator.tsx`, `CueingEmulatorTour.tsx` (interactive onboarding walkthrough — 8 steps, auto-shown on first visit, auto-advances on real actions, `localStorage: pftc_emulator_tutorial_seen`), `TableLeveler.tsx`
   - **Standalone**: `rCueMasterTools()`, `rCoinFlip()`, `rEmulator()`, `rLeveler()` render functions; `COIN` state object + `doFlip()` for the coin flip animation
 
 - **Coin Flip**: Billiards-themed coin flip tool to decide who breaks

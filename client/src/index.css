@@ -260,6 +260,14 @@
  * Even without handling focused or not, this is six possible combinations that
  * need to be distinguished from eachother visually.
  */
+@keyframes tour-ring-pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 20%, transparent), 0 0 16px color-mix(in srgb, currentColor 40%, transparent); }
+  50%       { opacity: 0.75; box-shadow: 0 0 0 6px color-mix(in srgb, currentColor 10%, transparent), 0 0 28px color-mix(in srgb, currentColor 20%, transparent); }
+}
+.tour-ring {
+  animation: tour-ring-pulse 1.6s ease-in-out infinite;
+}
+
 @layer utilities {
 
   /* Hide ugly search cancel button in Chrome until we can style it properly */
