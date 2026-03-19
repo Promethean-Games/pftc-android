@@ -10,6 +10,12 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   simulateShot,
   createBall,
   TABLE_DIMENSIONS,
@@ -794,24 +800,22 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
       <div className="flex items-center justify-between gap-2 p-2 border-b flex-wrap">
         <div className="flex items-center gap-2 flex-wrap">
           <span className="font-bold text-sm">Cueing Emulator</span>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => addBall("solid")}
-            data-testid="button-add-solid"
-          >
-            <Plus className="w-3 h-3 mr-1" />
-            Solid
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => addBall("stripe")}
-            data-testid="button-add-stripe"
-          >
-            <Plus className="w-3 h-3 mr-1" />
-            Stripe
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="sm" variant="outline" data-testid="button-add-ball">
+                <Plus className="w-3 h-3 mr-1" />
+                Add Ball
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              <DropdownMenuItem onClick={() => addBall("solid")} data-testid="button-add-solid">
+                Solid
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => addBall("stripe")} data-testid="button-add-stripe">
+                Stripe
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           {selectedBallId && selectedBallId !== "cue" && (
             <Button
               size="sm"
