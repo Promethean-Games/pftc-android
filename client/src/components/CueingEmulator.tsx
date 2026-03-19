@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { X, Plus, Trash2, Undo2, Crosshair, Grid3x3, Move, Settings, Lock, RefreshCw, Copy, Check } from "lucide-react";
+import { X, Plus, Trash2, Undo2, Crosshair, Grid3x3, Move, Settings, RefreshCw, Copy, Check } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
@@ -1164,77 +1164,91 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
                 </AccordionContent>
               </AccordionItem>
 
-              <AccordionItem value="presets">
+              <AccordionItem value="course-tools">
                 <AccordionTrigger className="text-sm py-2" data-testid="accordion-course-layouts">
                   <span className="flex items-center gap-2">
                     Course Layouts
                     <Badge variant="secondary" className="text-xs no-default-active-elevate">
-                      <Lock className="w-2.5 h-2.5 mr-1" />
-                      Coming Soon
+                      In Active Development...
                     </Badge>
                   </span>
                 </AccordionTrigger>
                 <AccordionContent>
-                  <p className="text-xs text-muted-foreground pb-3 leading-relaxed" data-testid="text-courses-coming-soon">
-                    Preset course layouts — matching the card deck holes — are coming soon as a purchasable add-on.
-                  </p>
-                </AccordionContent>
-              </AccordionItem>
+                  <div className="pb-3 space-y-4" data-testid="course-layouts-content">
+                    <div className="space-y-3">
+                      {[2, 3, 4, 5, 6].map((par) => {
+                        const parPresets = COURSE_PRESETS.filter((p) => p.par === par);
+                        return (
+                          <div key={par}>
+                            <span className="text-xs text-muted-foreground block mb-1">Par {par}</span>
+                            <div className="flex flex-wrap gap-1">
+                              {parPresets.map((preset) => (
+                                <Button
+                                  key={preset.id}
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => loadPreset(preset)}
+                                  data-testid={`button-preset-${preset.id}`}
+                                >
+                                  {preset.label}
+                                </Button>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
 
-              <AccordionItem value="export">
-                <AccordionTrigger className="text-sm py-2" data-testid="accordion-export-layout">
-                  Export Layout
-                </AccordionTrigger>
-                <AccordionContent>
-                  <div className="pb-3 space-y-2" data-testid="export-layout-content">
-                    <p className="text-xs text-muted-foreground leading-relaxed">
-                      Position your balls, then copy this snippet to share the layout.
-                    </p>
-                    <textarea
-                      readOnly
-                      className="w-full rounded-md border bg-muted px-2 py-1.5 text-xs font-mono leading-relaxed resize-none focus:outline-none"
-                      rows={Math.max(3, balls.filter((b) => b.type !== "cue" && !b.pocketed).length + 1)}
-                      value={(() => {
-                        const objectBalls = balls.filter((b) => b.type !== "cue" && !b.pocketed);
-                        if (objectBalls.length === 0) return "(no object balls placed)";
-                        return objectBalls
-                          .map((b) => {
-                            const rx = Math.round(b.pos.x * 100) / 100;
-                            const ry = Math.round(b.pos.y * 100) / 100;
-                            return `{ type: "${b.type}", x: ${rx}, y: ${ry} },`;
-                          })
-                          .join("\n");
-                      })()}
-                      data-testid="textarea-export-layout"
-                      onFocus={(e) => e.currentTarget.select()}
-                    />
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="w-full"
-                      data-testid="button-copy-layout"
-                      onClick={() => {
-                        const objectBalls = balls.filter((b) => b.type !== "cue" && !b.pocketed);
-                        if (objectBalls.length === 0) return;
-                        const text = objectBalls
-                          .map((b) => {
-                            const rx = Math.round(b.pos.x * 100) / 100;
-                            const ry = Math.round(b.pos.y * 100) / 100;
-                            return `{ type: "${b.type}", x: ${rx}, y: ${ry} },`;
-                          })
-                          .join("\n");
-                        navigator.clipboard.writeText(text).then(() => {
-                          setCopiedLayout(true);
-                          setTimeout(() => setCopiedLayout(false), 2000);
-                        });
-                      }}
-                    >
-                      {copiedLayout ? (
-                        <><Check className="w-3 h-3 mr-1" />Copied!</>
-                      ) : (
-                        <><Copy className="w-3 h-3 mr-1" />Copy to Clipboard</>
-                      )}
-                    </Button>
+                    <div className="border-t pt-3 space-y-2">
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        Position balls on the table, then copy this to report the layout.
+                      </p>
+                      <textarea
+                        readOnly
+                        className="w-full rounded-md border bg-muted px-2 py-1.5 text-xs font-mono leading-relaxed resize-none focus:outline-none"
+                        rows={Math.max(3, balls.filter((b) => b.type !== "cue" && !b.pocketed).length + 1)}
+                        value={(() => {
+                          const objectBalls = balls.filter((b) => b.type !== "cue" && !b.pocketed);
+                          if (objectBalls.length === 0) return "(no object balls placed)";
+                          return objectBalls
+                            .map((b) => {
+                              const rx = Math.round(b.pos.x * 100) / 100;
+                              const ry = Math.round(b.pos.y * 100) / 100;
+                              return `{ type: "${b.type}", x: ${rx}, y: ${ry} },`;
+                            })
+                            .join("\n");
+                        })()}
+                        data-testid="textarea-export-layout"
+                        onFocus={(e) => e.currentTarget.select()}
+                      />
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="w-full"
+                        data-testid="button-copy-layout"
+                        onClick={() => {
+                          const objectBalls = balls.filter((b) => b.type !== "cue" && !b.pocketed);
+                          if (objectBalls.length === 0) return;
+                          const text = objectBalls
+                            .map((b) => {
+                              const rx = Math.round(b.pos.x * 100) / 100;
+                              const ry = Math.round(b.pos.y * 100) / 100;
+                              return `{ type: "${b.type}", x: ${rx}, y: ${ry} },`;
+                            })
+                            .join("\n");
+                          navigator.clipboard.writeText(text).then(() => {
+                            setCopiedLayout(true);
+                            setTimeout(() => setCopiedLayout(false), 2000);
+                          });
+                        }}
+                      >
+                        {copiedLayout ? (
+                          <><Check className="w-3 h-3 mr-1" />Copied!</>
+                        ) : (
+                          <><Copy className="w-3 h-3 mr-1" />Copy to Clipboard</>
+                        )}
+                      </Button>
+                    </div>
                   </div>
                 </AccordionContent>
               </AccordionItem>
