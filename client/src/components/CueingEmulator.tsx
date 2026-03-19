@@ -182,6 +182,111 @@ function formatSpeed(v: number): string {
   return `${whole + 1}`;
 }
 
+// ── Table Size ────────────────────────────────────────────────────────────────
+
+interface TableSizeState {
+  preset: "7ft" | "8ft" | "9ft" | "custom";
+  customLength: number; // inches
+  customWidth: number;  // inches
+}
+
+const TABLE_SIZE_PRESETS: Record<"7ft" | "8ft" | "9ft", { lengthIn: number; widthIn: number; ballScale: number }> = {
+  "7ft": { lengthIn: 76, widthIn: 38, ballScale: 100 / 76 },
+  "8ft": { lengthIn: 88, widthIn: 44, ballScale: 100 / 88 },
+  "9ft": { lengthIn: 100, widthIn: 50, ballScale: 1.0 },
+};
+
+function formatInches(inches: number): string {
+  const ft = Math.floor(inches / 12);
+  const ins = inches % 12;
+  return ins === 0 ? `${ft}'` : `${ft}' ${ins}"`;
+}
+
+const DIAL_ITEM_H = 36;
+const DIAL_VISIBLE = 5;
+
+interface ScrollDialProps {
+  values: number[];
+  value: number;
+  onChange: (v: number) => void;
+  label: string;
+}
+
+function ScrollDial({ values, value, onChange, label }: ScrollDialProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const scrollingRef = useRef(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const selectedIdx = values.indexOf(value);
+  const containerH = DIAL_ITEM_H * DIAL_VISIBLE;
+  const padding = DIAL_ITEM_H * 2;
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el || scrollingRef.current) return;
+    const target = Math.max(0, selectedIdx) * DIAL_ITEM_H;
+    el.scrollTop = target;
+  }, [selectedIdx]);
+
+  const handleScroll = () => {
+    const el = containerRef.current;
+    if (!el) return;
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => {
+      const idx = Math.round(el.scrollTop / DIAL_ITEM_H);
+      const clamped = Math.max(0, Math.min(values.length - 1, idx));
+      onChange(values[clamped]);
+      scrollingRef.current = false;
+    }, 80);
+    scrollingRef.current = true;
+  };
+
+  return (
+    <div className="flex flex-col items-center gap-1">
+      <span className="text-xs text-muted-foreground">{label}</span>
+      <div className="relative" style={{ width: 80, height: containerH }}>
+        <div
+          className="absolute inset-0 pointer-events-none z-10"
+          style={{
+            background: "linear-gradient(to bottom, var(--background) 0%, transparent 35%, transparent 65%, var(--background) 100%)",
+          }}
+        />
+        <div
+          className="absolute left-0 right-0 z-0 rounded border border-border bg-muted/30"
+          style={{
+            top: DIAL_ITEM_H * 2,
+            height: DIAL_ITEM_H,
+          }}
+        />
+        <div
+          ref={containerRef}
+          className="absolute inset-0 overflow-y-scroll"
+          style={{ scrollSnapType: "y mandatory", WebkitOverflowScrolling: "touch" as never }}
+          onScroll={handleScroll}
+          data-testid={`dial-${label.toLowerCase()}`}
+        >
+          <div style={{ paddingTop: padding, paddingBottom: padding }}>
+            {values.map((v) => (
+              <div
+                key={v}
+                style={{ height: DIAL_ITEM_H, scrollSnapAlign: "center" }}
+                className="flex items-center justify-center text-sm font-medium select-none"
+              >
+                {formatInches(v)}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const DIAL_LENGTHS = Array.from({ length: 73 }, (_, i) => 60 + i); // 60"–132" (5'–11')
+const DIAL_WIDTHS  = Array.from({ length: 37 }, (_, i) => 30 + i); // 30"–66" (2'6"–5'6")
+
+// ─────────────────────────────────────────────────────────────────────────────
+
 export function CueingEmulator({ onClose }: CueingEmulatorProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -265,6 +370,19 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
     rails: "medium",
   });
 
+  const [tableSizeState, setTableSizeState] = useState<TableSizeState>({
+    preset: "9ft",
+    customLength: 88,
+    customWidth: 44,
+  });
+
+  const ballScale = useMemo(() => {
+    if (tableSizeState.preset === "custom") {
+      return 100 / Math.max(60, tableSizeState.customLength);
+    }
+    return TABLE_SIZE_PRESETS[tableSizeState.preset].ballScale;
+  }, [tableSizeState]);
+
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
   const dragRef = useRef<{
     ballId: string;
@@ -284,9 +402,9 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
       englishX,
       englishY,
     };
-    const result = simulateShot(balls, params, tableConfig);
+    const result = simulateShot(balls, params, { ...tableConfig, ballScale });
     return result.trajectories;
-  }, [hasAimLine, balls, aimAngle, angleFine, shotSpeed, englishX, englishY, tableConfig]);
+  }, [hasAimLine, balls, aimAngle, angleFine, shotSpeed, englishX, englishY, tableConfig, ballScale]);
 
   const cutAngleInfo = useMemo<{ angle: number; label: string } | null>(() => {
     if (!hasAimLine) return null;
@@ -295,7 +413,7 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
     const totalAngle = aimAngle + (angleFine * Math.PI) / 180;
     const dirX = Math.cos(totalAngle);
     const dirY = Math.sin(totalAngle);
-    const br2 = TABLE_DIMENSIONS.ballRadius * 2;
+    const br2 = TABLE_DIMENSIONS.ballRadius * ballScale * 2;
 
     let closestDist = Infinity;
     let closestBall: Ball | null = null;
@@ -333,7 +451,7 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
     else label = "Thin cut";
 
     return { angle: Math.round(cutDeg * 100) / 100, label };
-  }, [hasAimLine, balls, aimAngle, angleFine]);
+  }, [hasAimLine, balls, aimAngle, angleFine, ballScale]);
 
   const getScale = useCallback(() => {
     if (canvasSize.width === 0) return { scale: 1, offsetX: 0, offsetY: 0 };
@@ -393,7 +511,7 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
     const tw = TABLE_DIMENSIONS.width * scale;
     const th = TABLE_DIMENSIONS.height * scale;
 
-    const railW = Math.max(16, TABLE_DIMENSIONS.pocketRadius * scale + 4);
+    const railW = Math.max(16, TABLE_DIMENSIONS.pocketRadius * ballScale * scale + 4);
 
     ctx.fillStyle = "#5a3825";
     ctx.fillRect(offsetX - railW, offsetY - railW, tw + railW * 2, th + railW * 2);
@@ -439,7 +557,7 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
 
     for (const pocket of TABLE_DIMENSIONS.pockets) {
       const pp = tableToCanvas(pocket.x, pocket.y);
-      const pr = TABLE_DIMENSIONS.pocketRadius * scale;
+      const pr = TABLE_DIMENSIONS.pocketRadius * ballScale * scale;
       ctx.beginPath();
       ctx.arc(pp.x, pp.y, pr, 0, Math.PI * 2);
       ctx.fillStyle = "#111";
@@ -503,7 +621,7 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
     for (const ball of balls) {
       if (ball.pocketed) continue;
       const bp = tableToCanvas(ball.pos.x, ball.pos.y);
-      const br = TABLE_DIMENSIONS.ballRadius * scale;
+      const br = TABLE_DIMENSIONS.ballRadius * ballScale * scale;
 
       ctx.beginPath();
       ctx.arc(bp.x + 1, bp.y + 1, br, 0, Math.PI * 2);
@@ -600,6 +718,7 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
     tableToCanvas,
     canvasSize,
     snapToGrid,
+    ballScale,
   ]);
 
   useEffect(() => {
@@ -634,7 +753,7 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
     // Touch targets need ~44px of hit area for comfortable finger use.
     // extraPx is in canvas-pixel units; dividing by scale converts to table units.
     const extraPx = touchTarget ? 18 : 4;
-    const hitRadius = TABLE_DIMENSIONS.ballRadius + extraPx / scale;
+    const hitRadius = TABLE_DIMENSIONS.ballRadius * ballScale + extraPx / scale;
     // Prefer the closest ball when multiple overlap within the hit zone
     let closest: Ball | null = null;
     let closestDist = Infinity;
@@ -700,13 +819,14 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
       const snapped = snapPos(rawX, rawY);
       rawX = snapped.x;
       rawY = snapped.y;
+      const effBR = TABLE_DIMENSIONS.ballRadius * ballScale;
       const newX = Math.max(
-        TABLE_DIMENSIONS.ballRadius,
-        Math.min(TABLE_DIMENSIONS.width - TABLE_DIMENSIONS.ballRadius, rawX)
+        effBR,
+        Math.min(TABLE_DIMENSIONS.width - effBR, rawX)
       );
       const newY = Math.max(
-        TABLE_DIMENSIONS.ballRadius,
-        Math.min(TABLE_DIMENSIONS.height - TABLE_DIMENSIONS.ballRadius, rawY)
+        effBR,
+        Math.min(TABLE_DIMENSIONS.height - effBR, rawY)
       );
       setBalls((prev) =>
         prev.map((b) =>
@@ -1029,6 +1149,55 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
               <BookOpen className="w-4 h-4" />
               How to Use the Emulator
             </Button>
+
+            <div className="space-y-3">
+              <span className="font-semibold text-sm">Table Size</span>
+              <div className="space-y-1">
+                <span className="text-xs text-muted-foreground block">Preset</span>
+                <ToggleGroup
+                  value={tableSizeState.preset}
+                  options={[
+                    { label: "7ft", value: "7ft" },
+                    { label: "8ft", value: "8ft" },
+                    { label: "9ft", value: "9ft" },
+                    { label: "Custom", value: "custom" },
+                  ]}
+                  onChange={(v) =>
+                    setTableSizeState((p) => ({
+                      ...p,
+                      preset: v as TableSizeState["preset"],
+                    }))
+                  }
+                />
+              </div>
+
+              {tableSizeState.preset === "custom" && (
+                <div className="space-y-2">
+                  <span className="text-xs text-muted-foreground block">Playing Surface</span>
+                  <div className="flex gap-4 justify-center">
+                    <ScrollDial
+                      label="Length"
+                      values={DIAL_LENGTHS}
+                      value={tableSizeState.customLength}
+                      onChange={(v) =>
+                        setTableSizeState((p) => ({ ...p, customLength: v }))
+                      }
+                    />
+                    <ScrollDial
+                      label="Width"
+                      values={DIAL_WIDTHS}
+                      value={tableSizeState.customWidth}
+                      onChange={(v) =>
+                        setTableSizeState((p) => ({ ...p, customWidth: v }))
+                      }
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground text-center">
+                    {formatInches(tableSizeState.customLength)} &times; {formatInches(tableSizeState.customWidth)}
+                  </p>
+                </div>
+              )}
+            </div>
 
             <div className="space-y-3">
               <span className="font-semibold text-sm">Table Physics</span>

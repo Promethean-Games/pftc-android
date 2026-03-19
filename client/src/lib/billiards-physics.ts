@@ -16,6 +16,8 @@ export interface TableConfig {
   tableSpeed: "slow" | "medium" | "fast";
   equipment: "dirty" | "average" | "clean";
   rails: "soft" | "medium" | "firm";
+  /** Scale factor vs. a 9-ft table (100"×50"). 9ft=1.0, 8ft≈1.136, 7ft≈1.316. */
+  ballScale?: number;
 }
 
 export interface ShotParams {
@@ -120,17 +122,17 @@ function vecPerp(v: Vec2): Vec2 {
   return { x: -v.y, y: v.x };
 }
 
-function clampBallPosition(pos: Vec2): Vec2 {
+function clampBallPosition(pos: Vec2, ballR: number): Vec2 {
   return {
-    x: Math.max(BALL_RADIUS, Math.min(TABLE_WIDTH - BALL_RADIUS, pos.x)),
-    y: Math.max(BALL_RADIUS, Math.min(TABLE_HEIGHT - BALL_RADIUS, pos.y)),
+    x: Math.max(ballR, Math.min(TABLE_WIDTH - ballR, pos.x)),
+    y: Math.max(ballR, Math.min(TABLE_HEIGHT - ballR, pos.y)),
   };
 }
 
-function checkPocketed(ball: Ball): boolean {
+function checkPocketed(ball: Ball, pocketR: number): boolean {
   for (const pocket of POCKETS) {
     const dist = vecLen(vecSub(ball.pos, pocket));
-    if (dist < POCKET_RADIUS) return true;
+    if (dist < pocketR) return true;
   }
   return false;
 }
@@ -138,16 +140,17 @@ function checkPocketed(ball: Ball): boolean {
 function resolveBallBallCollision(
   a: Ball,
   b: Ball,
-  throwFactor: number
+  throwFactor: number,
+  ballDiameter: number
 ): void {
   const delta = vecSub(b.pos, a.pos);
   const dist = vecLen(delta);
-  if (dist < 1e-10 || dist > BALL_DIAMETER) return;
+  if (dist < 1e-10 || dist > ballDiameter) return;
 
   const normal = vecNorm(delta);
   const tangent = vecPerp(normal);
 
-  const overlap = BALL_DIAMETER - dist;
+  const overlap = ballDiameter - dist;
   if (overlap > 0) {
     const sep = vecScale(normal, overlap / 2);
     a.pos = vecSub(a.pos, sep);
@@ -172,36 +175,37 @@ function resolveBallBallCollision(
 
 function resolveRailCollision(
   ball: Ball,
-  restitution: number
+  restitution: number,
+  ballR: number
 ): void {
   let hit = false;
 
-  if (ball.pos.x - BALL_RADIUS < 0) {
-    ball.pos.x = BALL_RADIUS;
+  if (ball.pos.x - ballR < 0) {
+    ball.pos.x = ballR;
     ball.vel.x = Math.abs(ball.vel.x) * restitution;
     const spinEffect = ball.spin.y * 0.15;
     ball.vel.y += spinEffect;
     ball.spin.y *= 0.7;
     hit = true;
   }
-  if (ball.pos.x + BALL_RADIUS > TABLE_WIDTH) {
-    ball.pos.x = TABLE_WIDTH - BALL_RADIUS;
+  if (ball.pos.x + ballR > TABLE_WIDTH) {
+    ball.pos.x = TABLE_WIDTH - ballR;
     ball.vel.x = -Math.abs(ball.vel.x) * restitution;
     const spinEffect = -ball.spin.y * 0.15;
     ball.vel.y += spinEffect;
     ball.spin.y *= 0.7;
     hit = true;
   }
-  if (ball.pos.y - BALL_RADIUS < 0) {
-    ball.pos.y = BALL_RADIUS;
+  if (ball.pos.y - ballR < 0) {
+    ball.pos.y = ballR;
     ball.vel.y = Math.abs(ball.vel.y) * restitution;
     const spinEffect = ball.spin.x * 0.15;
     ball.vel.x += spinEffect;
     ball.spin.x *= 0.7;
     hit = true;
   }
-  if (ball.pos.y + BALL_RADIUS > TABLE_HEIGHT) {
-    ball.pos.y = TABLE_HEIGHT - BALL_RADIUS;
+  if (ball.pos.y + ballR > TABLE_HEIGHT) {
+    ball.pos.y = TABLE_HEIGHT - ballR;
     ball.vel.y = -Math.abs(ball.vel.y) * restitution;
     const spinEffect = -ball.spin.x * 0.15;
     ball.vel.x += spinEffect;
@@ -330,6 +334,11 @@ export function simulateShot(
   const restitution = RAIL_RESTITUTION[tableConfig.rails];
   const throwFactor = THROW_FACTOR[tableConfig.equipment];
 
+  const bScale = tableConfig.ballScale ?? 1;
+  const effBallRadius = BALL_RADIUS * bScale;
+  const effBallDiameter = BALL_DIAMETER * bScale;
+  const effPocketRadius = POCKET_RADIUS * bScale;
+
   const trajectoryMap: Record<string, TrajectoryPoint[]> = {};
   for (const b of simBalls) {
     trajectoryMap[b.id] = [{ x: b.pos.x, y: b.pos.y }];
@@ -348,15 +357,15 @@ export function simulateShot(
       for (let j = i + 1; j < simBalls.length; j++) {
         if (simBalls[i].pocketed || simBalls[j].pocketed) continue;
         const dist = vecLen(vecSub(simBalls[i].pos, simBalls[j].pos));
-        if (dist < BALL_DIAMETER) {
-          resolveBallBallCollision(simBalls[i], simBalls[j], throwFactor);
+        if (dist < effBallDiameter) {
+          resolveBallBallCollision(simBalls[i], simBalls[j], throwFactor, effBallDiameter);
         }
       }
     }
 
     for (const ball of simBalls) {
       if (ball.pocketed) continue;
-      resolveRailCollision(ball, restitution);
+      resolveRailCollision(ball, restitution, effBallRadius);
     }
 
     for (const ball of simBalls) {
@@ -367,7 +376,7 @@ export function simulateShot(
 
     for (const ball of simBalls) {
       if (ball.pocketed) continue;
-      if (checkPocketed(ball)) {
+      if (checkPocketed(ball, effPocketRadius)) {
         ball.pocketed = true;
         trajectoryMap[ball.id]?.push({ x: ball.pos.x, y: ball.pos.y });
         ball.vel = { x: 0, y: 0 };
