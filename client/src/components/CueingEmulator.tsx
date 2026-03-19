@@ -1256,6 +1256,14 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
           </div>
         </div>
       </div>
+      <div
+        className="border-t bg-muted/50 py-3 flex items-center justify-center"
+        data-testid="footer-ball-in-hand"
+      >
+        <span className="text-2xl font-bold tracking-widest uppercase text-muted-foreground select-none">
+          Ball in Hand
+        </span>
+      </div>
     </div>
   );
 }
