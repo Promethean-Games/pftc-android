@@ -1,5 +1,7 @@
 import { createRoot } from "react-dom/client";
 import App from "./App";
+import { PrivacyPolicyPage } from "@/components/PrivacyPolicyPage";
+import { ThemeProvider } from "@/components/ThemeProvider";
 import "./index.css";
 
 if ("serviceWorker" in navigator) {
@@ -32,4 +34,14 @@ if ("serviceWorker" in navigator) {
   });
 }
 
-createRoot(document.getElementById("root")!).render(<App />);
+const isPrivacyPage = window.location.pathname === "/privacy";
+
+createRoot(document.getElementById("root")!).render(
+  isPrivacyPage ? (
+    <ThemeProvider>
+      <PrivacyPolicyPage />
+    </ThemeProvider>
+  ) : (
+    <App />
+  )
+);
