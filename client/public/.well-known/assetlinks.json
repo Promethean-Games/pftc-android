@@ -12,5 +12,17 @@
         "7E:F9:05:E8:C2:58:4D:FF:D9:12:0D:A4:6C:76:6C:EE:6A:BD:11:BF:AC:3E:D4:3D:EA:C4:22:DC:93:D1:6A:B1"
       ]
     }
+  },
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.prometheangames.pftc.classic",
+      "sha256_cert_fingerprints": [
+        "FB:D3:E8:62:0F:E4:D0:AE:71:B4:20:96:A8:85:84:9B:80:30:E2:62:33:3C:E4:D3:81:65:E0:C8:08:E1:6B:C3"
+      ]
+    }
   }
 ]
