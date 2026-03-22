@@ -481,7 +481,7 @@ export function GameScreen({
         const card = getDrawnCard(currentHole);
         return card ? (
           <div
-            className="fixed inset-0 bg-background z-50 flex flex-col items-center justify-center p-6 gap-6"
+            className="fixed inset-x-0 top-0 bottom-16 bg-background z-[35] flex flex-col items-center justify-center p-6 gap-6"
             data-testid="setup-screen-overlay"
             onTouchStart={(e) => e.stopPropagation()}
             onTouchMove={(e) => e.stopPropagation()}
