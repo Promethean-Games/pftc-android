@@ -318,6 +318,9 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
   const animBallsRef = useRef<Ball[] | null>(null);
   const drawRef = useRef<(() => void) | null>(null);
 
+  const [showEnglishPopup, setShowEnglishPopup] = useState(false);
+  const englishPopupRef = useRef<HTMLDivElement>(null);
+
   // Auto-start tour on first visit
   useEffect(() => {
     const seen = localStorage.getItem("pftc_emulator_tutorial_seen");
@@ -1032,13 +1035,29 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
     return Math.round(val / ENG_SNAP) * ENG_SNAP;
   };
 
-  const handleEnglishDiagramClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width) * 4 - 2;
-    const y = ((e.clientY - rect.top) / rect.height) * 4 - 2;
+  const updateEnglishFromPointer = useCallback((clientX: number, clientY: number) => {
+    const el = englishPopupRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const x = ((clientX - rect.left) / rect.width) * 4 - 2;
+    const y = ((clientY - rect.top) / rect.height) * 4 - 2;
     setEnglishX(snapEnglish(Math.max(ENG_MIN, Math.min(ENG_MAX, x))));
     setEnglishY(snapEnglish(Math.max(ENG_MIN, Math.min(ENG_MAX, y))));
-  };
+  }, []);
+
+  // While the english popup is open, track pointer moves anywhere on screen
+  // and close on pointer release.
+  useEffect(() => {
+    if (!showEnglishPopup) return;
+    const onMove = (e: PointerEvent) => updateEnglishFromPointer(e.clientX, e.clientY);
+    const onUp = () => setShowEnglishPopup(false);
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    };
+  }, [showEnglishPopup, updateEnglishFromPointer]);
 
   const ToggleGroup = ({
     value,
@@ -1181,6 +1200,58 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
       )}
 
       <div className="flex-1 min-h-0 relative overflow-hidden">
+        {/* English spin popup — press & hold the diagram thumbnail to open;
+            drag to position; release to confirm and close. */}
+        {showEnglishPopup && (
+          <div
+            className="absolute inset-0 z-[45] flex items-center justify-center"
+            style={{ background: "rgba(0,0,0,0.82)", touchAction: "none" }}
+            data-testid="english-popup-overlay"
+          >
+            <div
+              ref={englishPopupRef}
+              style={{ width: "min(72vw, 72vh)", height: "min(72vw, 72vh)" }}
+              data-testid="english-popup-diagram"
+            >
+              <svg width="100%" height="100%" viewBox="0 0 120 120">
+                <circle cx="60" cy="60" r="58" fill="white" stroke="#aaa" strokeWidth="1.5" />
+                <circle cx="60" cy="60" r="43.5" fill="none" stroke="#ef4444" strokeWidth="1.5" strokeDasharray="5 4" opacity="0.6" />
+                <line x1="60" y1="2" x2="60" y2="118" stroke="rgba(0,0,0,0.15)" strokeWidth="1" />
+                <line x1="2" y1="60" x2="118" y2="60" stroke="rgba(0,0,0,0.15)" strokeWidth="1" />
+                {([-1.5,-1,-0.5,0,0.5,1,1.5] as number[]).map((vx) =>
+                  ([-1.5,-1,-0.5,0,0.5,1,1.5] as number[]).map((vy) => {
+                    const px = 60 + (vx / 2) * 58;
+                    const py = 60 + (vy / 2) * 58;
+                    return <circle key={`${vx}-${vy}`} cx={px} cy={py} r={2} fill="rgba(0,0,0,0.18)" />;
+                  })
+                )}
+                <circle
+                  cx={60 + (englishX / 2) * 58}
+                  cy={60 + (englishY / 2) * 58}
+                  r={Math.max(7, 58 / 3)}
+                  fill="rgba(59,130,246,0.28)"
+                  stroke="#3b82f6"
+                  strokeWidth="2"
+                />
+                <circle
+                  cx={60 + (englishX / 2) * 58}
+                  cy={60 + (englishY / 2) * 58}
+                  r={5}
+                  fill="#3b82f6"
+                />
+                <text x="60" y="14" textAnchor="middle" fontSize="9" fill="rgba(0,0,0,0.4)">Top</text>
+                <text x="60" y="112" textAnchor="middle" fontSize="9" fill="rgba(0,0,0,0.4)">Bottom</text>
+                <text x="10" y="63" textAnchor="middle" fontSize="9" fill="rgba(0,0,0,0.4)">L</text>
+                <text x="110" y="63" textAnchor="middle" fontSize="9" fill="rgba(0,0,0,0.4)">R</text>
+              </svg>
+              <p className="text-center text-white/80 text-sm mt-2 select-none">
+                H{englishX >= 0 ? "+" : ""}{englishX.toFixed(2)} &nbsp; V{englishY >= 0 ? "+" : ""}{englishY.toFixed(2)}
+              </p>
+              <p className="text-center text-white/50 text-xs mt-1 select-none">Release to confirm</p>
+            </div>
+          </div>
+        )}
+
         <div
           ref={containerRef}
           className="absolute inset-0 bg-[#1a1a2e] dark:bg-[#0a0a1a]"
@@ -1365,9 +1436,9 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
       <div className="border-t bg-background px-3 py-2 flex items-center gap-3" data-testid="shot-controls-strip">
         <div className="flex flex-col items-center gap-1 flex-shrink-0">
           <div
-            className="relative cursor-pointer"
-            style={{ width: 64, height: 64 }}
-            onClick={handleEnglishDiagramClick}
+            className="relative cursor-pointer select-none"
+            style={{ width: 64, height: 64, touchAction: "none" }}
+            onPointerDown={(e) => { e.preventDefault(); setShowEnglishPopup(true); }}
             data-testid="english-diagram"
           >
             <svg width="64" height="64" viewBox="0 0 120 120">
@@ -1421,7 +1492,7 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
           </div>
           <div className="flex items-center gap-2">
             <span className="text-xs text-muted-foreground w-20 flex-shrink-0">
-              Angle: {angleFine > 0 ? "+" : ""}{angleFine.toFixed(1)}°
+              Fine Tune: {angleFine > 0 ? "+" : ""}{angleFine.toFixed(1)}°
             </span>
             <Slider
               value={[angleFine]}

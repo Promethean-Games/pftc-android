@@ -1,4 +1,4 @@
-import { X, PlayCircle, LayoutDashboard, AlertCircle, AlertTriangle, ArrowUpToLine, ListChecks, Heart, Trophy } from "lucide-react";
+import { X, PlayCircle, LayoutDashboard, AlertCircle, AlertTriangle, ArrowUpToLine, ListChecks, Heart, Trophy, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface Rule {
@@ -70,6 +70,16 @@ const SECTIONS: Section[] = [
           <>
             Tally each player's score for the respective hole. When all players have a
             score recorded (non-zero), proceed to <B>NEXT CARD.</B>
+          </>
+        ),
+      },
+      {
+        icon: Smartphone,
+        title: "Tip",
+        body: (
+          <>
+            The <B>Advanced Cueing Emulator</B> (in CueMaster Tools) works best in{" "}
+            <B>landscape mode.</B> Rotate your device sideways for the most table space.
           </>
         ),
       },
