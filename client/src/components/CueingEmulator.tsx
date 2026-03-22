@@ -26,7 +26,7 @@ interface CueingEmulatorProps {
 const TRAJ_COLORS: Record<string, string> = {
   cue: "#60a5fa",
   solid: "#eab308",
-  stripe: "#22c55e",
+  stripe: "#000000",
 };
 
 const BALL_FILL: Record<string, string> = {
@@ -579,8 +579,8 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
       if (traj.points.length < 2) continue;
       ctx.beginPath();
       ctx.strokeStyle = TRAJ_COLORS[traj.ballType] || "#fff";
-      ctx.lineWidth = 1.5;
-      ctx.globalAlpha = 0.7;
+      ctx.lineWidth = 3;
+      ctx.globalAlpha = 1.0;
       const first = tableToCanvas(traj.points[0].x, traj.points[0].y);
       ctx.moveTo(first.x, first.y);
       for (let i = 1; i < traj.points.length; i++) {
@@ -682,9 +682,9 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
         const endY = cueCanvas.y + Math.sin(totalAngle) * lineLen;
 
         ctx.beginPath();
-        ctx.setLineDash([6, 4]);
-        ctx.strokeStyle = "rgba(255,255,255,0.5)";
-        ctx.lineWidth = 1;
+        ctx.setLineDash([8, 5]);
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 2.5;
         ctx.moveTo(cueCanvas.x, cueCanvas.y);
         ctx.lineTo(endX, endY);
         ctx.stroke();
