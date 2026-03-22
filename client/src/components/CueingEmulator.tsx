@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { X, Plus, Trash2, Undo2, Crosshair, Grid3x3, Move, Settings, RefreshCw, BookOpen } from "lucide-react";
+import { X, Plus, Trash2, Undo2, Crosshair, Grid3x3, Move, Settings, RefreshCw, BookOpen, Target } from "lucide-react";
 import { CueingEmulatorTour, getTourTrigger, TOUR_STEP_COUNT } from "./CueingEmulatorTour";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
@@ -768,7 +768,7 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
     // Touch targets need ~44px of hit area for comfortable finger use.
     // extraPx is in canvas-pixel units; dividing by scale converts to table units.
     const extraPx = touchTarget ? 18 : 4;
-    const hitRadius = TABLE_DIMENSIONS.ballRadius * ballScale + extraPx / scale;
+    const hitRadius = TABLE_DIMENSIONS.ballRadius * ballScale * 2 + extraPx / scale;
     // Prefer the closest ball when multiple overlap within the hit zone
     let closest: Ball | null = null;
     let closestDist = Infinity;
@@ -875,6 +875,62 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
     setBalls((prev) => prev.filter((b) => b.id !== selectedBallId));
     setSelectedBallId(null);
   };
+
+  const resetCueBall = useCallback(() => {
+    const br = TABLE_DIMENSIONS.ballRadius * ballScale;
+    const minClearance = br * 2 + 0.25;
+    const otherBalls = balls.filter((b) => b.type !== "cue" && !b.pocketed);
+
+    const isOccupied = (x: number, y: number) =>
+      otherBalls.some((b) => Math.hypot(b.pos.x - x, b.pos.y - y) < minClearance);
+
+    const pocketClear = TABLE_DIMENSIONS.pocketRadius * ballScale + br + 0.5;
+    const isNearPocket = (x: number, y: number) =>
+      TABLE_DIMENSIONS.pockets.some((p) => Math.hypot(p.x - x, p.y - y) < pocketClear);
+
+    const railClear = br + 2;
+    const isNearRail = (x: number, y: number) =>
+      x < railClear || x > TABLE_DIMENSIONS.width - railClear ||
+      y < railClear || y > TABLE_DIMENSIONS.height - railClear;
+
+    const HEADSTRING_X = TABLE_DIMENSIONS.width * 0.25;
+    const CENTER_Y = TABLE_DIMENSIONS.height / 2;
+
+    // Priority 1: headstring positions — center then spread outward
+    const headstringCandidates = [0, -12.5, 12.5, -6.25, 6.25, -18.75, 18.75].map(
+      (dy) => ({ x: HEADSTRING_X, y: CENTER_Y + dy })
+    );
+
+    // Priority 2: safe grid behind/near headstring (avoid rails and pockets)
+    const safeGrid: { x: number; y: number }[] = [];
+    for (let gx = HEADSTRING_X; gx >= railClear; gx -= 6.25) {
+      for (let gy = 6.25; gy <= TABLE_DIMENSIONS.height - 6.25; gy += 6.25) {
+        if (!isNearRail(gx, gy) && !isNearPocket(gx, gy)) {
+          safeGrid.push({ x: gx, y: gy });
+        }
+      }
+    }
+
+    // Priority 3: full playfield grid (avoid pockets only)
+    const anyGrid: { x: number; y: number }[] = [];
+    for (let gx = railClear; gx <= TABLE_DIMENSIONS.width - railClear; gx += 6.25) {
+      for (let gy = railClear; gy <= TABLE_DIMENSIONS.height - railClear; gy += 6.25) {
+        if (!isNearPocket(gx, gy)) anyGrid.push({ x: gx, y: gy });
+      }
+    }
+
+    const target =
+      [...headstringCandidates, ...safeGrid, ...anyGrid].find((c) => !isOccupied(c.x, c.y)) ??
+      { x: HEADSTRING_X, y: CENTER_Y };
+
+    setBalls((prev) =>
+      prev.map((b) =>
+        b.type === "cue" ? { ...b, pos: { x: target.x, y: target.y }, pocketed: false } : b
+      )
+    );
+    setHasAimLine(false);
+    setSelectedBallId(null);
+  }, [balls, ballScale]);
 
   const handleClose = () => {
     try {
@@ -1137,6 +1193,15 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
           >
             <Move className="w-3 h-3 mr-1" />
             Move Cue Ball
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={resetCueBall}
+            data-testid="button-reset-cue"
+          >
+            <Target className="w-3 h-3 mr-1" />
+            Reset Cue
           </Button>
         </div>
         <div className="flex items-center gap-2">
