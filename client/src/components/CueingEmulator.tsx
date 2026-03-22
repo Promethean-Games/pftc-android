@@ -488,9 +488,10 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
   );
 
   useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
     const updateSize = () => {
-      if (!containerRef.current) return;
-      const rect = containerRef.current.getBoundingClientRect();
+      const rect = container.getBoundingClientRect();
       const dpr = window.devicePixelRatio || 1;
       setCanvasSize({
         width: rect.width * dpr,
@@ -498,8 +499,11 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
       });
     };
     updateSize();
-    window.addEventListener("resize", updateSize);
-    return () => window.removeEventListener("resize", updateSize);
+    // ResizeObserver fires whenever the container changes size (e.g. cut-angle
+    // bar appearing / disappearing), not just on window resize events.
+    const ro = new ResizeObserver(updateSize);
+    ro.observe(container);
+    return () => ro.disconnect();
   }, []);
 
   const draw = useCallback(() => {
