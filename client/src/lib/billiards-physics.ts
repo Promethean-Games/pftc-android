@@ -137,6 +137,26 @@ function checkPocketed(ball: Ball, pocketR: number): boolean {
   return false;
 }
 
+// Collision where only one ball is moving (the other is pocketed/stationary).
+// Only the moving ball gets the impulse; the pocketed ball's state is untouched.
+function resolveCueBallVsPocketedBall(
+  moving: Ball,
+  stationary: Ball,
+  ballDiameter: number
+): void {
+  const delta = vecSub(stationary.pos, moving.pos);
+  const dist = vecLen(delta);
+  if (dist < 1e-10 || dist > ballDiameter) return;
+  const normal = vecNorm(delta);
+  const overlap = ballDiameter - dist;
+  if (overlap > 0) {
+    moving.pos = vecSub(moving.pos, vecScale(normal, overlap));
+  }
+  const normalSpeed = vecDot(moving.vel, normal);
+  if (normalSpeed <= 0) return;
+  moving.vel = vecSub(moving.vel, vecScale(normal, normalSpeed * (1 + BALL_BALL_RESTITUTION)));
+}
+
 function resolveBallBallCollision(
   a: Ball,
   b: Ball,
@@ -355,10 +375,19 @@ export function simulateShot(
 
     for (let i = 0; i < simBalls.length; i++) {
       for (let j = i + 1; j < simBalls.length; j++) {
-        if (simBalls[i].pocketed || simBalls[j].pocketed) continue;
-        const dist = vecLen(vecSub(simBalls[i].pos, simBalls[j].pos));
-        if (dist < effBallDiameter) {
-          resolveBallBallCollision(simBalls[i], simBalls[j], throwFactor, effBallDiameter);
+        const bi = simBalls[i];
+        const bj = simBalls[j];
+        if (bi.pocketed && bj.pocketed) continue;
+        const dist = vecLen(vecSub(bi.pos, bj.pos));
+        if (dist >= effBallDiameter) continue;
+        if (bi.pocketed) {
+          // bi is in a pocket — ricochet bj off it
+          resolveCueBallVsPocketedBall(bj, bi, effBallDiameter);
+        } else if (bj.pocketed) {
+          // bj is in a pocket — ricochet bi off it
+          resolveCueBallVsPocketedBall(bi, bj, effBallDiameter);
+        } else {
+          resolveBallBallCollision(bi, bj, throwFactor, effBallDiameter);
         }
       }
     }

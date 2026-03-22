@@ -66,7 +66,7 @@ const STEPS: StepDef[] = [
   {
     id: "speed",
     title: "Shot Speed",
-    body: "Drag to set power. Snaps to whole numbers; \u00bc-step fine-tuning available.",
+    body: "Drag to set power. Speed 5 \u2248 lag speed \u00b7 Speed 10 \u2248 break shot. Snaps to whole numbers; \u00bc-step fine-tuning available.",
     targetTestId: "slider-speed",
     trigger: "next",
     Icon: Zap,
@@ -107,7 +107,7 @@ interface TooltipPos {
   left: number;
 }
 
-const TOOLTIP_W = 252;
+const TOOLTIP_W = 290;
 const TOOLTIP_OFFSET = 14;
 
 function computeTooltipPos(ring: RingBox | null): TooltipPos {
@@ -334,11 +334,11 @@ export function CueingEmulatorTour({
         </div>
 
         <div className="px-3 pt-2 pb-3">
-          <div className="flex items-center gap-1.5 mb-1.5">
-            <Icon className="w-3.5 h-3.5 shrink-0" style={{ color: ringColor }} />
-            <span className="font-semibold text-sm leading-tight">{title}</span>
+          <div className="flex items-center gap-2 mb-2">
+            <Icon className="w-4 h-4 shrink-0" style={{ color: ringColor }} />
+            <span className="font-semibold text-base leading-tight">{title}</span>
           </div>
-          <p className="text-xs text-muted-foreground leading-relaxed mb-2.5">{body}</p>
+          <p className="text-sm text-muted-foreground leading-relaxed mb-3">{body}</p>
           <div className="flex items-center justify-between">
             <span className="text-xs text-muted-foreground/60 tabular-nums">
               {currentStepIndex + 1}/{STEPS.length}
