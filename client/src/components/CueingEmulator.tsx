@@ -315,6 +315,8 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
   const [tourStep, setTourStep] = useState<number | null>(null);
   const [isAnimating, setIsAnimating] = useState(false);
   const animFrameRef = useRef<number | null>(null);
+  const animBallsRef = useRef<Ball[] | null>(null);
+  const drawRef = useRef<(() => void) | null>(null);
 
   // Auto-start tour on first visit
   useEffect(() => {
@@ -505,6 +507,7 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
+    const ballsToDraw = animBallsRef.current ?? balls;
     const { scale, offsetX, offsetY } = getScale();
 
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -599,7 +602,7 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
 
     // Crosshairs for the ball currently being dragged
     if (dragRef.current) {
-      const draggedBall = balls.find((b) => b.id === dragRef.current!.ballId);
+      const draggedBall = ballsToDraw.find((b) => b.id === dragRef.current!.ballId);
       if (draggedBall && !draggedBall.pocketed) {
         const bp = tableToCanvas(draggedBall.pos.x, draggedBall.pos.y);
         ctx.save();
@@ -619,7 +622,7 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
       }
     }
 
-    for (const ball of balls) {
+    for (const ball of ballsToDraw) {
       if (ball.pocketed) continue;
       const bp = tableToCanvas(ball.pos.x, ball.pos.y);
       const br = TABLE_DIMENSIONS.ballRadius * ballScale * scale;
@@ -725,6 +728,8 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
   useEffect(() => {
     draw();
   }, [draw]);
+
+  useEffect(() => { drawRef.current = draw; }, [draw]);
 
   const getEventPos = (
     e: React.TouchEvent | React.MouseEvent
@@ -875,7 +880,9 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
     const cueBall = balls.find((b) => b.type === "cue" && !b.pocketed);
     if (!cueBall || !hasAimLine || isAnimating) return;
 
-    setShotHistory((prev) => [...prev, balls.map((b) => ({ ...b, pos: { ...b.pos }, vel: { ...b.vel }, spin: { ...b.spin } }))]);
+    // Snapshot current balls for history
+    const snapshot = balls.map((b) => ({ ...b, pos: { ...b.pos }, vel: { ...b.vel }, spin: { ...b.spin } }));
+    setShotHistory((prev) => [...prev, snapshot]);
 
     const params: ShotParams = {
       speed: shotSpeed,
@@ -887,18 +894,30 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
 
     const result = simulateShot(balls, params, tableConfig);
 
-    // Build a lookup: ballId -> trajectory points
+    // Build trajectory lookup: ballId -> points[]
     const trajMap: Record<string, { x: number; y: number }[]> = {};
     for (const traj of result.trajectories) {
       trajMap[traj.ballId] = traj.points;
     }
     const maxFrames = Math.max(...result.trajectories.map((t) => t.points.length), 1);
-    // Scale duration loosely with shot complexity; 500ms min, 1200ms max
     const ANIM_DURATION_MS = Math.min(1200, Math.max(500, maxFrames * 1.8));
+
+    // Preserve any balls that were already pocketed before this shot
+    const alreadyPocketed = balls.filter((b) => b.pocketed);
+    // Final state: simulation result merged with pre-pocketed balls
+    const mergedFinal = [
+      ...result.finalBalls,
+      ...alreadyPocketed.filter((pb) => !result.finalBalls.find((fb) => fb.id === pb.id)),
+    ];
+
+    // Capture current balls for animation closure
+    const preShotBalls = balls.map((b) => ({ ...b, pos: { ...b.pos } }));
 
     setHasAimLine(false);
     setSelectedBallId(null);
     setIsAnimating(true);
+    // Seed the animation ref so draw() immediately shows starting positions
+    animBallsRef.current = preShotBalls;
 
     const startTime = performance.now();
 
@@ -907,24 +926,31 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
       const progress = Math.min(elapsed / ANIM_DURATION_MS, 1);
       const frameIndex = Math.floor(progress * (maxFrames - 1));
 
-      setBalls((prevBalls) =>
-        prevBalls.map((b) => {
-          const pts = trajMap[b.id];
-          if (!pts || pts.length === 0) return b;
-          const idx = Math.min(frameIndex, pts.length - 1);
-          const finalBall = result.finalBalls.find((fb) => fb.id === b.id);
-          const reachedEnd = frameIndex >= pts.length - 1;
-          const pocketed = reachedEnd && (finalBall?.pocketed ?? false);
-          return { ...b, pos: { ...pts[idx] }, pocketed };
-        })
-      );
+      animBallsRef.current = preShotBalls.map((b) => {
+        const pts = trajMap[b.id];
+        if (!pts || pts.length === 0) return b;
+        const idx = Math.min(frameIndex, pts.length - 1);
+        const finalBall = result.finalBalls.find((fb) => fb.id === b.id);
+        // Pocket the ball as soon as its own trajectory is exhausted
+        const reachedEnd = frameIndex >= pts.length - 1;
+        const pocketed = reachedEnd && (finalBall?.pocketed ?? false);
+        return { ...b, pos: { ...pts[idx] }, pocketed };
+      });
+
+      // Draw directly — no React re-render per frame
+      drawRef.current?.();
 
       if (progress < 1) {
         animFrameRef.current = requestAnimationFrame(animate);
       } else {
-        setBalls(result.finalBalls);
+        animBallsRef.current = null;
+        setBalls(mergedFinal);
         setIsAnimating(false);
         setCueBallMoved(true);
+        setAngleFine(0);
+        setShotSpeed(5);
+        setEnglishX(0);
+        setEnglishY(0);
         if (tourStep !== null && getTourTrigger(tourStep) === "shot_taken") advanceTour();
       }
     };
@@ -950,6 +976,18 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
     setHasAimLine(false);
     setSelectedBallId(null);
     setCueBallMoved(false);
+  };
+
+  const handleClearTable = () => {
+    setBalls([createBall("cue", "cue", 25, 25)]);
+    setShotHistory([]);
+    setHasAimLine(false);
+    setSelectedBallId(null);
+    setCueBallMoved(false);
+    setAngleFine(0);
+    setShotSpeed(5);
+    setEnglishX(0);
+    setEnglishY(0);
   };
 
   const loadPreset = (preset: CoursePreset) => {
@@ -1189,6 +1227,16 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
             >
               <BookOpen className="w-4 h-4" />
               How to Use the Emulator
+            </Button>
+
+            <Button
+              variant="outline"
+              className="w-full justify-start gap-2"
+              onClick={() => { handleClearTable(); setShowSettings(false); }}
+              data-testid="button-clear-table"
+            >
+              <Trash2 className="w-4 h-4" />
+              Clear Table
             </Button>
 
             <div className="space-y-3">
