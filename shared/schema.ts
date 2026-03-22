@@ -50,6 +50,7 @@ export type Settings = z.infer<typeof settingsSchema>;
 
 export const setupTimeSchema = z.object({
   hole: z.number(),
+  cardId: z.string(),
   par: z.number(),
   setupTimeMs: z.number(),
   timestamp: z.string(),

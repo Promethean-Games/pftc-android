@@ -49,9 +49,69 @@ export function GameScreen({
   onHome,
 }: GameScreenProps) {
   const { isUnlocked, freeHoles } = useUnlock();
-  const { drawCard, getDrawnCard } = useGame();
+  const { drawCard, getDrawnCard, pauseTimer, resumeTimer, recordSetupTime } = useGame();
   const isHoleLocked = !isUnlocked && currentHole > freeHoles;
   const paywallTracked = useRef(false);
+
+  const [showSetupScreen, setShowSetupScreen] = useState(false);
+  const [incomingPlayerName, setIncomingPlayerName] = useState("");
+  const [pendingNavDirection, setPendingNavDirection] = useState<"next" | "prev" | null>(null);
+  const setupStartTime = useRef<number | null>(null);
+
+  const handleNextPlayer = () => {
+    const card = getDrawnCard(currentHole);
+    if (card && players.length > 1 && !isHoleLocked) {
+      const currentIndex = players.indexOf(currentPlayer);
+      const nextIndex = (currentIndex + 1) % players.length;
+      setIncomingPlayerName(players[nextIndex].name);
+      setPendingNavDirection("next");
+      setupStartTime.current = Date.now();
+      pauseTimer();
+      setShowSetupScreen(true);
+    } else {
+      onNextPlayer();
+    }
+  };
+
+  const handlePreviousPlayer = () => {
+    const card = getDrawnCard(currentHole);
+    if (card && players.length > 1 && !isHoleLocked) {
+      const currentIndex = players.indexOf(currentPlayer);
+      const prevIndex = (currentIndex - 1 + players.length) % players.length;
+      setIncomingPlayerName(players[prevIndex].name);
+      setPendingNavDirection("prev");
+      setupStartTime.current = Date.now();
+      pauseTimer();
+      setShowSetupScreen(true);
+    } else {
+      onPreviousPlayer();
+    }
+  };
+
+  const handleSetupReady = () => {
+    const setupTimeMs = setupStartTime.current ? Date.now() - setupStartTime.current : 0;
+    const card = getDrawnCard(currentHole);
+    if (card) {
+      recordSetupTime({
+        hole: currentHole,
+        cardId: card.id,
+        par: card.par ?? 0,
+        setupTimeMs,
+        timestamp: new Date().toISOString(),
+      });
+      trackEvent("setup_time_recorded", {
+        hole: currentHole,
+        cardId: card.id,
+        par: card.par,
+        setupTimeMs,
+      });
+    }
+    setShowSetupScreen(false);
+    resumeTimer();
+    if (pendingNavDirection === "next") onNextPlayer();
+    else if (pendingNavDirection === "prev") onPreviousPlayer();
+    setPendingNavDirection(null);
+  };
 
   useEffect(() => {
     if (isHoleLocked && !paywallTracked.current) {
@@ -88,9 +148,9 @@ export function GameScreen({
     const isRightSwipe = distance < -minSwipeDistance;
     
     if (isLeftSwipe) {
-      onNextPlayer();
+      handleNextPlayer();
     } else if (isRightSwipe) {
-      onPreviousPlayer();
+      handlePreviousPlayer();
     }
     
     touchStartX.current = null;
@@ -153,7 +213,7 @@ export function GameScreen({
       if (action === "stroke_add") {
         setStrokes((prev) => Math.max(0, prev + 1));
       } else if (action === "next_player") {
-        onNextPlayer();
+        handleNextPlayer();
       } else if (action === "undo") {
         onUndo();
       }
@@ -161,7 +221,7 @@ export function GameScreen({
     window.addEventListener("pftc-notif-action", handler as EventListener);
     return () =>
       window.removeEventListener("pftc-notif-action", handler as EventListener);
-  }, [onNextPlayer, onUndo]);
+  }, [handleNextPlayer, onUndo]);
 
   const playerStats = (scores[currentPlayer.id] || []).reduce((acc, score) => ({
     scratches: acc.scratches + score.scratches,
@@ -216,7 +276,7 @@ export function GameScreen({
         <Button
           size="icon"
           variant="outline"
-          onClick={onPreviousPlayer}
+          onClick={handlePreviousPlayer}
           className="w-20 h-11 text-xl"
           data-testid="button-prev-player"
         >
@@ -236,7 +296,7 @@ export function GameScreen({
         <Button
           size="icon"
           variant="outline"
-          onClick={onNextPlayer}
+          onClick={handleNextPlayer}
           className="w-20 h-11 text-xl"
           data-testid="button-next-player"
         >
@@ -409,6 +469,37 @@ export function GameScreen({
           </div>
         </>
       )}
+
+      {showSetupScreen && (() => {
+        const card = getDrawnCard(currentHole);
+        return card ? (
+          <div
+            className="fixed inset-0 bg-background z-50 flex flex-col items-center justify-center p-6 gap-6"
+            data-testid="setup-screen-overlay"
+            onTouchStart={(e) => e.stopPropagation()}
+            onTouchMove={(e) => e.stopPropagation()}
+            onTouchEnd={(e) => e.stopPropagation()}
+          >
+            <img
+              src={card.img}
+              alt={card.isJoker ? "Joker" : `Par ${card.par}`}
+              className="max-w-full max-h-[55vh] rounded-lg object-contain"
+              data-testid="img-setup-card"
+            />
+            <p className="text-center text-lg font-medium text-muted-foreground" data-testid="text-setup-instruction">
+              Set up the table to match the card for{" "}
+              <span className="text-foreground font-bold">{incomingPlayerName}</span>.
+            </p>
+            <Button
+              className="w-full max-w-xs h-14 text-xl font-bold bg-green-600 text-white"
+              onClick={handleSetupReady}
+              data-testid="button-setup-ready"
+            >
+              Ready!
+            </Button>
+          </div>
+        ) : null;
+      })()}
 
       {showCourseViewer && currentCard && (
         <div

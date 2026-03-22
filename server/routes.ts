@@ -72,7 +72,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const ALLOWED_EVENTS = new Set([
     "app_opened", "game_started", "game_completed",
     "paywall_encountered", "purchase_initiated", "purchase_completed",
-    "tool_opened", "tutorial_viewed",
+    "tool_opened", "tutorial_viewed", "setup_time_recorded",
   ]);
 
   app.post("/api/analytics/capture", analyticsLimiter, async (req, res) => {
