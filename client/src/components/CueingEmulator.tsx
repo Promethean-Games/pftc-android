@@ -1191,15 +1191,21 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
         </div>
       </div>
 
-      {cutAngleInfo && (
-        <div className="flex items-center gap-3 px-3 py-1 border-b bg-muted/50 text-sm" data-testid="cut-angle-info">
-          <span className="text-muted-foreground">Cut Angle:</span>
-          <span className="font-mono font-bold" data-testid="text-cut-angle">{cutAngleInfo.angle.toFixed(2)}°</span>
-          <span className="text-muted-foreground">({cutAngleInfo.label})</span>
-        </div>
-      )}
-
       <div className="flex-1 min-h-0 relative overflow-hidden">
+        {/* Cut-angle info bar — absolute overlay so the canvas container never
+            changes size (avoids the ResizeObserver → canvas-clear flicker). */}
+        {cutAngleInfo && (
+          <div
+            className="absolute top-0 left-0 right-0 z-10 flex items-center gap-3 px-3 py-1 text-sm pointer-events-none"
+            style={{ background: "rgba(0,0,0,0.55)" }}
+            data-testid="cut-angle-info"
+          >
+            <span className="text-white/70">Cut Angle:</span>
+            <span className="font-mono font-bold text-white" data-testid="text-cut-angle">{cutAngleInfo.angle.toFixed(2)}°</span>
+            <span className="text-white/70">({cutAngleInfo.label})</span>
+          </div>
+        )}
+
         {/* English spin popup — press & hold the diagram thumbnail to open;
             drag to position; release to confirm and close. */}
         {showEnglishPopup && (
