@@ -19,6 +19,7 @@ import { isLeader } from "@/lib/game-utils";
 import { initAnalytics, trackEvent } from "@/lib/analytics";
 import { APP_VERSION } from "@/lib/constants";
 import { isRunningInTwa } from "@/lib/play-billing";
+import { useBackHandler } from "@/hooks/useBackHandler";
 
 type Screen = "splash" | "load" | "setup" | "game" | "summary";
 type ActiveTab = "game" | "summary" | "settings" | "save";
@@ -93,6 +94,22 @@ function GameApp() {
     document.addEventListener("visibilitychange", handleVisibility);
     return () => document.removeEventListener("visibilitychange", handleVisibility);
   }, [screen, activeTab, game.isComplete]);
+
+  // Back-button / Android back-gesture handling for screen-level navigation.
+  // Each registered handler intercepts one back-press and navigates one step up.
+
+  // Load dialog → splash
+  useBackHandler(screen === "load" ? () => setScreen("splash") : null);
+
+  // Player setup → splash
+  useBackHandler(screen === "setup" ? () => setScreen("splash") : null);
+
+  // In-game: non-default tab (settings / save / summary) → game tab
+  useBackHandler(
+    screen === "game" && activeTab !== "game" && !viewOnly
+      ? () => setActiveTab("game")
+      : null
+  );
 
   const handleNewGame = () => {
     game.resetGame();

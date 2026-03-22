@@ -11,6 +11,7 @@ import { PrivacyPolicy } from "./PrivacyPolicy";
 import { PlaytestBanner } from "./PlaytestBanner"; // PLAYTESTING_MODE — revert: remove this import and usage
 import { useUnlock } from "@/contexts/UnlockContext";
 import { trackEvent } from "@/lib/analytics";
+import { useBackHandler } from "@/hooks/useBackHandler";
 
 interface SplashScreenProps {
   onNewGame: () => void;
@@ -25,6 +26,29 @@ export function SplashScreen({ onNewGame, onLoadGame }: SplashScreenProps) {
   const [showCueMasterTools, setShowCueMasterTools] = useState(false);
   const [showPrivacy, setShowPrivacy] = useState(false);
   const { isUnlocked, initiateCheckout, initiateStripeCheckout, isCheckingUnlock, purchaseError, playBillingUnavailable, clearPurchaseError } = useUnlock();
+
+  // Back-button / Android back-gesture handling.
+  // Each overlay level gets its own handler so back navigates one level at a
+  // time: sub-tool → CueMasterTools → dismiss.  The innermost registered
+  // handler is called first (top of the global stack).
+
+  // Level: sub-tools opened from CueMasterTools
+  const subToolOpen = showCoinFlip || showEmulator || showLeveler;
+  useBackHandler(subToolOpen ? () => {
+    setShowCoinFlip(false);
+    setShowEmulator(false);
+    setShowLeveler(false);
+    setShowCueMasterTools(true);
+  } : null);
+
+  // Level: CueMasterTools hub
+  useBackHandler(showCueMasterTools ? () => setShowCueMasterTools(false) : null);
+
+  // Level: Tutorial carousel
+  useBackHandler(showTutorial ? () => setShowTutorial(false) : null);
+
+  // Level: Privacy / Terms
+  useBackHandler(showPrivacy ? () => setShowPrivacy(false) : null);
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen p-6 relative">
@@ -150,13 +174,13 @@ export function SplashScreen({ onNewGame, onLoadGame }: SplashScreenProps) {
         <TutorialCarousel onClose={() => setShowTutorial(false)} />
       )}
       {showLeveler && (
-        <TableLeveler onClose={() => setShowLeveler(false)} />
+        <TableLeveler onClose={() => { setShowLeveler(false); setShowCueMasterTools(true); }} />
       )}
       {showEmulator && (
-        <CueingEmulator onClose={() => setShowEmulator(false)} />
+        <CueingEmulator onClose={() => { setShowEmulator(false); setShowCueMasterTools(true); }} />
       )}
       {showCoinFlip && (
-        <CoinFlip onClose={() => setShowCoinFlip(false)} />
+        <CoinFlip onClose={() => { setShowCoinFlip(false); setShowCueMasterTools(true); }} />
       )}
       {showCueMasterTools && (
         <CueMasterTools
