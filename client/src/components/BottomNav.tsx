@@ -23,7 +23,7 @@ export function BottomNav({ activeTab, onTabChange, viewOnly, onGoHome }: Bottom
   }
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 h-16 bg-card border-t flex items-center z-40">
+    <div className="fixed bottom-0 left-0 right-0 h-16 bg-card border-t flex items-center z-[60]">
       {viewOnly && onGoHome && (
         <Button
           variant="ghost"
