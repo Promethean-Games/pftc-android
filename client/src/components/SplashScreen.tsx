@@ -70,6 +70,7 @@ export function SplashScreen({ onNewGame, onLoadGame }: SplashScreenProps) {
         >
           {isUnlocked ? "New Game" : "Start Demo"}
         </Button>
+        <p className="text-xs text-red-500 text-center -mt-2">*Pool table not included.</p>
         <Button
           size="lg"
           variant="outline"
