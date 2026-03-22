@@ -268,7 +268,7 @@ export function GameScreen({
     return !playerScore || playerScore.strokes === 0;
   }).length;
   
-  const shooterInfo = `${shootersRemaining} shooter${shootersRemaining !== 1 ? "s" : ""} remaining`;
+  const shooterInfo = `${shootersRemaining} player${shootersRemaining !== 1 ? "s" : ""} remaining`;
 
   const currentCard = getDrawnCard(currentHole);
 
