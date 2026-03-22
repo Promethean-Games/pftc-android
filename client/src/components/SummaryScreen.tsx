@@ -79,11 +79,13 @@ export function SummaryScreen({ players, scores, onNewGame, onSubmitToSheets, is
                 <span className="font-semibold" data-testid="text-course-par">{coursePar}</span>
               </div>
               <div className="flex justify-between border-b border-dashed pb-2">
-                <span>Total Strokes:</span>
-                <span className="font-semibold">
-                  {Object.values(scores).reduce((sum, playerScores) => 
-                    sum + calculatePlayerTotal(playerScores).totalStrokes, 0
-                  )}
+                <span>Avg Strokes:</span>
+                <span className="font-semibold" data-testid="text-avg-strokes">
+                  {players.length > 0
+                    ? (Object.values(scores).reduce((sum, playerScores) =>
+                        sum + calculatePlayerTotal(playerScores).totalStrokes, 0
+                      ) / players.length).toFixed(1)
+                    : "—"}
                 </span>
               </div>
               <div className="flex justify-between border-b border-dashed pb-2">
