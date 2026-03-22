@@ -313,6 +313,8 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
   const [showSettings, setShowSettings] = useState(false);
   const [cueBallMoved, setCueBallMoved] = useState(false);
   const [tourStep, setTourStep] = useState<number | null>(null);
+  const [isAnimating, setIsAnimating] = useState(false);
+  const animFrameRef = useRef<number | null>(null);
 
   // Auto-start tour on first visit
   useEffect(() => {
@@ -358,6 +360,10 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
     if (getTourTrigger(tourStep) !== "aim_set") return;
     if (hasAimLine) advanceTour();
   }, [hasAimLine, tourStep, advanceTour]);
+
+  useEffect(() => {
+    return () => { if (animFrameRef.current !== null) cancelAnimationFrame(animFrameRef.current); };
+  }, []);
 
   const [tableConfig, setTableConfig] = useState<TableConfig>({
     tableSpeed: "medium",
@@ -867,7 +873,7 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
 
   const handleShoot = () => {
     const cueBall = balls.find((b) => b.type === "cue" && !b.pocketed);
-    if (!cueBall || !hasAimLine) return;
+    if (!cueBall || !hasAimLine || isAnimating) return;
 
     setShotHistory((prev) => [...prev, balls.map((b) => ({ ...b, pos: { ...b.pos }, vel: { ...b.vel }, spin: { ...b.spin } }))]);
 
@@ -880,12 +886,50 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
     };
 
     const result = simulateShot(balls, params, tableConfig);
-    setBalls(result.finalBalls);
+
+    // Build a lookup: ballId -> trajectory points
+    const trajMap: Record<string, { x: number; y: number }[]> = {};
+    for (const traj of result.trajectories) {
+      trajMap[traj.ballId] = traj.points;
+    }
+    const maxFrames = Math.max(...result.trajectories.map((t) => t.points.length), 1);
+    // Scale duration loosely with shot complexity; 500ms min, 1200ms max
+    const ANIM_DURATION_MS = Math.min(1200, Math.max(500, maxFrames * 1.8));
+
     setHasAimLine(false);
     setSelectedBallId(null);
-    setCueBallMoved(true);
+    setIsAnimating(true);
 
-    if (tourStep !== null && getTourTrigger(tourStep) === "shot_taken") advanceTour();
+    const startTime = performance.now();
+
+    const animate = () => {
+      const elapsed = performance.now() - startTime;
+      const progress = Math.min(elapsed / ANIM_DURATION_MS, 1);
+      const frameIndex = Math.floor(progress * (maxFrames - 1));
+
+      setBalls((prevBalls) =>
+        prevBalls.map((b) => {
+          const pts = trajMap[b.id];
+          if (!pts || pts.length === 0) return b;
+          const idx = Math.min(frameIndex, pts.length - 1);
+          const finalBall = result.finalBalls.find((fb) => fb.id === b.id);
+          const reachedEnd = frameIndex >= pts.length - 1;
+          const pocketed = reachedEnd && (finalBall?.pocketed ?? false);
+          return { ...b, pos: { ...pts[idx] }, pocketed };
+        })
+      );
+
+      if (progress < 1) {
+        animFrameRef.current = requestAnimationFrame(animate);
+      } else {
+        setBalls(result.finalBalls);
+        setIsAnimating(false);
+        setCueBallMoved(true);
+        if (tourStep !== null && getTourTrigger(tourStep) === "shot_taken") advanceTour();
+      }
+    };
+
+    animFrameRef.current = requestAnimationFrame(animate);
   };
 
   const handleUndo = () => {
@@ -1039,7 +1083,7 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
             size="sm"
             variant="default"
             onClick={handleShoot}
-            disabled={!hasAimLine}
+            disabled={!hasAimLine || isAnimating}
             data-testid="button-shoot"
           >
             <Crosshair className="w-3 h-3 mr-1" />
