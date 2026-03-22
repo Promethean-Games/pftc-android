@@ -58,12 +58,18 @@ export function GameScreen({
   const [pendingNavDirection, setPendingNavDirection] = useState<"next" | "prev" | null>(null);
   const setupStartTime = useRef<number | null>(null);
 
+  const incomingPlayerHasScore = (incomingPlayer: Player) => {
+    const s = scores[incomingPlayer.id]?.find((s) => s.hole === currentHole);
+    return s && s.strokes > 0;
+  };
+
   const handleNextPlayer = () => {
     const card = getDrawnCard(currentHole);
-    if (card && players.length > 1 && !isHoleLocked) {
-      const currentIndex = players.indexOf(currentPlayer);
-      const nextIndex = (currentIndex + 1) % players.length;
-      setIncomingPlayerName(players[nextIndex].name);
+    const currentIndex = players.indexOf(currentPlayer);
+    const nextIndex = (currentIndex + 1) % players.length;
+    const nextPlayer = players[nextIndex];
+    if (card && players.length > 1 && !isHoleLocked && !incomingPlayerHasScore(nextPlayer)) {
+      setIncomingPlayerName(nextPlayer.name);
       setPendingNavDirection("next");
       setupStartTime.current = Date.now();
       pauseTimer();
@@ -75,10 +81,11 @@ export function GameScreen({
 
   const handlePreviousPlayer = () => {
     const card = getDrawnCard(currentHole);
-    if (card && players.length > 1 && !isHoleLocked) {
-      const currentIndex = players.indexOf(currentPlayer);
-      const prevIndex = (currentIndex - 1 + players.length) % players.length;
-      setIncomingPlayerName(players[prevIndex].name);
+    const currentIndex = players.indexOf(currentPlayer);
+    const prevIndex = (currentIndex - 1 + players.length) % players.length;
+    const prevPlayer = players[prevIndex];
+    if (card && players.length > 1 && !isHoleLocked && !incomingPlayerHasScore(prevPlayer)) {
+      setIncomingPlayerName(prevPlayer.name);
       setPendingNavDirection("prev");
       setupStartTime.current = Date.now();
       pauseTimer();
