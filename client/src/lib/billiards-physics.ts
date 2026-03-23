@@ -416,11 +416,13 @@ export function simulateShot(
     recordCounter++;
     if (recordCounter >= RECORD_INTERVAL) {
       recordCounter = 0;
+      // Record ALL non-pocketed balls every interval so trajectory arrays stay
+      // temporally in sync. Stationary balls repeat their position (invisible
+      // zero-length line) but their index aligns with the cue ball's index,
+      // preventing object balls from appearing to jump at animation start.
       for (const ball of simBalls) {
         if (ball.pocketed) continue;
-        if (vecLen(ball.vel) > VELOCITY_THRESHOLD * 0.5 || vecLen(ball.spin) > VELOCITY_THRESHOLD) {
-          trajectoryMap[ball.id]?.push({ x: ball.pos.x, y: ball.pos.y });
-        }
+        trajectoryMap[ball.id]?.push({ x: ball.pos.x, y: ball.pos.y });
       }
     }
 
