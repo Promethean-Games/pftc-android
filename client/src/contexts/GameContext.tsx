@@ -2,6 +2,12 @@ import { createContext, useContext, useState, useEffect, type ReactNode } from "
 import type { Player, HoleScore, GameSession, Settings, SetupTime } from "@shared/schema";
 import { PLAYER_COLORS, MAX_HOLES } from "@/lib/constants";
 import { shuffleDeck, getCardById, type CourseCard } from "@/lib/card-deck";
+import {
+  ACHIEVEMENT_IDS,
+  unlockAchievement,
+  checkHoleScoreAchievements,
+  checkRoundAchievements,
+} from "@/lib/play-games";
 
 export interface TurnTime {
   playerId: string;
@@ -323,6 +329,33 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const nextCard = () => {
     saveHistory(gameState);
     const now = Date.now();
+
+    // ── Play Games achievements ──────────────────────────────────────────────
+    const completedHole = gameState.currentHole;
+
+    // Milestone: first hole
+    if (completedHole === 1) unlockAchievement(ACHIEVEMENT_IDS.OFF_THE_TEE);
+    // Milestone: front nine
+    if (completedHole === 9) unlockAchievement(ACHIEVEMENT_IDS.FRONT_NINE);
+    // Milestone: full round
+    if (completedHole >= MAX_HOLES) unlockAchievement(ACHIEVEMENT_IDS.FULL_ROUND);
+
+    // Score achievements — fire for every player on the just-completed hole
+    for (const player of gameState.players) {
+      const h = gameState.scores[player.id]?.find((s) => s.hole === completedHole);
+      if (h && h.par > 0) {
+        checkHoleScoreAchievements(h.strokes + h.scratches + h.penalties, h.par);
+      }
+    }
+
+    // Round-end achievements — check every player's full card
+    if (completedHole >= MAX_HOLES) {
+      for (const player of gameState.players) {
+        checkRoundAchievements(gameState.scores[player.id] || []);
+      }
+    }
+    // ────────────────────────────────────────────────────────────────────────
+
     setGameState((prev) => {
       const activeSince = prev.isPaused ? 0 : (now - prev.lastResumedAt);
       const newTotalPlay = prev.totalPlayTimeMs + activeSince;

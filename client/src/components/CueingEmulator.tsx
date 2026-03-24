@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { ACHIEVEMENT_IDS, incrementAchievement, unlockAchievement } from "@/lib/play-games";
 import { X, Plus, Trash2, Undo2, Crosshair, Grid3x3, Move, Settings, RefreshCw, BookOpen, Target } from "lucide-react";
 import { CueingEmulatorTour, getTourTrigger, TOUR_STEP_COUNT } from "./CueingEmulatorTour";
 import { Button } from "@/components/ui/button";
@@ -946,6 +947,20 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
     // Snapshot current balls for history
     const snapshot = balls.map((b) => ({ ...b, pos: { ...b.pos }, vel: { ...b.vel }, spin: { ...b.spin } }));
     setShotHistory((prev) => [...prev, snapshot]);
+
+    // ── Play Games achievements ──────────────────────────────────────────────
+    // CueMaster: incremental — PGPS unlocks automatically after 10 steps
+    incrementAchievement(ACHIEVEMENT_IDS.CUEMASTER);
+
+    // Table Read: unlock once the player has shot on all three standard sizes
+    if (tableSizeState.preset !== "custom") {
+      const presetsKey = "pftc_emulator_presets_used";
+      const usedPresets = new Set<string>(JSON.parse(localStorage.getItem(presetsKey) || "[]"));
+      usedPresets.add(tableSizeState.preset);
+      localStorage.setItem(presetsKey, JSON.stringify([...usedPresets]));
+      if (usedPresets.size >= 3) unlockAchievement(ACHIEVEMENT_IDS.TABLE_READ);
+    }
+    // ────────────────────────────────────────────────────────────────────────
 
     const params: ShotParams = {
       speed: shotSpeed,
