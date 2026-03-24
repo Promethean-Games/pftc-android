@@ -1101,19 +1101,7 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
     setEnglishY(snapEnglish(Math.max(ENG_MIN, Math.min(ENG_MAX, y))));
   }, []);
 
-  // While the english popup is open, track pointer moves anywhere on screen
-  // and close on pointer release.
-  useEffect(() => {
-    if (!showEnglishPopup) return;
-    const onMove = (e: PointerEvent) => updateEnglishFromPointer(e.clientX, e.clientY);
-    const onUp = () => setShowEnglishPopup(false);
-    window.addEventListener("pointermove", onMove);
-    window.addEventListener("pointerup", onUp);
-    return () => {
-      window.removeEventListener("pointermove", onMove);
-      window.removeEventListener("pointerup", onUp);
-    };
-  }, [showEnglishPopup, updateEnglishFromPointer]);
+  // No global listeners needed — the popup now uses direct React event handlers.
 
   const ToggleGroup = ({
     value,
@@ -1271,18 +1259,28 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
           </div>
         )}
 
-        {/* English spin popup — press & hold the diagram thumbnail to open;
-            drag to position; release to confirm and close. */}
+        {/* English spin popup — click thumbnail to open; stays open until user
+            taps the cue ball to set a contact point, or taps thumbnail to close. */}
         {showEnglishPopup && (
           <div
             className="absolute inset-0 z-[45] flex items-center justify-center"
             style={{ background: "rgba(0,0,0,0.82)", touchAction: "none" }}
             data-testid="english-popup-overlay"
+            onClick={() => setShowEnglishPopup(false)}
           >
             <div
               ref={englishPopupRef}
               style={{ width: "min(72vw, 72vh)", height: "min(72vw, 72vh)" }}
               data-testid="english-popup-diagram"
+              onPointerMove={(e) => {
+                e.stopPropagation();
+                updateEnglishFromPointer(e.clientX, e.clientY);
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                updateEnglishFromPointer(e.clientX, e.clientY);
+                setShowEnglishPopup(false);
+              }}
             >
               <svg width="100%" height="100%" viewBox="0 0 120 120">
                 <circle cx="60" cy="60" r="58" fill="white" stroke="#aaa" strokeWidth="1.5" />
@@ -1318,7 +1316,7 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
               <p className="text-center text-white/80 text-sm mt-2 select-none">
                 H{englishX >= 0 ? "+" : ""}{englishX.toFixed(2)} &nbsp; V{englishY >= 0 ? "+" : ""}{englishY.toFixed(2)}
               </p>
-              <p className="text-center text-white/50 text-xs mt-1 select-none">Release to confirm</p>
+              <p className="text-center text-white/50 text-xs mt-1 select-none">Tap the ball to set · tap outside to close</p>
             </div>
           </div>
         )}
@@ -1508,8 +1506,8 @@ export function CueingEmulator({ onClose }: CueingEmulatorProps) {
         <div className="flex flex-col items-center gap-1 flex-shrink-0">
           <div
             className="relative cursor-pointer select-none"
-            style={{ width: 64, height: 64, touchAction: "none" }}
-            onPointerDown={(e) => { e.preventDefault(); setShowEnglishPopup(true); }}
+            style={{ width: 64, height: 64 }}
+            onClick={() => setShowEnglishPopup((v) => !v)}
             data-testid="english-diagram"
           >
             <svg width="64" height="64" viewBox="0 0 120 120">
