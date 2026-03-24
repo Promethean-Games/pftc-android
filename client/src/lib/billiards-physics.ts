@@ -381,11 +381,19 @@ export function simulateShot(
         const dist = vecLen(vecSub(bi.pos, bj.pos));
         if (dist >= effBallDiameter) continue;
         if (bi.pocketed) {
-          // bi is in a pocket — ricochet bj off it
-          resolveCueBallVsPocketedBall(bj, bi, effBallDiameter);
+          // bi is in a pocket — ricochet bj off it, but only if bj is not
+          // itself already entering a pocket (otherwise it would be blocked
+          // from pocketing by the previously-pocketed ball sitting there).
+          const bjNearPocket = POCKETS.some(
+            (p) => vecLen(vecSub(bj.pos, p)) < effPocketRadius * 1.5
+          );
+          if (!bjNearPocket) resolveCueBallVsPocketedBall(bj, bi, effBallDiameter);
         } else if (bj.pocketed) {
-          // bj is in a pocket — ricochet bi off it
-          resolveCueBallVsPocketedBall(bi, bj, effBallDiameter);
+          // bj is in a pocket — ricochet bi off it, same caveat.
+          const biNearPocket = POCKETS.some(
+            (p) => vecLen(vecSub(bi.pos, p)) < effPocketRadius * 1.5
+          );
+          if (!biNearPocket) resolveCueBallVsPocketedBall(bi, bj, effBallDiameter);
         } else {
           resolveBallBallCollision(bi, bj, throwFactor, effBallDiameter);
         }

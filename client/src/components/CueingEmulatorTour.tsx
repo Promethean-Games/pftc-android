@@ -56,7 +56,7 @@ const STEPS: StepDef[] = [
   {
     id: "english",
     title: "Spin Diagram",
-    body: "Tap inside to set tip contact. Center = no spin. Off-center adds spin.",
+    body: "Tap the diagram to open the spin overlay. Then tap anywhere on the cue ball to set your tip contact and close. Tap the diagram again to close without changes.",
     targetTestId: "english-diagram",
     trigger: "next",
     Icon: CircleDot,
