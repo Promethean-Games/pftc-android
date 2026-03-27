@@ -6,7 +6,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider, useTheme } from "@/components/ThemeProvider";
 import { GameProvider, useGame } from "@/contexts/GameContext";
-import { UnlockProvider, useUnlock } from "@/contexts/UnlockContext";
+import { UnlockProvider } from "@/contexts/UnlockContext";
 import { SplashScreen } from "@/components/SplashScreen";
 import { PlayerSetup } from "@/components/PlayerSetup";
 import { GameScreen } from "@/components/GameScreen";
@@ -27,7 +27,6 @@ type ActiveTab = "game" | "summary" | "settings" | "save";
 function GameApp() {
   const game = useGame();
   const { theme, setTheme } = useTheme();
-  const { isUnlocked } = useUnlock();
   
   const [screen, setScreen] = useState<Screen>(() => {
     const saved = localStorage.getItem("appScreen");
@@ -127,7 +126,7 @@ function GameApp() {
     setScreen("game");
     trackEvent("game_started", {
       player_count: game.players.length,
-      mode: isUnlocked ? "full" : "demo",
+      mode: "full",
     });
   };
 

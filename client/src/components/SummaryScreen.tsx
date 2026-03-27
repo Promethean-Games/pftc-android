@@ -2,11 +2,10 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Pencil, Lock } from "lucide-react";
+import { Pencil } from "lucide-react";
 import type { Player, HoleScore } from "@shared/schema";
 import { calculatePlayerTotal, getLeaderboard } from "@/lib/game-utils";
 import { cn } from "@/lib/utils";
-import { useUnlock } from "@/contexts/UnlockContext";
 import { GameAnalytics } from "./GameAnalytics";
 import type { TurnTime } from "@/contexts/GameContext";
 
@@ -25,7 +24,6 @@ interface SummaryScreenProps {
 }
 
 export function SummaryScreen({ players, scores, onNewGame, onSubmitToSheets, isGameOver = false, viewOnly = false, onUpdateScore, turnTimes = [], gameStartTime = 0, gameEndTime = null, totalPlayTimeMs = 0 }: SummaryScreenProps) {
-  const { isUnlocked, freeHoles } = useUnlock();
   const [isLandscape, setIsLandscape] = useState(false);
   const [editingCell, setEditingCell] = useState<{ playerId: string; hole: number } | null>(null);
   const [editValue, setEditValue] = useState("");
@@ -233,16 +231,7 @@ export function SummaryScreen({ players, scores, onNewGame, onSubmitToSheets, is
                         const par = holeScore?.par || 0;
                         const strokes = holeScore?.strokes || 0;
                         const diff = strokes - par;
-                        const holeLocked = !isUnlocked && hole > freeHoles;
                         const isEditing = editingCell?.playerId === entry.player.id && editingCell?.hole === hole;
-                        
-                        if (holeLocked) {
-                          return (
-                            <TableCell key={hole} className="text-center select-none">
-                              <Lock className="w-3 h-3 mx-auto text-muted-foreground/50" />
-                            </TableCell>
-                          );
-                        }
 
                         if (isEditing) {
                           return (
@@ -335,14 +324,9 @@ export function SummaryScreen({ players, scores, onNewGame, onSubmitToSheets, is
                       </TableCell>
                       {allHoles.map((hole) => {
                         const holeScore = playerScores.find((s) => s.hole === hole);
-                        const isLocked = !isUnlocked && hole > freeHoles;
                         return (
-                          <TableCell key={hole} className={cn("text-center", isLocked && "select-none")}>
-                            {isLocked ? (
-                              <Lock className="w-3 h-3 mx-auto text-muted-foreground/50" />
-                            ) : (
-                              holeScore ? holeScore.strokes : "-"
-                            )}
+                          <TableCell key={hole} className="text-center">
+                            {holeScore ? holeScore.strokes : "-"}
                           </TableCell>
                         );
                       })}
@@ -363,7 +347,6 @@ export function SummaryScreen({ players, scores, onNewGame, onSubmitToSheets, is
         gameStartTime={gameStartTime}
         gameEndTime={gameEndTime}
         totalPlayTimeMs={totalPlayTimeMs}
-        isUnlocked={isUnlocked}
       />
 
       <div className="space-y-3">

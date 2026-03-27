@@ -9,8 +9,6 @@ import { getScoreCallout } from "@/lib/game-utils";
 import { cn } from "@/lib/utils";
 import { DrawDialog } from "./DrawDialog";
 
-import { useUnlock } from "@/contexts/UnlockContext";
-import { UnlockBanner } from "./UnlockBanner";
 import { useGame } from "@/contexts/GameContext";
 import type { CourseCard } from "@/lib/card-deck";
 import { trackEvent } from "@/lib/analytics";
@@ -48,10 +46,7 @@ export function GameScreen({
   onSetParForAll,
   onHome,
 }: GameScreenProps) {
-  const { isUnlocked, freeHoles } = useUnlock();
   const { drawCard, getDrawnCard, pauseTimer, resumeTimer, recordSetupTime } = useGame();
-  const isHoleLocked = !isUnlocked && currentHole > freeHoles;
-  const paywallTracked = useRef(false);
 
   const [showSetupScreen, setShowSetupScreen] = useState(false);
   const [incomingPlayerName, setIncomingPlayerName] = useState("");
@@ -68,7 +63,7 @@ export function GameScreen({
     const currentIndex = players.indexOf(currentPlayer);
     const nextIndex = (currentIndex + 1) % players.length;
     const nextPlayer = players[nextIndex];
-    if (card && players.length > 1 && !isHoleLocked && !incomingPlayerHasScore(nextPlayer)) {
+    if (card && players.length > 1 && !incomingPlayerHasScore(nextPlayer)) {
       setIncomingPlayerName(nextPlayer.name);
       setPendingNavDirection("next");
       setupStartTime.current = Date.now();
@@ -84,7 +79,7 @@ export function GameScreen({
     const currentIndex = players.indexOf(currentPlayer);
     const prevIndex = (currentIndex - 1 + players.length) % players.length;
     const prevPlayer = players[prevIndex];
-    if (card && players.length > 1 && !isHoleLocked && !incomingPlayerHasScore(prevPlayer)) {
+    if (card && players.length > 1 && !incomingPlayerHasScore(prevPlayer)) {
       setIncomingPlayerName(prevPlayer.name);
       setPendingNavDirection("prev");
       setupStartTime.current = Date.now();
@@ -119,13 +114,6 @@ export function GameScreen({
     else if (pendingNavDirection === "prev") onPreviousPlayer();
     setPendingNavDirection(null);
   };
-
-  useEffect(() => {
-    if (isHoleLocked && !paywallTracked.current) {
-      paywallTracked.current = true;
-      trackEvent("paywall_encountered", { hole: currentHole });
-    }
-  }, [isHoleLocked, currentHole]);
 
   const [showDrawDialog, setShowDrawDialog] = useState(false);
   const [showFinishConfirm, setShowFinishConfirm] = useState(false);
@@ -178,7 +166,6 @@ export function GameScreen({
   const [penalties, setPenalties] = useState(currentScore.penalties || 0);
 
   useEffect(() => {
-    if (isHoleLocked) return;
     if (currentHole !== lastHole) {
       setLastHole(currentHole);
       const existingPar = scores[currentPlayer.id]?.find((s) => s.hole === currentHole)?.par;
@@ -186,10 +173,9 @@ export function GameScreen({
         setShowDrawDialog(true);
       }
     }
-  }, [currentHole, lastHole, scores, currentPlayer.id, isHoleLocked]);
+  }, [currentHole, lastHole, scores, currentPlayer.id]);
 
   useEffect(() => {
-    if (isHoleLocked) return;
     if (currentScore.par === 0) {
       setShowDrawDialog(true);
     }
@@ -348,11 +334,7 @@ export function GameScreen({
         )}
       </div>
 
-      {isHoleLocked ? (
-        <div className="flex-1 flex flex-col items-center justify-center py-8" data-testid="locked-hole-overlay">
-          <UnlockBanner variant="overlay" onHome={onHome} />
-        </div>
-      ) : par === 0 ? (
+      {par === 0 ? (
         <button
           className="w-full mb-3 p-4 rounded-md border-2 border-dashed border-primary text-center"
           onClick={() => setShowDrawDialog(true)}
@@ -387,8 +369,7 @@ export function GameScreen({
         </div>
       )}
 
-      {!isHoleLocked && (
-        <>
+      <>
           <div className={cn("flex gap-3 mb-4", leftHandedMode && "flex-row-reverse")}>
             <Button
               variant="destructive"
@@ -474,8 +455,7 @@ export function GameScreen({
               )}
             </div>
           </div>
-        </>
-      )}
+      </>
 
       {showSetupScreen && (() => {
         const card = getDrawnCard(currentHole);
@@ -546,7 +526,7 @@ export function GameScreen({
         </div>
       )}
 
-      {showDrawDialog && !isHoleLocked && (
+      {showDrawDialog && (
         <DrawDialog
           onConfirm={handleDrawConfirm}
           drawnCard={getDrawnCard(currentHole)}

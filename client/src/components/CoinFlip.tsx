@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useUnlock } from "@/contexts/UnlockContext";
 import headsImg from "@assets/image_1773676717898.png";
 import tailsImg from "@assets/image_1773670945305.png";
 
@@ -48,7 +47,6 @@ interface CoinFlipProps {
 }
 
 export function CoinFlip({ onClose }: CoinFlipProps) {
-  const { isUnlocked } = useUnlock();
   const [rotation, setRotation] = useState(0);
   const [isFlipping, setIsFlipping] = useState(false);
   const [result, setResult] = useState<"heads" | "tails" | null>(null);
@@ -70,11 +68,9 @@ export function CoinFlip({ onClose }: CoinFlipProps) {
     setTimeout(() => {
       setIsFlipping(false);
       setResult(outcome);
-      if (isUnlocked) {
-        setHistory((h) =>
-          [{ id: Date.now(), outcome, timestamp: new Date() }, ...h].slice(0, MAX_HISTORY)
-        );
-      }
+      setHistory((h) =>
+        [{ id: Date.now(), outcome, timestamp: new Date() }, ...h].slice(0, MAX_HISTORY)
+      );
     }, 1400);
   };
 
@@ -195,9 +191,7 @@ export function CoinFlip({ onClose }: CoinFlipProps) {
           </Button>
         </div>
 
-        {/* Flip History — paid users only */}
-        {isUnlocked && (
-          <div className="flex-1 flex flex-col overflow-hidden border-t mx-0">
+        <div className="flex-1 flex flex-col overflow-hidden border-t mx-0">
             <div className="flex items-center justify-between px-4 py-2 shrink-0">
               <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
                 Flip History
@@ -252,8 +246,7 @@ export function CoinFlip({ onClose }: CoinFlipProps) {
                 </div>
               )}
             </div>
-          </div>
-        )}
+        </div>
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { BookOpen, Wrench, ShoppingCart, Shield, AlertCircle, X, MessageSquare } from "lucide-react";
+import { BookOpen, Wrench, Shield, MessageSquare } from "lucide-react";
 import { LOGO_URL, APP_VERSION } from "@/lib/constants";
 import { TutorialCarousel } from "./TutorialCarousel";
 import { TableLeveler } from "./TableLeveler";
@@ -8,8 +8,6 @@ import { CueingEmulator } from "./CueingEmulator";
 import { CoinFlip } from "./CoinFlip";
 import { CueMasterTools } from "./CueMasterTools";
 import { PrivacyPolicy } from "./PrivacyPolicy";
-import { PlaytestBanner } from "./PlaytestBanner"; // PLAYTESTING_MODE — revert: remove this import and usage
-import { useUnlock } from "@/contexts/UnlockContext";
 import { trackEvent } from "@/lib/analytics";
 import { useBackHandler } from "@/hooks/useBackHandler";
 
@@ -25,8 +23,6 @@ export function SplashScreen({ onNewGame, onLoadGame }: SplashScreenProps) {
   const [showCoinFlip, setShowCoinFlip] = useState(false);
   const [showCueMasterTools, setShowCueMasterTools] = useState(false);
   const [showPrivacy, setShowPrivacy] = useState(false);
-  const { isUnlocked, initiateCheckout, initiateStripeCheckout, isCheckingUnlock, purchaseError, playBillingUnavailable, clearPurchaseError } = useUnlock();
-
   // Back-button / Android back-gesture handling.
   // Each overlay level gets its own handler so back navigates one level at a
   // time: sub-tool → CueMasterTools → dismiss.  The innermost registered
@@ -68,7 +64,7 @@ export function SplashScreen({ onNewGame, onLoadGame }: SplashScreenProps) {
           onClick={onNewGame}
           data-testid="button-new-game"
         >
-          {isUnlocked ? "New Game" : "Start Demo"}
+          New Game
         </Button>
         <p className="text-xs text-red-500 text-center -mt-2">*Pool table not included.</p>
         <Button
@@ -80,50 +76,6 @@ export function SplashScreen({ onNewGame, onLoadGame }: SplashScreenProps) {
         >
           Load Game
         </Button>
-        {!isUnlocked && (
-          <>
-            <Button
-              size="lg"
-              className="w-full text-lg h-14 bg-gradient-to-r from-emerald-600 to-green-500 border-0 text-white font-bold shadow-lg"
-              onClick={initiateCheckout}
-              disabled={isCheckingUnlock}
-              data-testid="button-buy-now"
-            >
-              <ShoppingCart className="w-5 h-5 mr-2" />
-              {isCheckingUnlock ? "Processing…" : "Buy Now — Unlock All 18 Courses"}
-            </Button>
-            {purchaseError && (
-              <div
-                className="flex items-start gap-2 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive"
-                data-testid="text-purchase-error"
-              >
-                <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
-                <span className="flex-1">{purchaseError}</span>
-                <button
-                  onClick={clearPurchaseError}
-                  className="shrink-0 opacity-60 hover:opacity-100"
-                  data-testid="button-dismiss-error"
-                  aria-label="Dismiss"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            )}
-            {playBillingUnavailable && (
-              <Button
-                size="lg"
-                variant="outline"
-                className="w-full text-lg h-14"
-                onClick={initiateStripeCheckout}
-                disabled={isCheckingUnlock}
-                data-testid="button-stripe-fallback"
-              >
-                <ShoppingCart className="w-5 h-5 mr-2" />
-                Pay via Web Browser Instead
-              </Button>
-            )}
-          </>
-        )}
         <Button
           size="lg"
           className="w-full text-lg h-14 text-white font-bold border-0"
@@ -144,11 +96,10 @@ export function SplashScreen({ onNewGame, onLoadGame }: SplashScreenProps) {
           <BookOpen className="w-5 h-5 mr-2" />
           How to Play
         </Button>
-        {/* PLAYTESTING_MODE — revert: restore variant="ghost" className="w-full text-sm h-10 text-muted-foreground" */}
         <Button
           size="lg"
           variant="ghost"
-          className="w-full text-sm h-10 font-semibold text-green-700 dark:text-green-400 bg-green-100 dark:bg-green-900/30"
+          className="w-full text-sm h-10 text-muted-foreground"
           onClick={() => window.open("https://forms.gle/TgT8YWzdbk7gvJXq6", "_blank")}
           data-testid="button-feedback"
         >
@@ -194,8 +145,6 @@ export function SplashScreen({ onNewGame, onLoadGame }: SplashScreenProps) {
       {showPrivacy && (
         <PrivacyPolicy onClose={() => setShowPrivacy(false)} />
       )}
-      {/* PLAYTESTING_MODE — revert: remove this line */}
-      <PlaytestBanner />
     </div>
   );
 }

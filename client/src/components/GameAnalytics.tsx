@@ -1,15 +1,13 @@
 import { useMemo } from "react";
 import { Card } from "@/components/ui/card";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } from "recharts";
-import { Clock, Timer, TrendingUp, TrendingDown, Zap, Target, Award, BarChart3, Lock } from "lucide-react";
+import { Clock, Timer, TrendingUp, TrendingDown, Zap, Target, Award, BarChart3 } from "lucide-react";
 import type { Player, HoleScore } from "@shared/schema";
 import type { TurnTime } from "@/contexts/GameContext";
 import { cn } from "@/lib/utils";
-import { UnlockBanner } from "./UnlockBanner";
 
 interface GameAnalyticsProps {
   players: Player[];
-  isUnlocked?: boolean;
   scores: Record<string, HoleScore[]>;
   turnTimes: TurnTime[];
   gameStartTime: number;
@@ -37,7 +35,7 @@ function formatShortDuration(ms: number): string {
   return `${seconds}s`;
 }
 
-export function GameAnalytics({ players, scores, turnTimes, gameStartTime, gameEndTime, totalPlayTimeMs = 0, isUnlocked = false }: GameAnalyticsProps) {
+export function GameAnalytics({ players, scores, turnTimes, gameStartTime, gameEndTime, totalPlayTimeMs = 0 }: GameAnalyticsProps) {
   const analytics = useMemo(() => {
     if (turnTimes.length === 0 || players.length === 0) return null;
 
@@ -215,8 +213,7 @@ export function GameAnalytics({ players, scores, turnTimes, gameStartTime, gameE
         </div>
       </Card>
 
-      {isUnlocked ? (
-        <>
+      <>
           <Card className="p-4 mb-6">
             <h3 className="font-bold mb-3 flex items-center gap-2">
               <Timer className="w-5 h-5" /> Turn Duration by Card
@@ -339,30 +336,7 @@ export function GameAnalytics({ players, scores, turnTimes, gameStartTime, gameE
               })}
             </div>
           </Card>
-        </>
-      ) : (
-        <Card className="p-5 mb-6 space-y-4">
-          <div className="flex items-center gap-2">
-            <Lock className="w-5 h-5 text-muted-foreground" />
-            <h3 className="font-bold">Detailed Analytics</h3>
-            <span className="text-xs text-muted-foreground ml-auto">Paid feature</span>
-          </div>
-          <div className="grid grid-cols-3 gap-3">
-            {[
-              { icon: Timer, label: "Turn Duration", desc: "Per-card timing chart" },
-              { icon: Zap, label: "Speed Records", desc: "Fastest & slowest cards" },
-              { icon: Award, label: "Performance", desc: "Pace, streaks & insights" },
-            ].map(({ icon: Icon, label, desc }) => (
-              <div key={label} className="flex flex-col items-center gap-1 p-3 rounded-md border border-dashed text-center opacity-50 select-none">
-                <Icon className="w-5 h-5 text-muted-foreground" />
-                <span className="text-xs font-semibold">{label}</span>
-                <span className="text-xs text-muted-foreground leading-tight">{desc}</span>
-              </div>
-            ))}
-          </div>
-          <UnlockBanner variant="inline" />
-        </Card>
-      )}
+      </>
     </>
   );
 }
