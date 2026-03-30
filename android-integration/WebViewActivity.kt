@@ -7,7 +7,6 @@ import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.gms.games.PlayGames
-import com.google.android.gms.games.PlayGamesSdk
 
 /**
  * Full-screen WebView Activity that hosts the PFTC Progressive Web App
@@ -35,9 +34,6 @@ class WebViewActivity : AppCompatActivity() {
     @SuppressLint("SetJavaScriptEnabled")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        // Initialise PGPS — must be called before any client access
-        PlayGamesSdk.initialize(this)
 
         webView = WebView(this)
         setContentView(webView)

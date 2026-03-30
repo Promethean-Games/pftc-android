@@ -1,7 +1,7 @@
 # Google Play Games Services — Android Integration
 
-This directory contains the two Kotlin files needed to wire Play Games Services
-achievements into the PFTC Android app bundle.
+This directory contains the three Kotlin/Java files needed to wire Play Games
+Services into the PFTC Android app bundle.
 
 ---
 
@@ -32,55 +32,91 @@ achievement's *Achievement ID* when you create them.
 
 ## Step 1 — Add Play Games Services to your Android project
 
-In your app-level `build.gradle` (or `build.gradle.kts`):
+In your **app-level** `build.gradle` (or `build.gradle.kts`):
 
 ```groovy
 dependencies {
-    implementation("com.google.android.gms:play-services-games-v2:20.1.2")
+    implementation "com.google.android.gms:play-services-games-v2:+"
+}
+```
+
+In your **project-level** `build.gradle`, confirm both sections include the
+Google and Maven Central repositories:
+
+```groovy
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
 }
 ```
 
 ---
 
-## Step 2 — Add your Games App ID
+## Step 2 — Add your Games Project ID
 
-After creating your game in Play Console, copy the **Application ID** (a
-numeric string like `1234567890123`).
+After creating your game in Play Console, find the **Project ID** (a numeric
+string like `0000000000`) on the **Play Games Services → Configuration** page.
 
-Create (or update) `app/src/main/res/values/games-ids.xml`:
+**`app/src/main/res/values/strings.xml`** — add this entry:
 
 ```xml
-<?xml version="1.0" encoding="utf-8"?>
-<resources>
-    <!-- Replace with your Play Console Application ID -->
-    <string name="app_id" translatable="false">YOUR_PLAY_GAMES_APP_ID</string>
-</resources>
+<!-- Replace 0000000000 with your game's project ID -->
+<string translatable="false" name="game_services_project_id">0000000000</string>
 ```
 
-Add the meta-data entry to `AndroidManifest.xml` inside `<application>`:
+**`AndroidManifest.xml`** — add inside `<application>`:
 
 ```xml
 <meta-data
     android:name="com.google.android.gms.games.APP_ID"
-    android:value="@string/app_id" />
+    android:value="@string/game_services_project_id" />
 ```
 
 ---
 
-## Step 3 — Add the Kotlin files
+## Step 3 — Register the custom Application class
 
-Copy `PlayGamesInterface.kt` and `WebViewActivity.kt` into:
+The Play Games SDK **must** be initialised in `Application.onCreate()`, not in
+an Activity.  Add `android:name=".PFTCApplication"` to the `<application>`
+element in `AndroidManifest.xml`:
+
+```xml
+<application
+    android:name=".PFTCApplication"
+    android:label="@string/app_name"
+    ... >
+```
+
+---
+
+## Step 4 — Copy the Kotlin files
+
+Copy all three files into:
 
 ```
 app/src/main/java/com/prometheangames/pftc/classic/
 ```
 
+| File | Purpose |
+|---|---|
+| `PFTCApplication.kt` | Custom Application class — initialises the Play Games SDK |
+| `WebViewActivity.kt` | Full-screen WebView that loads the PWA and injects the JS bridge |
+| `PlayGamesInterface.kt` | `window.PlayGames` JavaScript bridge for achievements |
+
 ---
 
-## Step 4 — Swap the launcher Activity in AndroidManifest.xml
+## Step 5 — Swap the launcher Activity in AndroidManifest.xml
 
-Your existing manifest has a `LauncherActivity` from the TWA library.
-Replace it with `WebViewActivity`:
+Replace the standard TWA `LauncherActivity` with `WebViewActivity`:
 
 ```xml
 <!-- BEFORE (remove this) -->
@@ -107,24 +143,24 @@ You can keep any other `intent-filter` blocks (deep links, etc.) you already hav
 
 ## How it works at runtime
 
-1. `WebViewActivity` loads `https://pftc-classic.replit.app` in a full-screen
-   `WebView` (same URL as before, just no longer using Chrome Custom Tabs).
-2. `PlayGamesInterface` is registered as `window.PlayGames` in JavaScript.
-3. The web app calls `window.PlayGames?.unlockAchievement(id)` or
+1. `PFTCApplication.onCreate()` initialises the Play Games SDK with the
+   application context before any Activity starts.
+2. `WebViewActivity` loads `https://pftc-classic.replit.app` in a full-screen
+   `WebView`.  On page load it checks `isAuthenticated`; if the user is not
+   signed in it calls `signIn()`, which triggers the PGPS one-time consent prompt.
+3. `PlayGamesInterface` is registered as `window.PlayGames` in JavaScript.
+4. The web app calls `window.PlayGames?.unlockAchievement(id)` or
    `window.PlayGames?.incrementAchievement(id, steps)` at the right moments.
    If `window.PlayGames` is `undefined` (e.g. running in a browser) the calls
    are silent no-ops.
-4. On first page load, `WebViewActivity` silently checks Play Games sign-in
-   status.  If the user is not signed in, PGPS shows its own one-time consent
-   prompt.
 
 ---
 
 ## Notes
 
-- The `achievement_cuemaster` incremental achievement is incremented by 1 on
-  every shot taken in the Cueing Emulator.  PGPS handles the cumulative count
-  and unlocks the achievement automatically after 10 steps.
+- `achievement_cuemaster` is an incremental achievement (10 steps).  It is
+  incremented by 1 on every shot taken in the Cueing Emulator.  PGPS handles
+  the cumulative count and unlocks the achievement automatically after 10 steps.
 - `achievement_table_read` is tracked in `localStorage` on the web side.  The
   bridge call fires once all three standard table sizes (7ft, 8ft, 9ft) have
   each had at least one shot taken on them.
