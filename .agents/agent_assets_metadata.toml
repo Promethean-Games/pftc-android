@@ -28,7 +28,7 @@ title = "birdie achievement"
 id = "z23ALJ8LOE-ydOBjb4Lub"
 uri = "file://attached_assets/achievements/full_round.png"
 type = "image"
-title = "full round achievement"
+title = "full round 18 scorecard achievement"
 
 [[generated]]
 id = "J21mt4CwnkiBZnt6Ygy49"
@@ -94,7 +94,7 @@ title = "Birdie"
 id = "8bPbcGOvAuzjj9iPqthJM"
 uri = "file://attached_assets/achievements/full_round.png"
 type = "image"
-title = "Full Round"
+title = "Full Round (scorecard with 18)"
 
 [[outputs]]
 id = "sigG0KUecOQ-JbN0bwbL8"
