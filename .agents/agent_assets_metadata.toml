@@ -82,7 +82,7 @@ title = "Table Read (regenerated)"
 id = "LiZcV1v2eBIqM_21fg0M6"
 uri = "file://attached_assets/achievements/front_nine.png"
 type = "image"
-title = "Front Nine"
+title = "Front Nine (regenerated)"
 
 [[outputs]]
 id = "KDtA2zT0f9npxTiBuM0wD"
@@ -100,13 +100,13 @@ title = "Full Round"
 id = "sigG0KUecOQ-JbN0bwbL8"
 uri = "file://attached_assets/achievements/cuemaster.png"
 type = "image"
-title = "CueMaster"
+title = "CueMaster (regenerated)"
 
 [[outputs]]
 id = "T-fJ1t8bEd-R62Yu0jPWN"
 uri = "file://attached_assets/achievements/eagle.png"
 type = "image"
-title = "Eagle"
+title = "Eagle (regenerated)"
 
 [[outputs]]
 id = "dCFysRBXWoRKcsFpqKB5I"
@@ -118,7 +118,7 @@ title = "Bogey Free"
 id = "95Uu2TNMo6zP1etBlb68H"
 uri = "file://attached_assets/achievements/ace.png"
 type = "image"
-title = "Ace"
+title = "Ace (regenerated)"
 
 [[outputs]]
 id = "z2gT9WCooyuIPGcZ6GBN1"
