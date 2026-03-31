@@ -46,7 +46,7 @@ OneSignal.init({
       prompts: [
         {
           type: "push",
-          autoPrompt: false,
+          autoPrompt: true,
           text: {
             actionMessage: "Get notified about new courses and updates for Par for the Course.",
             acceptButton: "Allow",
