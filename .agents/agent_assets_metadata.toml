@@ -70,13 +70,13 @@ title = "scratch golfer achievement"
 id = "B7xpY4PCjXJJtem3MRBoG"
 uri = "file://attached_assets/achievements/off_the_tee.png"
 type = "image"
-title = "Off the Tee"
+title = "Off the Tee (regenerated)"
 
 [[outputs]]
 id = "ljKBwC9fIEe0pKEZxHnEq"
 uri = "file://attached_assets/achievements/table_read.png"
 type = "image"
-title = "Table Read"
+title = "Table Read (regenerated)"
 
 [[outputs]]
 id = "LiZcV1v2eBIqM_21fg0M6"
@@ -130,4 +130,4 @@ title = "Tour Champion"
 id = "aTe1mP1AabcCgzp6ET6Pr"
 uri = "file://attached_assets/achievements/scratch_golfer.png"
 type = "image"
-title = "Scratch Golfer"
+title = "Scratch Golfer (regenerated)"
