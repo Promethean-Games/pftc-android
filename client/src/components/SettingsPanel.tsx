@@ -9,6 +9,17 @@ import { UserPlus, Home } from "lucide-react";
 import type { Settings, Player } from "@shared/schema";
 import { getAnalyticsOptOut, setAnalyticsOptOut } from "@/lib/analytics";
 import OneSignal from "react-onesignal";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface SettingsPanelProps {
   settings: Settings;
@@ -215,14 +226,37 @@ export function SettingsPanel({ settings, players, onUpdateSettings, onAddPlayer
                 Home
               </Button>
             )}
-            <Button
-              variant="destructive"
-              className="w-full h-12"
-              onClick={onEndGame}
-              data-testid="button-end-game"
-            >
-              End Game
-            </Button>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant="destructive"
+                  className="w-full"
+                  data-testid="button-end-game"
+                >
+                  End Game
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>End the game?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will finish the current round and take you to the summary screen. This cannot be undone.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel data-testid="button-end-game-cancel">
+                    Keep Playing
+                  </AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={onEndGame}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    data-testid="button-end-game-confirm"
+                  >
+                    End Game
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         </div>
       </div>
