@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { UserPlus, Home } from "lucide-react";
 import type { Settings, Player } from "@shared/schema";
 import { getAnalyticsOptOut, setAnalyticsOptOut } from "@/lib/analytics";
+import OneSignal from "react-onesignal";
 
 interface SettingsPanelProps {
   settings: Settings;
@@ -25,10 +26,35 @@ export function SettingsPanel({ settings, players, onUpdateSettings, onAddPlayer
   const [newPlayerName, setNewPlayerName] = useState("");
   const [insertPosition, setInsertPosition] = useState<string>("end");
   const [analyticsOptOut, setAnalyticsOptOutState] = useState(() => getAnalyticsOptOut());
+  const [notifPermission, setNotifPermission] = useState<NotificationPermission>("default");
+
+  useEffect(() => {
+    if ("Notification" in window) {
+      setNotifPermission(Notification.permission);
+    }
+  }, []);
 
   const handleAnalyticsToggle = (enabled: boolean) => {
     setAnalyticsOptOut(!enabled);
     setAnalyticsOptOutState(!enabled);
+  };
+
+  const handleNotifToggle = async (enabled: boolean) => {
+    if (enabled) {
+      try {
+        await OneSignal.Slidedown.promptPush();
+        if ("Notification" in window) setNotifPermission(Notification.permission);
+      } catch {
+        // User dismissed or browser blocked
+      }
+    } else {
+      try {
+        await OneSignal.User.PushSubscription.optOut();
+        setNotifPermission("denied");
+      } catch {
+        // Silently ignore
+      }
+    }
   };
 
   const handleAddPlayer = () => {
@@ -124,7 +150,7 @@ export function SettingsPanel({ settings, players, onUpdateSettings, onAddPlayer
               />
             </div>
 
-            <div className="flex items-center justify-between py-3">
+            <div className="flex items-center justify-between py-3 border-b">
               <Label htmlFor="analytics-toggle" className="flex-1">
                 <div className="font-medium">Help Improve the App</div>
                 <div className="text-sm text-muted-foreground">Send anonymous usage data to help us improve</div>
@@ -136,6 +162,26 @@ export function SettingsPanel({ settings, players, onUpdateSettings, onAddPlayer
                 data-testid="switch-analytics"
               />
             </div>
+
+            {"Notification" in window && (
+              <div className="flex items-center justify-between py-3">
+                <Label htmlFor="notif-toggle" className="flex-1">
+                  <div className="font-medium">Push Notifications</div>
+                  <div className="text-sm text-muted-foreground">
+                    {notifPermission === "denied"
+                      ? "Blocked by browser — enable in device settings"
+                      : "Get notified about new courses and updates"}
+                  </div>
+                </Label>
+                <Switch
+                  id="notif-toggle"
+                  checked={notifPermission === "granted"}
+                  disabled={notifPermission === "denied"}
+                  onCheckedChange={handleNotifToggle}
+                  data-testid="switch-notifications"
+                />
+              </div>
+            )}
           </Card>
 
           {!viewOnly && (

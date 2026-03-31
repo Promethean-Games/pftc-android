@@ -3,13 +3,13 @@ import App from "./App";
 import { PrivacyPolicyPage } from "@/components/PrivacyPolicyPage";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import "./index.css";
+import OneSignal from "react-onesignal";
 
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
     navigator.serviceWorker
       .register("/sw.js")
       .then((reg) => {
-        // Detect when a new SW installs while the page is open
         reg.addEventListener("updatefound", () => {
           const incoming = reg.installing;
           if (!incoming) return;
@@ -25,7 +25,6 @@ if ("serviceWorker" in navigator) {
       })
       .catch(() => {});
 
-    // Detect when the SW activates after the page was already open
     navigator.serviceWorker.addEventListener("message", (event) => {
       if (event.data?.type === "SW_UPDATED") {
         window.dispatchEvent(new CustomEvent("swUpdateReady"));
@@ -33,6 +32,31 @@ if ("serviceWorker" in navigator) {
     });
   });
 }
+
+OneSignal.init({
+  appId: "b006b486-0ef4-4219-8135-9d19638e0555",
+  allowLocalhostAsSecureOrigin: true,
+  serviceWorkerParam: { scope: "/" },
+  serviceWorkerPath: "/OneSignalSDKWorker.js",
+  notifyButton: {
+    enable: false,
+  },
+  promptOptions: {
+    slidedown: {
+      prompts: [
+        {
+          type: "push",
+          autoPrompt: false,
+          text: {
+            actionMessage: "Get notified about new courses and updates for Par for the Course.",
+            acceptButton: "Allow",
+            cancelButton: "Later",
+          },
+        },
+      ],
+    },
+  },
+}).catch(() => {});
 
 const isPrivacyPage = window.location.pathname === "/privacy";
 
