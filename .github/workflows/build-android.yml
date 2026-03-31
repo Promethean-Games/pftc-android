@@ -34,8 +34,15 @@ jobs:
       - name: Install SDK platform
         run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
 
-      - name: Build release AAB
+      - name: Decode keystore
+        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/keystore.jks
+
+      - name: Build signed release AAB
         working-directory: android
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: gradle bundleRelease
 
       - name: Upload AAB
