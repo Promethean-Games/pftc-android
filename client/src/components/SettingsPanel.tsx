@@ -5,7 +5,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { UserPlus, Home } from "lucide-react";
+import { UserPlus, UserMinus, Home } from "lucide-react";
 import type { Settings, Player } from "@shared/schema";
 import { getAnalyticsOptOut, setAnalyticsOptOut } from "@/lib/analytics";
 import OneSignal from "react-onesignal";
@@ -26,6 +26,7 @@ interface SettingsPanelProps {
   players: Player[];
   onUpdateSettings: (settings: Partial<Settings>) => void;
   onAddPlayer: (name: string, position?: number) => void;
+  onDropPlayer: (id: string) => void;
   onEndGame: () => void;
   onHome?: () => void;
   onLogout?: () => void;
@@ -33,11 +34,12 @@ interface SettingsPanelProps {
   isGameOver?: boolean;
 }
 
-export function SettingsPanel({ settings, players, onUpdateSettings, onAddPlayer, onEndGame, onHome, onLogout, viewOnly = false, isGameOver = false }: SettingsPanelProps) {
+export function SettingsPanel({ settings, players, onUpdateSettings, onAddPlayer, onDropPlayer, onEndGame, onHome, onLogout, viewOnly = false, isGameOver = false }: SettingsPanelProps) {
   const [newPlayerName, setNewPlayerName] = useState("");
   const [insertPosition, setInsertPosition] = useState<string>("end");
   const [analyticsOptOut, setAnalyticsOptOutState] = useState(() => getAnalyticsOptOut());
   const [notifPermission, setNotifPermission] = useState<NotificationPermission>("default");
+  const [dropTarget, setDropTarget] = useState<string>("");
 
   useEffect(() => {
     if ("Notification" in window) {
@@ -128,6 +130,68 @@ export function SettingsPanel({ settings, players, onUpdateSettings, onAddPlayer
             </div>
             <p className="text-xs text-muted-foreground mt-2">
               Current players: {players.length}
+            </p>
+          </Card>
+          )}
+
+          {!isGameOver && players.length > 1 && (
+          <Card className="p-4">
+            <h3 className="font-semibold mb-3 flex items-center gap-2">
+              <UserMinus className="w-4 h-4" />
+              Drop Player
+            </h3>
+            <div className="flex gap-2">
+              <Select value={dropTarget} onValueChange={setDropTarget}>
+                <SelectTrigger className="flex-1" data-testid="select-settings-drop-player">
+                  <SelectValue placeholder="Select player to drop…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {players.map((player) => (
+                    <SelectItem key={player.id} value={player.id}>
+                      {player.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="outline"
+                    disabled={!dropTarget}
+                    data-testid="button-settings-drop-player"
+                  >
+                    Drop
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>
+                      Drop {players.find((p) => p.id === dropTarget)?.name ?? "player"}?
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                      They will be removed from the active roster and won't play any further holes. Their scores to date will be kept, but future holes will show no score for them. This may affect their analytics.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel data-testid="button-drop-player-cancel">
+                      Cancel
+                    </AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => {
+                        onDropPlayer(dropTarget);
+                        setDropTarget("");
+                      }}
+                      data-testid="button-drop-player-confirm"
+                    >
+                      Drop Player
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              Scores to date are preserved — only future holes are affected.
             </p>
           </Card>
           )}

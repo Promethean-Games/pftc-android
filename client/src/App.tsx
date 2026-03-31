@@ -292,6 +292,7 @@ function GameApp() {
           players={game.players}
           onUpdateSettings={game.updateSettings}
           onAddPlayer={game.addPlayer}
+          onDropPlayer={game.removePlayer}
           onEndGame={handleEndGame}
           onHome={() => setScreen("splash")}
           viewOnly={viewOnly}
