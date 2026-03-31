@@ -16,7 +16,7 @@ title = "table read achievement book"
 id = "PVvXfGnauCyMwKl7SfaUq"
 uri = "file://attached_assets/achievements/front_nine.png"
 type = "image"
-title = "front nine achievement"
+title = "front nine scorecard achievement"
 
 [[generated]]
 id = "-2lKMDFDF_C3-En5z_rmB"
@@ -82,7 +82,7 @@ title = "Table Read (regenerated)"
 id = "LiZcV1v2eBIqM_21fg0M6"
 uri = "file://attached_assets/achievements/front_nine.png"
 type = "image"
-title = "Front Nine (regenerated)"
+title = "Front Nine (scorecard)"
 
 [[outputs]]
 id = "KDtA2zT0f9npxTiBuM0wD"
