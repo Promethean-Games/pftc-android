@@ -34,34 +34,16 @@ jobs:
       - name: Install SDK platform
         run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
 
-      - name: Build unsigned release AAB
-        working-directory: android
-        run: gradle bundleRelease
-
       - name: Decode keystore
-        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > keystore.p12
+        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/keystore.jks
 
-      - name: Re-encode keystore with legacy PKCS12 (fixes Java ASN.1 compatibility)
-        run: |
-          openssl pkcs12 \
-            -in keystore.p12 \
-            -out keystore-legacy.p12 \
-            -passin pass:"${{ secrets.KEYSTORE_PASSWORD }}" \
-            -passout pass:"${{ secrets.KEYSTORE_PASSWORD }}" \
-            -legacy
-
-      - name: Sign AAB with jarsigner
-        run: |
-          jarsigner \
-            -verbose \
-            -sigalg SHA256withRSA \
-            -digestalg SHA-256 \
-            -keystore keystore-legacy.p12 \
-            -storetype PKCS12 \
-            -storepass "${{ secrets.KEYSTORE_PASSWORD }}" \
-            -keypass "${{ secrets.KEY_PASSWORD }}" \
-            android/app/build/outputs/bundle/release/app-release.aab \
-            "${{ secrets.KEY_ALIAS }}"
+      - name: Build signed release AAB
+        working-directory: android
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: gradle bundleRelease
 
       - name: Upload AAB
         uses: actions/upload-artifact@v4
