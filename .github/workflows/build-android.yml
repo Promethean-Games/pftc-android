@@ -37,6 +37,19 @@ jobs:
       - name: Decode keystore
         run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/keystore.jks
 
+      - name: Convert keystore to JKS format
+        run: |
+          keytool -importkeystore \
+            -srckeystore android/app/keystore.jks \
+            -destkeystore android/app/keystore-jks.jks \
+            -deststoretype JKS \
+            -srcstorepass "${{ secrets.KEYSTORE_PASSWORD }}" \
+            -deststorepass "${{ secrets.KEYSTORE_PASSWORD }}" \
+            -noprompt 2>/dev/null || true
+          if [ -f android/app/keystore-jks.jks ]; then
+            mv android/app/keystore-jks.jks android/app/keystore.jks
+          fi
+
       - name: Build signed release AAB
         working-directory: android
         env:
