@@ -39,7 +39,16 @@ jobs:
         run: gradle bundleRelease
 
       - name: Decode keystore
-        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > keystore.jks
+        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > keystore.p12
+
+      - name: Re-encode keystore with legacy PKCS12 (fixes Java ASN.1 compatibility)
+        run: |
+          openssl pkcs12 \
+            -in keystore.p12 \
+            -out keystore-legacy.p12 \
+            -passin pass:"${{ secrets.KEYSTORE_PASSWORD }}" \
+            -passout pass:"${{ secrets.KEYSTORE_PASSWORD }}" \
+            -legacy
 
       - name: Sign AAB with jarsigner
         run: |
@@ -47,7 +56,8 @@ jobs:
             -verbose \
             -sigalg SHA256withRSA \
             -digestalg SHA-256 \
-            -keystore keystore.jks \
+            -keystore keystore-legacy.p12 \
+            -storetype PKCS12 \
             -storepass "${{ secrets.KEYSTORE_PASSWORD }}" \
             -keypass "${{ secrets.KEY_PASSWORD }}" \
             android/app/build/outputs/bundle/release/app-release.aab \
