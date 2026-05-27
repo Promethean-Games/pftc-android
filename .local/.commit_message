@@ -1,0 +1,7 @@
+Suppress browser autofill on player name inputs
+
+Added autoComplete="off" and name="player-display-name" to the player
+name <Input> in PlayerSetup.tsx. The non-standard name value prevents
+browsers from pattern-matching the field to saved payment/address data,
+while autoComplete="off" is the primary hint respected by most browsers.
+No other inputs were changed (task scope limited to player name fields).

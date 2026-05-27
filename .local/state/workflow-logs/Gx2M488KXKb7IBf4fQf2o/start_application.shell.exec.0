@@ -1,0 +1,93 @@
+
+> rest-express@1.0.0 dev
+> NODE_ENV=development tsx server/index-dev.ts
+
+[1G[0K1:50:32 PM [express] serving on port 5000
+Browserslist: browsers data (caniuse-lite) is 7 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+
+A PostCSS plugin did not pass the `from` option to `postcss.parse`. This may cause imported assets to be incorrectly transformed. If you've recently added a PostCSS plugin that raised this warning, please contact the package author to fix the issue.
+1:50:36 PM [express] POST /api/analytics/capture 200 in 163ms :: {"ok":true}
+
+
+
+
+
+
+
+
+
+
+
+
+
+[1;1H[0J[2m1:58:47 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/DrawDialog.tsx, /src/index.css?v=rv_Ay0Tq9LvUYI_iyzDtB[22m
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[1;1H[0J[2m1:58:51 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/DrawDialog.tsx, /src/index.css?v=rv_Ay0Tq9LvUYI_iyzDtB[22m [33m(x2)[39m
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[1;1H[0J[2m1:58:59 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/DrawDialog.tsx, /src/index.css?v=rv_Ay0Tq9LvUYI_iyzDtB[22m [33m(x3)[39m
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[1;1H[0J[2m1:59:04 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/GameScreen.tsx, /src/index.css?v=rv_Ay0Tq9LvUYI_iyzDtB[22m
+1:59:08 PM [express] POST /api/analytics/capture 200 in 126ms :: {"ok":true}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[1;1H[0J[2m2:04:37 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/components/EditionSelectScreen.tsx, /src/index.css?v=rv_Ay0Tq9LvUYI_iyzDtB[22m
